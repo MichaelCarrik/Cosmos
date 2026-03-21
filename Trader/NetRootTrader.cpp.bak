@@ -1,0 +1,142 @@
+//
+// Created by zhangyw on 3/8/21.
+//
+
+#include "NetRootTrader.h.bak"
+
+namespace TrendFollow {
+    namespace Trader {
+
+        BSFlag NetRootTrader::getOrderSide( Types::OrderSide orderSide) {
+            switch (orderSide) {
+                case  Types::OrderSide::buy:
+                    return BSFlag::Buy;
+                case  Types::OrderSide::sell:
+                    return BSFlag::Sell;
+            }
+            return BSFlag::BSFlagNotSet;
+        }
+
+        OffSetFlag NetRootTrader::getOrderPositionEffect( Types::PositionEffectType pet) {
+            switch (pet) {
+                case  Types::PositionEffectType::T_close:
+                    return OffSetFlag::CLOSETD;
+                case  Types::PositionEffectType::Y_close:
+                    return OffSetFlag::CLOSEYD;
+                case  Types::PositionEffectType::open:
+                    return OffSetFlag::OPEN;
+            }
+            return OffSetFlag::CLOSEYD;
+        }
+
+        ExchID NetRootTrader::getExchangeID( char exchangeID){
+            return ExchID::CFFEX;
+        }
+
+        int NetRootTrader::start(){
+            boost::property_tree::ptree pt;
+            boost::property_tree::read_xml(m_configPath, pt);
+            m_netRootConnect.accountID = pt.get_child("ThostUser2.ConnectConfig.AccountID").get<std::string>("<xmlattr>.value");
+            m_netRootConnect.userid = pt.get_child("ThostUser2.ConnectConfig.Username").get<std::string>("<xmlattr>.value");
+            m_netRootConnect.password = pt.get_child("ThostUser2.ConnectConfig.Password").get<std::string>("<xmlattr>.value");
+            m_netRootConnect.frontHost = pt.get_child("ThostUser2.ConnectConfig.TradeFront").get<std::string>("<xmlattr>.value");
+            m_netRootConnect.port = pt.get_child("ThostUser2.ConnectConfig.Port").get<int>("<xmlattr>.value");
+
+            MsgConnectInfo connInfo;
+            auto ret = m_api.Connect(connInfo, m_netRootConnect.frontHost, m_netRootConnect.port);
+            if(ret !=0){
+                spdlog::error("m_api connect failed : %s", m_api.GetLastError().c_str());
+                return -1;
+            }
+
+            ret = m_api.OptLogin(m_netRootConnect.userid, m_netRootConnect.password);
+            if(ret !=0){
+                spdlog::error("login failed : %s", m_api.GetLastError().c_str());
+                return -1;
+            }
+
+            MsgAccountLogin acctLoginInfo;
+            ret = m_api.AccountLogin(m_netRootConnect.accountID, m_netRootConnect.password, acctLoginInfo);
+            if(ret !=0){
+                spdlog::error("money failed : %s", m_api.GetLastError().c_str());
+                return -1;
+            }
+
+
+            m_api.RegisterTradeSpi(this);
+
+
+            return 0;
+        }
+
+        void NetRootTrader::sendOrder( Types::OrderField const & input_orderField){
+            OrderNewInfo m_netRootOrder;
+            m_netRootOrder.acctId = m_netRootConnect.accountID;
+            m_netRootOrder.exchId = getExchangeID(input_orderField.exchangeID);
+            m_netRootOrder.stkId = input_orderField.instrumentID.data();
+            std::string rmb("00");
+            m_netRootOrder.currencyId = rmb;
+            //       pNROrder->orderType = OrderType::Buy;
+            m_netRootOrder.f_offSetFlag = getOrderPositionEffect(input_orderField.pet);
+            m_netRootOrder.bsFlag = getOrderSide(input_orderField.orderSide);
+            m_netRootOrder.businessMark = BusinessMark::OTO;
+            m_netRootOrder.f_orderPriceType = OrderPriceType::LIMIT;
+            m_netRootOrder.orderPrice = input_orderField.orderPrice;
+            m_netRootOrder.orderQty = input_orderField.orderVolume;
+
+
+            int assignId = 0;
+            auto orderField = m_orderList->getNewMemory(assignId);
+            memcpy(orderField, &input_orderField, sizeof( Types::OrderField));
+            m_netRootOrder.contractNum = assignId;
+            m_netRootOrder.batchNum = assignId;
+            m_netRootOrder.clientId = assignId;
+            orderField->tOrderID = assignId;
+            //  fprintf(stderr,"sendOrder : instrument=%s, requestID=%d orderRef=%s\n", orderField->instrumentID.data(), orderField->tOrderID, pCtpOrder->OrderRef);
+            MsgOrderNew msgOrdernew;
+
+            auto nRetCode = m_api.SyncOrderNew(m_netRootOrder, msgOrdernew);
+        };
+
+        bool NetRootTrader::cancelOrder( Types::OrderField const & inputOrder, int64_t& epoch_time) {
+            auto order = m_orderList->getMemoryById(inputOrder.tOrderID);
+            if (order != nullptr) {
+
+                OrderCancelInfo orderCancel ;
+                orderCancel.acctId = m_netRootConnect.accountID;
+                orderCancel.exchId =  getExchangeID(inputOrder.exchangeID);
+                orderCancel.contractNum = order->netRootContractNum;
+
+                auto ret = m_api.OrderCancel(orderCancel);
+
+//                    spdlog::debug(
+//                            "cancelOrder : frontid= {}, sessionid={}, OrderSysId={}, iRuquest={},  orderRef={}, ret={}, traderOrderID={}, policyOrderID={}",
+//                            field->FrontID, field->SessionID, field->OrderSysID, field->RequestID, field->OrderRef,
+//                            ret, inputOrder.tradeOrderID, inputOrder.policyOrderID);
+            }
+        };
+
+        int NetRootTrader::queryPosition( Types::Instrument_t const& instrument){
+            QueryPositionCondition qryPosCond;
+            qryPosCond.acctId = m_netRootConnect.accountID;
+            qryPosCond.stkId = std::string(instrument.data());
+            vector<MsgPositionInfo> msgQueryPostionInfos;
+            auto ret = m_api.SyncQueryPosition(qryPosCond, msgQueryPostionInfos);
+            if (ret != 0)
+            {
+                spdlog::error("NetRootTrader::queryPosition failed %s=%s", instrument.data(), m_api.GetLastError().c_str());
+                return -1;
+            }
+
+            for (int i = 0; i < msgQueryPostionInfos.size(); i++)
+            {
+                spdlog::error("----持仓查询（同步）结果:%s", msgQueryPostionInfos[i].json.c_str());
+            }
+            return 0;
+
+        };
+
+
+
+    }
+}

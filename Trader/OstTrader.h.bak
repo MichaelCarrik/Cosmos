@@ -1,0 +1,130 @@
+//
+// Created by zhangyingwei on 2021/12/29.
+//
+
+#ifndef TRENDFOLLOW_OSTTRADER_BAK
+#define TRENDFOLLOW_OSTTRADER_BAK
+
+#include <future>
+#include "../Utils/MemoryList.h"
+#include "../Types/OrderField.h"
+#include "../Types/ArbitrageOrderField.h"
+#include "../Driver/RealtimeDriver.h"
+#include <boost/property_tree/ptree.hpp>
+#include <boost/property_tree/xml_parser.hpp>
+#include <UTApi.h>
+#include "../Types/Param.h"
+#include "../Types/Symbol.h"
+#include "../Types/QuerySymbol.h"
+#include "../Types/CtpTradeConnection.h"
+
+
+namespace TrendFollow {
+    namespace Trader {
+        struct QueryPosition{
+             Types::TradePosition tradePosition;
+            int cancelOrderCounts{0};
+            int query_buyVolume{0};
+            int query_sellVolume{0};
+             Types::Instrument_t  instrumentid{""};
+        };
+        class OstTrader : public CUTSpi {
+
+             Driver::RealtimeDriver * m_driver;
+             Types::CtpTradeConnection m_ctpConnection;
+            std::string m_configPath{""};
+            CUTApi * m_pTradeApi;
+            std::promise<int> m_loginPromise;
+            std::promise<int> m_queryPositionPromise;
+            int m_tradingDay{0};
+            long long m_maxOrderRef{0};
+            bool m_isLogin{false};
+            int m_requestID{0};
+            char m_frontId{};
+            long long m_sessionid{0};
+            folly::SpinLock m_sendOrderLock;
+            QueryPosition m_queryPosition;
+            std::unordered_map<Types::Instrument_t, Types::TradePosition, Types::InstrumentHash> m_onQuerySymbolMap;
+
+             Utils::MemoryList< Types::EventData,  Types::OrderBuffSize> m_eventDataList{0};
+             Utils::MemoryList< Types::OrderField,  Types::OrderBuffSize> m_receiveOrderList{0};
+             Utils::MemoryList< Types::ArbitrageOrderField,  Types::OrderBuffSize> m_receiveAbtrgOrderList{0};
+
+             Utils::MemoryList< Types::OrderField,  Types::OrderBuffSize>* m_orderList{nullptr};
+             Utils::MemoryList< Types::ArbitrageOrderField,  Types::OrderBuffSize>* m_abtrgOrderList{nullptr};
+
+             Utils::MemoryList<CUTInputOrderField,  Types::OrderBuffSize> m_OstOrderList{0};
+             Utils::MemoryList<CUTInputOrderActionField,  Types::OrderBuffSize> m_OstOrderActionList{0};
+
+            template<typename T>
+             Types::EventData* convertToEvent(const  Types::OrderField * orderField,  T* list){
+                auto event = list->getNewMemory();
+                event->point = orderField;
+                event->type =1;
+                return event;
+            }
+
+            template<typename T>
+             Types::EventData* convertToAbtrgEvent(const  Types::ArbitrageOrderField * orderField,  T* list){
+                auto event = list->getNewMemory();
+                event->point = orderField;
+                event->type =2;
+                return event;
+            }
+
+        public:
+            OstTrader( Driver::RealtimeDriver *driver, std::string& configPath):m_configPath(configPath){
+                    m_driver = driver;
+                m_orderList = new Utils::MemoryList<Types::OrderField ,Types::OrderBuffSize> (0);
+                m_abtrgOrderList= new Utils::MemoryList<Types::ArbitrageOrderField ,Types::OrderBuffSize> (0);
+            }
+
+            ~OstTrader()
+            {
+                if (m_pTradeApi != nullptr) {
+                    m_pTradeApi->Release();
+                }
+            }
+
+            virtual void OnFrontConnected() override;
+            virtual void OnFrontDisconnected(int nReason);
+            virtual void OnRspError(CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+            virtual void OnRspLogin(CUTRspLoginField *pRspUserLogin, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+            virtual void OnRspQryInstrument(CUTInstrumentField *pInstrument, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast){};
+            virtual void OnRspQryTradingAccount(CUTTradingAccountField *pTradingAccount, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast){};
+            virtual void OnRspQryInvestorPosition(CUTInvestorPositionField *pInvestorPosition, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+            virtual void OnRspQryOrder(CUTOrderField *pOrder, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast){};
+            virtual void OnRspQryTrade(CUTTradeField *pTrade, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast){};
+            virtual void OnRspOrderInsert(CUTInputOrderField *pInputOrder, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+            virtual void OnRtnOrder(CUTOrderField *pOrder);
+            virtual void OnRspOrderAction(CUTInputOrderActionField *pInputOrderAction, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
+            virtual void OnErrRtnOrderAction(CUTOrderActionField *pOrderAction);
+            virtual void OnRtnTrade(CUTTradeField *pTrade);
+
+            int start(int &);
+            char getOrderSide( Types::OrderSide orderSide);
+            char getOrderPositionEffect( Types::PositionEffectType pet);
+            char getOrderHedgeFlag( Types::HedgeType ht);
+            void updateOrder_with(const CUTOrderField * info,  Types::OrderField *pOrder);
+            void updateAbtrgOrder_with(const CUTOrderField * info,  Types::ArbitrageOrderField *abtrgOrder);
+            void updateAbtrgTrade_with(const CUTTradeField *pTrade,  Types::ArbitrageOrderField *abtrgOrder);
+
+            void sendOrder(  Types::OrderField const & orderField);
+            void sendAbtrgOrder(  Types::ArbitrageOrderField const & orderField);
+
+            bool cancelOrder( Types::OrderField const & inputOrder, int64_t& epoch_time) ;
+
+            bool cancelAbtrgOrder( Types::ArbitrageOrderField const & inputOrder, int64_t& epoch_time) ;
+            void _OnRtnOrder(CUTOrderField *pOrder);
+            void _OnRtnAbtrgOrder(CUTOrderField *pOrder);
+
+
+            void onQuerySymbol( Types::QuerySymbol const & querySymbol);
+
+            int _queryPosition(Types::Instrument_t queryInstrument);
+
+        };
+    }
+}
+
+#endif //TRENDFOLLOW_OSTTRADER_BAK

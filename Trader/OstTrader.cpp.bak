@@ -1,0 +1,633 @@
+//
+// Created by zhangyingwei on 2021/12/29.
+//
+
+#include "OstTrader.h.bak"
+
+
+namespace TrendFollow {
+    namespace Trader {
+        int OstTrader::start(int &tradingday) {
+            boost::property_tree::ptree pt;
+            boost::property_tree::read_xml(m_configPath, pt);
+            m_ctpConnection.username = pt.get_child("ThostUser2.ConnectConfig.Username").get<std::string>(
+                    "<xmlattr>.value");
+            m_ctpConnection.password = pt.get_child("ThostUser2.ConnectConfig.Password").get<std::string>(
+                    "<xmlattr>.value");
+            m_ctpConnection.authCode = pt.get_child("ThostUser2.ConnectConfig.Auth").get<std::string>("<xmlattr>.code");
+            m_ctpConnection.appId = pt.get_child("ThostUser2.ConnectConfig.AppId").get<std::string>("<xmlattr>.code");
+            m_ctpConnection.tradeFront = pt.get_child("ThostUser2.ConnectConfig.TradeFront").get<std::string>(
+                    "<xmlattr>.address");
+            m_ctpConnection.brokerId = pt.get_child("ThostUser2.ConnectConfig.BrokerID").get<std::string>(
+                    "<xmlattr>.name");
+            m_ctpConnection.interpreterConfig = pt.get_child(
+                    "ThostUser2.ConnectConfig.InterpreterConfig").get<std::string>("<xmlattr>.value");
+
+            //   m_interpreter = new NetRootInterpreter(m_pTradeApi,  m_ctpConnection.interpreterConfig,  m_maxOrderRef);
+
+            auto prefixOrder = pt.get_child("ThostUser2.ConnectConfig.OrderPrefix").get<std::string>("<xmlattr>.value");
+            std::copy(std::begin(prefixOrder), std::end(prefixOrder), std::begin(m_ctpConnection.OrderPrefix));
+            m_pTradeApi = CUTApi::CreateApi("./logs/");
+            m_pTradeApi->RegisterSpi(this);
+
+            m_pTradeApi->SubscribePrivateTopic(UT_TERT_QUICK);
+
+
+            std::array<char, 128> frontAddress{""};
+            std::copy(std::begin(m_ctpConnection.tradeFront), std::end(m_ctpConnection.tradeFront),
+                      std::begin(frontAddress));
+            fprintf(stderr, "frontAddress : %s\n", frontAddress.data());
+
+            m_pTradeApi->RegisterFront(frontAddress.data());
+            m_pTradeApi->Init();
+
+            auto loginFuture = m_loginPromise.get_future();
+            auto status = loginFuture.wait_for(std::chrono::seconds(30));
+            if (status == std::future_status::deferred) {
+                fprintf(stderr, "trade login deferred\n");
+                spdlog::error("trade login deferred");
+            } else if (status == std::future_status::timeout) {
+                fprintf(stderr, "trade login timeout\n");
+                spdlog::error("trade login timeout");
+                return -1;
+            } else if (status == std::future_status::ready) {
+                auto ret = loginFuture.get();
+                if (ret != 0) {
+                    fprintf(stderr, "trade login retcode %d\n", ret);
+                    spdlog::error("trade login retcode : {}", ret);
+                    return -1;
+                }
+
+            }
+            tradingday = m_tradingDay;
+        //    m_interpreter = new CtpInterpreter(m_pTradeApi, m_ctpConnection, m_frontID, m_sessionID, m_maxOrderRef);
+
+            m_isLogin = true;
+
+
+            return 0;
+        };
+
+        void OstTrader::OnFrontConnected(){
+            CUTReqLoginField reqUserLogin;
+            memset(&reqUserLogin, 0, sizeof(reqUserLogin));
+
+            strcpy(reqUserLogin.UserID, m_ctpConnection.username.c_str());
+            strcpy(reqUserLogin.Password, m_ctpConnection.password.c_str());
+            strcpy(reqUserLogin.AppID, m_ctpConnection.appId.c_str());
+            strcpy(reqUserLogin.UserProductPassword, m_ctpConnection.authCode.c_str());
+            int retCode = m_pTradeApi->ReqLogin(&reqUserLogin, 1);
+            if (retCode) {
+                fprintf(stderr, "ReqAuthenticate error %d\n", retCode);
+                spdlog::error("ReqAuthenticate error : {}", retCode);
+            }
+        };
+
+        void OstTrader::OnRspError(CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast)
+        {
+            if (pRspInfo && pRspInfo->ErrorID)
+            {
+                fprintf(stderr,"OnRspError: Error! [%d] [%s]\n", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+                spdlog::error("OnRspError error : {} {}", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+            }
+        }
+
+         void OstTrader::OnFrontDisconnected(int nReason)
+        {
+            fprintf(stderr, "OnFrontDisconnected:%d\n", nReason);
+        }
+
+        void OstTrader::OnRspLogin(CUTRspLoginField *pRspUserLogin, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast){
+            if (pRspInfo->ErrorID == 0 and m_isLogin == false) {
+                spdlog::info("trade login ok, wait api initail");
+                //   m_loginPromise.set_value(0);
+                try {
+                    m_tradingDay = pRspUserLogin->TradingDay;
+
+                  //  m_maxOrderRef = pRspUserLogin->PrivateSeq + 1;
+                    m_frontId = pRspUserLogin->FrontID;
+                    m_sessionid = pRspUserLogin->SessionID;
+
+//                    m_frontID = pRspUserLogin->FrontID;
+//                    m_sessionID = pRspUserLogin->SessionID;
+//                    fprintf(stderr, "ctpTrade login ok m_maxOrderRef=%d, frontID=%d, sessionID=%d\n", m_maxOrderRef,
+//                            m_frontID, m_sessionID);
+                    m_loginPromise.set_value(0);
+                }
+                catch (std::future_error const &e) {
+                    spdlog::error("OnRspUserLogin Error");
+                }
+
+            } else if (m_isLogin == false) {
+                m_loginPromise.set_value(4);
+                fprintf(stderr, "trade login error : %d, %s\n", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+                spdlog::error("trade login error : {} , {}", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+
+            }
+        }
+
+        char OstTrader::getOrderSide( Types::OrderSide orderSide){
+            switch (orderSide)
+            {
+                case  Types::OrderSide::buy:
+                    return UT_D_Buy;
+                case  Types::OrderSide::sell:
+                    return UT_D_Sell;
+            }
+            return ',';
+        }
+
+        char OstTrader::getOrderPositionEffect( Types::PositionEffectType pet){
+            switch (pet)
+            {
+                case  Types::PositionEffectType::T_close:
+                    return UT_OF_CloseToday ;
+                case  Types::PositionEffectType::Y_close:
+                    return UT_OF_CloseYesterday ;
+                case  Types::PositionEffectType::open:
+                    return UT_OF_Open;
+            }
+            return ',';
+        }
+
+        void OstTrader::updateOrder_with(const CUTOrderField * info,  Types::OrderField *pOrder)
+        {
+
+            switch (info->OrderStatus)
+            {
+                case UT_OST_NoTradeQueueing:
+                    pOrder->orderStatus =  Types::OrderStatus::accept;
+                    break;
+                case UT_OST_AllTraded:
+                    pOrder->lastFilledVolume = info->VolumeTraded - pOrder->filledVolume;
+                    pOrder->filledVolume=  info->VolumeTraded;
+                    pOrder->lastFilledPrice =  info->LimitPrice;
+                    pOrder->orderStatus =  Types::OrderStatus::allTraded;
+                    break;
+
+                case UT_OST_PartTradedQueueing:
+                case UT_OST_PartTradedNotQueueing  :
+
+                    pOrder->lastFilledVolume = info->VolumeTraded - pOrder->filledVolume;
+                    pOrder->filledVolume=  info->VolumeTraded;
+                    pOrder->lastFilledPrice =  info->LimitPrice;
+                    pOrder->orderStatus =  Types::OrderStatus::partTraded;
+
+                    break;
+                case  UT_OST_Canceled   :
+                    pOrder->lastFilledVolume = info->VolumeTraded - pOrder->filledVolume;
+                    pOrder->filledVolume=  info->VolumeTraded;
+                    pOrder->lastFilledPrice =  info->LimitPrice;
+                    pOrder->orderStatus =  Types::OrderStatus::canceled;
+                    break;
+                default:
+
+                    pOrder->orderStatus =  Types::OrderStatus::unknown;
+                    break;
+            }
+        }
+
+
+
+        void OstTrader::updateAbtrgOrder_with(const CUTOrderField * info,  Types::ArbitrageOrderField *abtrgOrder)
+        {
+
+            switch (info->OrderStatus)
+            {
+                case UT_OST_NoTradeQueueing:
+                    abtrgOrder->orderStatus =  Types::OrderStatus::accept;
+                    break;
+                case  UT_OST_Canceled   :
+                    abtrgOrder->orderStatus =  Types::OrderStatus::canceled;
+                    break;
+                default:
+
+                    abtrgOrder->orderStatus =  Types::OrderStatus::unknown;
+                    break;
+            }
+        }
+
+        void OstTrader::updateAbtrgTrade_with(const CUTTradeField *pTrade,  Types::ArbitrageOrderField *abtrgOrder)
+        {
+            if(strcmp(pTrade->InstrumentID, abtrgOrder->instrumentIDs[0].data())==0){
+
+                abtrgOrder->lastFilledVolume[0] = pTrade->Volume ;
+                abtrgOrder->filledVolume[0] +=  pTrade->Volume;
+                abtrgOrder->lastFilledPrice[0] =  pTrade->Price;
+                abtrgOrder->orderStatus =  Types::OrderStatus::partTraded;
+                abtrgOrder->lastFilledVolume[1] = 0;
+
+            }else if(strcmp(pTrade->InstrumentID, abtrgOrder->instrumentIDs[1].data())==0){
+                abtrgOrder->lastFilledVolume[1] = pTrade->Volume  ;
+                abtrgOrder->filledVolume[1] +=  pTrade->Volume;
+                abtrgOrder->lastFilledPrice[1] =  pTrade->Price;
+                abtrgOrder->orderStatus =  Types::OrderStatus::partTraded;
+                abtrgOrder->lastFilledVolume[0] = 0;
+            }else {
+                fprintf(stderr, "%s,%s,%s\n", pTrade->InstrumentID, abtrgOrder->instrumentIDs[0].data(),  abtrgOrder->instrumentIDs[1].data());
+                assert(false);
+            }
+
+            if ( (abtrgOrder->filledVolume[0] == abtrgOrder->filledVolume[1]) && (abtrgOrder->filledVolume[0] == abtrgOrder->orderVolume)){
+                abtrgOrder->orderStatus =  Types::OrderStatus::allTraded;
+            }
+        }
+
+        void OstTrader::_OnRtnOrder(CUTOrderField *pOrder){
+            auto epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                auto orderid = pOrder->OrderRef;
+                auto order = m_orderList->getMemoryById(orderid);
+
+                if (order != nullptr) {
+                    assert(pOrder->OrderRef == order->tOrderID);
+                    strcpy(order->orderSysID.data(), pOrder->OrderSysID);
+                    updateOrder_with(pOrder, order);
+                    auto receiveOrder = m_receiveOrderList.getNewMemory();
+                    memcpy(receiveOrder, order, sizeof( Types::OrderField));
+                    receiveOrder->epoch_time = epoch_time;
+                    auto event = convertToEvent(receiveOrder, &m_eventDataList);
+                    //         spdlog::debug("{} ctpRequestID:{}, CtpOrderSysID:{}, CtpInsertTime:{}, LimitPrice={}, policyOrderID:{}, tradeOrderID:{}, ctpOrdeStatus:{},  orderStatus:{}, epoch_time={}",
+                    //                       __FUNCTION__, ctpOrder->RequestID , ctpOrder->OrderSysID ,ctpOrder->InsertTime, ctpOrder->LimitPrice,  receiveOrder->policyOrderID, receiveOrder->tradeOrderID,
+                    //                         ctpOrder->OrderStatus,  Types::orderStatusMap[receiveOrder->orderStatus].data(), receiveOrder->epoch_time);
+
+                    m_driver->callback_asyncEventData(event, receiveOrder->policyID);
+                    spdlog::info(
+                            "{} {} CtpOrderSysID:{}, CtpInsertTime:{}, LimitPrice={}, VolumeTraded={}, policyOrderID:{}, tradeOrderID:{}, ctpOrdeStatus:{},  "
+                            "orderStatus:{}, OrderRef={}, orderSysID={}, epoch_time={}",
+                            __FUNCTION__, pOrder->InstrumentID,  pOrder->OrderSysID,
+                            pOrder->InsertTime, pOrder->LimitPrice, pOrder->VolumeTraded,
+                            receiveOrder->pOrderID,
+                            receiveOrder->tOrderID, pOrder->OrderStatus,
+                             Types::orderStatusMap[receiveOrder->orderStatus].data(),
+                            pOrder->OrderRef,
+                            pOrder->OrderSysID, receiveOrder->epoch_time);
+                }
+        }
+
+        void OstTrader::_OnRtnAbtrgOrder(CUTOrderField *pOrder){
+            auto epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+            auto orderid = pOrder->OrderRef;
+            auto abtrgOrder = m_abtrgOrderList->getMemoryById(orderid);
+            if (abtrgOrder != nullptr) {
+                assert(pOrder->OrderRef == abtrgOrder->tOrderID);
+                strcpy(abtrgOrder->orderSysID.data(), pOrder->OrderSysID);
+                updateAbtrgOrder_with(pOrder, abtrgOrder);
+                auto receiveAbtrgOrder = m_receiveAbtrgOrderList.getNewMemory();
+                memcpy(receiveAbtrgOrder, abtrgOrder, sizeof( Types::ArbitrageOrderField));
+                receiveAbtrgOrder->epoch_time = epoch_time;
+                auto event = convertToAbtrgEvent(receiveAbtrgOrder, &m_eventDataList);
+                //         spdlog::debug("{} ctpRequestID:{}, CtpOrderSysID:{}, CtpInsertTime:{}, LimitPrice={}, policyOrderID:{}, tradeOrderID:{}, ctpOrdeStatus:{},  orderStatus:{}, epoch_time={}",
+                //                       __FUNCTION__, ctpOrder->RequestID , ctpOrder->OrderSysID ,ctpOrder->InsertTime, ctpOrder->LimitPrice,  receiveOrder->policyOrderID, receiveOrder->tradeOrderID,
+                //                         ctpOrder->OrderStatus,  Types::orderStatusMap[receiveOrder->orderStatus].data(), receiveOrder->epoch_time);
+
+                m_driver->callback_asyncEventData(event, receiveAbtrgOrder->policyID);
+                spdlog::info(
+                        "{} {}  CtpOrderSysID:{}, CtpInsertTime:{}, LimitPrice={}, VolumeTraded={}, policyOrderID:{}, tradeOrderID:{}, ctpOrdeStatus:{},  "
+                        "orderStatus:{}, OrderRef={}, orderSysID={}, epoch_time={}",
+                        __FUNCTION__, pOrder->InstrumentID,  pOrder->OrderSysID,
+                        pOrder->InsertTime, pOrder->LimitPrice, pOrder->VolumeTraded,
+                        receiveAbtrgOrder->pOrderID,
+                        receiveAbtrgOrder->tOrderID, pOrder->OrderStatus,
+                         Types::orderStatusMap[receiveAbtrgOrder->orderStatus].data(),
+                        pOrder->OrderRef,
+                        pOrder->OrderSysID, receiveAbtrgOrder->epoch_time);
+            }
+        }
+
+
+        void OstTrader::OnRtnOrder(CUTOrderField *pOrder)
+        {
+            if (pOrder->SessionID == m_sessionid && pOrder->FrontID == m_frontId && pOrder->OrderStatus != UT_OST_Unknown) {
+                //    fprintf(stderr, "OnRtnOrder instrument=%s, RequestID=%d, OrderRef=%s, OrderSysID=%s, OrderStatus=%c\n",ctpOrder->InstrumentID,
+                //            ctpOrder->RequestID, ctpOrder->OrderRef,ctpOrder->OrderSysID, ctpOrder->OrderStatus);
+
+                if (pOrder->OrderType == UT_ORDT_DeriveFromCombination) {
+                    this->_OnRtnAbtrgOrder(pOrder);
+                } else {
+                    this->_OnRtnOrder(pOrder);
+                }
+
+            }
+        }
+
+
+
+        void OstTrader::sendOrder( Types::OrderField const &input_orderField) {
+            int nRetCode = 0;
+            auto pOstOrder = m_OstOrderList.getNewMemory();
+
+
+            strcpy(pOstOrder->InvestorID, m_ctpConnection.username.c_str());
+            strcpy(pOstOrder->InstrumentID, input_orderField.instrumentID.data());
+            pOstOrder->OrderPriceType = UT_OPT_LimitPrice;
+            pOstOrder->Direction = getOrderSide(input_orderField.orderSide);
+            pOstOrder->OffsetFlag = getOrderPositionEffect(input_orderField.pet);
+            pOstOrder->HedgeFlag = UT_HF_Speculation;
+            pOstOrder->LimitPrice = round(input_orderField.orderPrice*10000)/10000.0;
+            pOstOrder->VolumeTotalOriginal = input_orderField.orderVolume;
+            pOstOrder->TimeCondition = UT_TC_GFD;
+            pOstOrder->VolumeCondition = UT_VC_AV;
+            if(input_orderField.orderTimeType ==  Types::OrderTimeType::IOC){
+                pOstOrder->TimeCondition = UT_TC_IOC;
+            }
+
+            pOstOrder->ContingentCondition = UT_CC_Immediately;
+
+            pOstOrder->MinVolume = 0;
+            pOstOrder->StopPrice = 0;
+
+            m_sendOrderLock.lock();
+            int assignId=0;
+            auto orderField = m_orderList->getNewMemory(assignId);
+            memcpy(orderField, &input_orderField, sizeof( Types::OrderField ));
+            pOstOrder->OrderRef = assignId;
+            orderField->tOrderID = assignId;
+            //    fprintf(stderr,"sendOrder : instrument=%s, requestID=%d orderRef=%s\n", orderField->instrumentID.data(), orderField->tOrderID, pCtpOrder->OrderRef);
+            nRetCode = m_pTradeApi->ReqOrderInsert(pOstOrder, m_requestID++);
+            m_sendOrderLock.unlock();
+            if (nRetCode != 0) {
+                orderField->orderStatus =  Types::OrderStatus::failed;
+                auto event = convertToEvent(orderField, &m_eventDataList);
+                m_driver->callback_asyncEventData(event, orderField->policyID);
+                spdlog::error(
+                        "send order failed={}, instrumentId={}, tradeOrderID={}, policyOrderID={}, orderPrice={}, assignId={}",
+                        nRetCode, orderField->instrumentID.data(),
+                        orderField->tOrderID, orderField->pOrderID, orderField->orderPrice, orderField->tOrderID);
+                return;
+            }
+        }
+
+        void OstTrader::sendAbtrgOrder( Types::ArbitrageOrderField const &inputAbtragOrderField) {
+            int nRetCode = 0;
+            auto pOstOrder = m_OstOrderList.getNewMemory();
+
+            strcpy(pOstOrder->InvestorID, m_ctpConnection.username.c_str());
+            sprintf(pOstOrder->InstrumentID, "%s %s&%s", inputAbtragOrderField.orderPrex.data(),
+                   inputAbtragOrderField.instrumentIDs[0].data(), inputAbtragOrderField.instrumentIDs[1].data());
+            pOstOrder->OrderPriceType = UT_OPT_LimitPrice;
+            pOstOrder->Direction = getOrderSide(inputAbtragOrderField.orderSides[0]);
+            pOstOrder->OffsetFlag = getOrderPositionEffect(inputAbtragOrderField.pets[0]);
+            pOstOrder->HedgeFlag = UT_HF_Speculation;
+            pOstOrder->LimitPrice = round(inputAbtragOrderField.orderPrice*10000)/10000.0;
+            pOstOrder->VolumeTotalOriginal = inputAbtragOrderField.orderVolume;
+            pOstOrder->TimeCondition = UT_TC_GFD;
+            pOstOrder->VolumeCondition = UT_VC_AV;
+            if(inputAbtragOrderField.orderTimeType ==  Types::OrderTimeType::IOC){
+                pOstOrder->TimeCondition = UT_TC_IOC;
+            }
+
+            pOstOrder->ContingentCondition = UT_CC_Immediately;
+
+            pOstOrder->MinVolume = 0;
+            pOstOrder->StopPrice = 0;
+
+            m_sendOrderLock.lock();
+            int assignId=0;
+            auto abtrgOrderField = m_abtrgOrderList->getNewMemory(assignId);
+            memcpy(abtrgOrderField, &inputAbtragOrderField, sizeof( Types::ArbitrageOrderField ));
+            pOstOrder->OrderRef = assignId;
+            abtrgOrderField->tOrderID = assignId;
+            //     fprintf(stderr,"sendAbtrgOrder : instrument=%s, requestID=%d orderRef=%s\n", pCtpOrder->InstrumentID, abtrgOrderField->tOrderID, pCtpOrder->OrderRef);
+            nRetCode = m_pTradeApi->ReqOrderInsert(pOstOrder, 0);
+            m_sendOrderLock.unlock();
+            if (nRetCode != 0) {
+                abtrgOrderField->orderStatus =  Types::OrderStatus::failed;
+                auto event = convertToAbtrgEvent(abtrgOrderField, &m_eventDataList);
+                m_driver->callback_asyncEventData(event, abtrgOrderField->policyID);
+                spdlog::error(
+                        "send order failed={}, instrumentId={}, instrumentId={}, tradeOrderID={}, policyOrderID={}, orderPrice={}, assignId={}",
+                        nRetCode, abtrgOrderField->instrumentIDs[0].data(), abtrgOrderField->instrumentIDs[1].data(),
+                        abtrgOrderField->tOrderID, abtrgOrderField->pOrderID, abtrgOrderField->orderPrice, abtrgOrderField->tOrderID);
+                return;
+            }
+        }
+
+        bool OstTrader::cancelOrder( Types::OrderField const & inputOrder, int64_t& epoch_time) {
+            auto order = m_orderList->getMemoryById(inputOrder.tOrderID);
+            if (order != nullptr) {
+                int assignID;
+                auto field = m_OstOrderActionList.getNewMemory(assignID);
+                field->FrontID= m_frontId;
+                field->SessionID = m_sessionid;
+                field->OrderRef= atoi(order->orderRef.data());
+
+                epoch_time= std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                int ret = m_pTradeApi->ReqOrderAction(field, 0);
+                return ret;
+                //                    spdlog::debug(
+                //                            "cancelOrder : frontid= {}, sessionid={}, OrderSysId={}, iRuquest={},  orderRef={}, ret={}, traderOrderID={}, policyOrderID={}",
+                //                            field->FrontID, field->SessionID, field->OrderSysID, field->RequestID, field->OrderRef,
+                //                            ret, inputOrder.tradeOrderID, inputOrder.policyOrderID);
+            }
+        }
+
+        bool OstTrader::cancelAbtrgOrder( Types::ArbitrageOrderField const & inputAbtrgOrder, int64_t& epoch_time) {
+            auto abtrgOrder = m_abtrgOrderList->getMemoryById(inputAbtrgOrder.tOrderID);
+            if (abtrgOrder != nullptr) {
+                int assignID;
+                auto field = m_OstOrderActionList.getNewMemory(assignID);
+                field->FrontID= m_frontId;
+                field->SessionID = m_sessionid;
+                field->OrderRef= atoi(abtrgOrder->orderRef.data());
+
+                epoch_time= std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                int ret = m_pTradeApi->ReqOrderAction(field, 0);
+                return ret;
+            }
+        }
+
+        void OstTrader::OnRtnTrade(CUTTradeField *pTrade) {
+            auto epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
+                    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+            if (pTrade->TradeType == UT_ORDT_DeriveFromCombination) {
+                if (pTrade->SessionID == m_sessionid && pTrade->FrontID == m_frontId) {
+
+                    auto orderid = pTrade->OrderRef;
+                    auto abtrgOrder = m_abtrgOrderList->getMemoryById(orderid);
+                    if (abtrgOrder != nullptr) {
+
+                        updateAbtrgTrade_with(pTrade, abtrgOrder);
+                        auto receiveAbtrgOrder = m_receiveAbtrgOrderList.getNewMemory();
+                        memcpy(receiveAbtrgOrder, abtrgOrder, sizeof( Types::ArbitrageOrderField));
+                        receiveAbtrgOrder->epoch_time = epoch_time;
+                        auto event = convertToAbtrgEvent(receiveAbtrgOrder, &m_eventDataList);
+                        //         spdlog::debug("{} ctpRequestID:{}, CtpOrderSysID:{}, CtpInsertTime:{}, LimitPrice={}, policyOrderID:{}, tradeOrderID:{}, ctpOrdeStatus:{},  orderStatus:{}, epoch_time={}",
+                        //                       __FUNCTION__, ctpOrder->RequestID , ctpOrder->OrderSysID ,ctpOrder->InsertTime, ctpOrder->LimitPrice,  receiveOrder->policyOrderID, receiveOrder->tradeOrderID,
+                        //                         ctpOrder->OrderStatus,  Types::orderStatusMap[receiveOrder->orderStatus].data(), receiveOrder->epoch_time);
+
+                        m_driver->callback_asyncEventData(event, receiveAbtrgOrder->policyID);
+                        spdlog::info(
+                                "{} {}  , CtpOrderSysID:{}, TradeTime:{}, Price={}, Volume={}, policyOrderID:{}, tradeOrderID:{}, "
+                                "orderStatus:{}, OrderRef={}, orderSysID={}, epoch_time={}",
+                                __FUNCTION__, pTrade->InstrumentID, pTrade->OrderSysID, pTrade->TradeTime,
+                                pTrade->Price, pTrade->Volume, receiveAbtrgOrder->pOrderID,
+                                receiveAbtrgOrder->tOrderID,
+                                 Types::orderStatusMap[receiveAbtrgOrder->orderStatus].data(),
+                                pTrade->OrderRef,
+                                pTrade->OrderSysID, receiveAbtrgOrder->epoch_time);
+                    }
+                }
+            }
+        }
+        void OstTrader::OnRspQryInvestorPosition(CUTInvestorPositionField *pInvestorPosition, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast){
+            if (pInvestorPosition != nullptr && (pRspInfo == nullptr || pRspInfo->ErrorID == 0)) {
+
+//                fprintf(stderr,"instrument=%s, direction=%c, Position=%d, TodayPosition=%d\n", pInvestorPosition->InstrumentID, pInvestorPosition->PosiDirection,
+//                        pInvestorPosition->Position, pInvestorPosition->TodayPosition);
+                if (strcmp(m_queryPosition.instrumentid.data(), pInvestorPosition->InstrumentID) != 0) {
+                    spdlog::error(
+                            "OnRspQryInvestorPosition  no instrument in m_initPositionMap: instrument={}, errorID={}, errorMsg={}",
+                            pInvestorPosition->InstrumentID, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+                    m_queryPositionPromise.set_value(-1);
+                }
+                if (pInvestorPosition->PosiDirection == UT_PD_Long) {
+                    m_queryPosition.tradePosition.T_buyHold =  pInvestorPosition->Position - pInvestorPosition->YdPosition;
+                    m_queryPosition.tradePosition.Y_buyHold = pInvestorPosition->YdPosition ;
+
+                } else if (pInvestorPosition->PosiDirection == UT_PD_Short) {
+                    m_queryPosition.tradePosition.T_sellHold =  pInvestorPosition->Position - pInvestorPosition->YdPosition;
+                    m_queryPosition.tradePosition.Y_sellHold = pInvestorPosition->YdPosition;
+                }
+                if (bIsLast == true) {
+
+                    m_queryPosition.tradePosition.filledPosition =
+                            m_queryPosition.tradePosition.Y_buyHold + m_queryPosition.tradePosition.T_buyHold  -
+                            m_queryPosition.tradePosition.T_sellHold - m_queryPosition.tradePosition.Y_sellHold;
+                }
+
+            } else if (pInvestorPosition != nullptr && pRspInfo != nullptr) {
+                spdlog::error("OnRspQryInvestorPosition : instrument={}, errorID={}, errorMsg={}",
+                              pInvestorPosition->InstrumentID, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+                m_queryPositionPromise.set_value(pRspInfo->ErrorID);
+            }
+
+            if (bIsLast == true) {
+
+                m_queryPositionPromise.set_value(0);
+            }
+        }
+
+
+        void OstTrader::onQuerySymbol( Types::QuerySymbol const &querySymbol) {
+            auto itrQS = m_onQuerySymbolMap.find(querySymbol.symbol->instrumentID);
+            if (itrQS == m_onQuerySymbolMap.end()) {
+                memset(&m_queryPosition, 0, sizeof(QueryPosition));
+                strcpy(m_queryPosition.instrumentid.data(), querySymbol.symbol->instrumentID.data());
+                if (0 != this->_queryPosition(m_queryPosition.instrumentid)) {
+                    assert(false);
+                    return;
+                }
+                Types::TradePosition tradePosition;
+                memcpy(&tradePosition, &m_queryPosition.tradePosition, sizeof(m_queryPosition.tradePosition));
+                char logSymbolPath[128];
+                memset(logSymbolPath, 0, sizeof(128));
+                sprintf(logSymbolPath, "./logs/position/%s.txt", querySymbol.symbol->instrumentID.data());
+
+
+                if (tradePosition.filledPosition != 0) {
+
+                    int net = atoi(Utils::GetLastValueFromFile(logSymbolPath, "filledPosition",
+                                                               querySymbol.symbol->instrumentID.data()).c_str());
+                    if (net != tradePosition.filledPosition) {
+                        fprintf(stderr, "instrument =%s, net=%d, filledPosition=%d\n",  querySymbol.symbol->instrumentID.data(),
+                                net, tradePosition.filledPosition);
+                        //   assert(false);
+                    }
+                    tradePosition.averagePrice = atof(Utils::GetLastValueFromFile(logSymbolPath, "averagePrice",
+                                                                                  querySymbol.symbol->instrumentID.data()).c_str());
+                }
+                tradePosition.profit = atof(
+                        Utils::GetLastValueFromFile(logSymbolPath, "profit", querySymbol.symbol->instrumentID.data()).c_str());
+
+                m_onQuerySymbolMap[m_queryPosition.instrumentid] = tradePosition;
+                itrQS = m_onQuerySymbolMap.find(querySymbol.symbol->instrumentID);
+            }
+
+
+             Types::OnQuerySymbol onQuerySymbol;
+            memcpy(&onQuerySymbol.tradePosition, &itrQS->second, sizeof(m_queryPosition.tradePosition));
+            onQuerySymbol.id = querySymbol.id;
+            onQuerySymbol.tradingDay = m_tradingDay;
+            //   onQuerySymbol.cancelOrderCounts = m_queryPosition.cancelOrderCounts;
+            strcpy(onQuerySymbol.instrument.data(), querySymbol.symbol->instrumentID.data());
+            m_driver->send(onQuerySymbol);
+
+//            if(0!= this->_queryOrder(m_queryPosition.instrumentid)){
+//                assert(false);
+//                return ;
+//            }
+
+        }
+        int OstTrader::_queryPosition( Types::Instrument_t queryInstrument) {
+
+            CUTQryInvestorPositionField qryPosition;
+            memset(&qryPosition, 0, sizeof(CUTQryInvestorPositionField));
+            strcpy(qryPosition.InstrumentID, queryInstrument.data());
+            strcpy(qryPosition.InvestorID, m_ctpConnection.username.c_str());
+
+            //         std::copy(std::begin(param.value), std::end(param.value), std::begin(symbol->tradePosition.instrument));
+            std::promise<int> positionPromise;
+            m_queryPositionPromise.swap(positionPromise);
+
+            int reqCount{0};
+            int retCode = -1;
+            while (reqCount < 3 && retCode != 0) {
+                retCode = m_pTradeApi->ReqQryInvestorPosition(&qryPosition, m_requestID++);
+                reqCount++;
+                sleep(1);
+            }
+
+
+            if (retCode != 0) {
+                spdlog::error("ReqQryInvestorPosition {} error retcode : {}", queryInstrument.data(), retCode);
+            }
+            auto positionFuture = m_queryPositionPromise.get_future();
+            auto status = positionFuture.wait_for(std::chrono::seconds(10));
+            if (status == std::future_status::deferred) {
+                spdlog::error("deferred");
+                return -1;
+            } else if (status == std::future_status::timeout) {
+                spdlog::error("query position {} timeout", queryInstrument.data());
+                return -1;
+            } else if (status == std::future_status::ready) {
+                auto ret = positionFuture.get();
+                if (ret != 0) {
+                    spdlog::error("query position  {} error ret : {}", queryInstrument.data(), ret);
+                    return -1;
+                }
+            }
+            return 0;
+        }
+
+         void OstTrader::OnErrRtnOrderAction(CUTOrderActionField *pOrderAction){
+
+            if (pOrderAction != nullptr) {
+                spdlog::info("OnErrRtnOrderAction : {},  OrderRef={}, OrderSysID={}, error {} {}", pOrderAction->InstrumentID, pOrderAction->OrderRef,
+                             pOrderAction->OrderSysID);
+            }
+        }
+
+        void OstTrader::OnRspOrderInsert(CUTInputOrderField *pInputOrder, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast){
+            if (pRspInfo->ErrorID != 0) {
+                fprintf(stderr, "OnRspOrderInsert : InstrumentID=%s,  OrderRef=%d, ErrorID=%d, ErrorMsg=%s\n",
+                              pInputOrder->InstrumentID,  pInputOrder->OrderRef, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+                spdlog::error("OnRspOrderInsert : InstrumentID={},  OrderRef={}, ErrorID={}, ErrorMsg={}",
+                              pInputOrder->InstrumentID,  pInputOrder->OrderRef, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+            }
+        }
+
+        void OstTrader::OnRspOrderAction(CUTInputOrderActionField *pInputOrderAction, CUTRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
+
+            if (pRspInfo->ErrorID != 0) {
+                spdlog::info("OnRspOrderAction : OrderRef={}, error {} {}", pInputOrderAction->OrderRef,
+                             pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+            }
+
+        };
+
+
+
+    }
+}
