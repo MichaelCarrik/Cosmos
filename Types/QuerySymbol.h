@@ -2,12 +2,12 @@
 // Created by zhangyw on 2/1/21.
 //
 
-#ifndef TRENDFOLLOW_QUERYSYMBOL_H
-#define TRENDFOLLOW_QUERYSYMBOL_H
+#ifndef Cosmos_QUERYSYMBOL_H
+#define Cosmos_QUERYSYMBOL_H
 
 #include "Symbol.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
 
         class QuerySymbol{
@@ -28,4 +28,4 @@ namespace TrendFollow{
     }
 }
 
-#endif //TRENDFOLLOW_QUERYSYMBOL_H
+#endif //Cosmos_QUERYSYMBOL_H

@@ -57,7 +57,7 @@ using std::map;
 #define MAX_SOCKET_CONNECT                    1024
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Market {
 #pragma pack(push, 1)
 

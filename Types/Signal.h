@@ -2,12 +2,12 @@
 // Created by zhangyw on 2/3/21.
 //
 
-#ifndef TRENDFOLLOW_SIGNAL_H
-#define TRENDFOLLOW_SIGNAL_H
+#ifndef Cosmos_SIGNAL_H
+#define Cosmos_SIGNAL_H
 #include "../Types/Type.h"
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
         struct Signal {
             double price;
@@ -27,4 +27,4 @@ namespace TrendFollow{
         };
     }
 }
-#endif //TRENDFOLLOW_SIGNAL_H
+#endif //Cosmos_SIGNAL_H

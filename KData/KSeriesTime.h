@@ -2,14 +2,14 @@
 // Created by zhangyw on 1/11/21.
 //
 
-#ifndef TRENDFOLLOW_KSERIESTIME_H
-#define TRENDFOLLOW_KSERIESTIME_H
+#ifndef Cosmos_KSERIESTIME_H
+#define Cosmos_KSERIESTIME_H
 
 #include "../Types/Type.h"
 #include "../Types/KPeriod.h"
 #include "../Utils/TradingHours.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace KData{
 
         struct KTime{
@@ -145,4 +145,4 @@ namespace TrendFollow{
     }
 }
 
-#endif //TRENDFOLLOW_KSERIESTIME_H
+#endif //Cosmos_KSERIESTIME_H

@@ -8,7 +8,7 @@
 
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Utils {
          std::map< Types::Product_t, TradingSession> TradingHours::m_productTradingSession;
          std::map< Types::Instrument_t , TradingSession> TradingHours::m_instrumentTradingSession;

@@ -4,7 +4,7 @@
 
 
 #include "EESNewTrader.h"
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
 
         int EESNewTrader::start(int & tradingday) {

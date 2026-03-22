@@ -7,7 +7,7 @@
 #include "Strangle.h"
 #include "../Types/Type.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Policy {
         class SellStrangle : public Strangle {
         private:

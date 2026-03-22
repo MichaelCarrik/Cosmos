@@ -19,7 +19,7 @@
 #include "../Utils/TradingHours.h"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Market {
 
 

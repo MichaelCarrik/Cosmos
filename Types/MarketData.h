@@ -9,7 +9,7 @@
 #include <string.h>
 #include "Type.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
         struct MarketData {
             int64_t epoch_time;

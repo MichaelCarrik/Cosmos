@@ -2,8 +2,8 @@
 // Created by zhangyingwei on 2021/12/29.
 //
 
-#ifndef TRENDFOLLOW_OSTTRADER_BAK
-#define TRENDFOLLOW_OSTTRADER_BAK
+#ifndef Cosmos_OSTTRADER_BAK
+#define Cosmos_OSTTRADER_BAK
 
 #include <future>
 #include "../Utils/MemoryList.h"
@@ -19,7 +19,7 @@
 #include "../Types/CtpTradeConnection.h"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         struct QueryPosition{
              Types::TradePosition tradePosition;
@@ -127,4 +127,4 @@ namespace TrendFollow {
     }
 }
 
-#endif //TRENDFOLLOW_OSTTRADER_BAK
+#endif //Cosmos_OSTTRADER_BAK

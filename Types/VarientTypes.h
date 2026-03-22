@@ -13,7 +13,7 @@
 
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
 
         enum class EngineState{pending, noTrading, hedging, FAK};

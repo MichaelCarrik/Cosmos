@@ -12,7 +12,7 @@
 
 #include "../Utils/Utils.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Market {
         MockMarket::MockMarket(decltype(m_driver) driver,
                                std::string &rawTickPath) :

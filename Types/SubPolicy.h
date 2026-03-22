@@ -7,7 +7,7 @@
 
 #include <string>
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types{
         struct SubscribeEngine{
             int policyid{-1};

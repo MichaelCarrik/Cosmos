@@ -23,7 +23,7 @@
 #include <filesystem>
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types{
 
         constexpr int MarketBuffSize = 90000;

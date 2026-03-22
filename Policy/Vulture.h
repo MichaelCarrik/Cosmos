@@ -2,14 +2,14 @@
 // Created by zhangyw on 2/14/21.
 //
 
-#ifndef TRENDFOLLOW_VULTURE_H
-#define TRENDFOLLOW_VULTURE_H
+#ifndef Cosmos_VULTURE_H
+#define Cosmos_VULTURE_H
 
 #include "LPolicy.h"
 #include <fstream>
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Policy {
         class Vulture : public LPolicy {
         private:
@@ -272,4 +272,4 @@ namespace TrendFollow {
         };
     }
 }
-#endif //TRENDFOLLOW_VULTURE_H
+#endif //Cosmos_VULTURE_H

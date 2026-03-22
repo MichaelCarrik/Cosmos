@@ -54,7 +54,7 @@ bool is_so_loaded(const std::string &so_name) {
 }
 
 
-void InitMySql(TrendFollow::Utils::CppMySQL3DB *mySql, std::string mysql_config) {
+void InitMySql(Cosmos::Utils::CppMySQL3DB *mySql, std::string mysql_config) {
     boost::property_tree::ptree pt;
     boost::property_tree::read_xml(mysql_config, pt);
     auto host = pt.get_child("mysql.host").get_value<std::string>();
@@ -98,27 +98,27 @@ int main() {
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%f] [%l] %v");
     spdlog::flush_every(std::chrono::seconds(5));
 
-    TrendFollow::Utils::TradingHours::loadConfig(config_tradinghours);
+    Cosmos::Utils::TradingHours::loadConfig(config_tradinghours);
 
     boost::property_tree::ptree pt;
     boost::property_tree::read_xml(config_path, pt);
-    TrendFollow::Driver::RealtimeDriver driver;
+    Cosmos::Driver::RealtimeDriver driver;
     driver.setPolicySize(22);
     //initial md
     fprintf(stderr, "init market begin\n");
     spdlog::info("initial md");
     auto md_config = pt.get_child("OptionTrading").get_child("md").get<std::string>("<xmlattr>.configfile");
     //    Market::Market< Market::MockMarket> market(&driver, md_config);
-    TrendFollow::Market::Market<TrendFollow::Market::CtpMarket, decltype(driver)> market(&driver, md_config);
+    Cosmos::Market::Market<Cosmos::Market::CtpMarket, decltype(driver)> market(&driver, md_config);
 
     auto trade_config = pt.get_child("OptionTrading").get_child("trade").get<std::string>("<xmlattr>.configfile");
     //    TradeBots::Trader::Trader<TradeBots::Trader::RemTraderSpi> trader(&driver, trade_config, symbolConfigMap.size());
-    TrendFollow::Trader::Trader<TrendFollow::Trader::CtpTrader, decltype(driver)> trader(&driver, trade_config);
+    Cosmos::Trader::Trader<Cosmos::Trader::CtpTrader, decltype(driver)> trader(&driver, trade_config);
     fprintf(stderr, "trade end\n");
     std::array<bool, 2> isDayArray{true}; //{false, true};
 
     std::string store_config = "mysql.xml";
-    TrendFollow::Utils::CppMySQL3DB *mySql = new TrendFollow::Utils::CppMySQL3DB();
+    Cosmos::Utils::CppMySQL3DB *mySql = new Cosmos::Utils::CppMySQL3DB();
     InitMySql(mySql, store_config);
 
     int tradingday = 0;
@@ -129,26 +129,26 @@ int main() {
     };
     spdlog::info("trader login successfully");
 
-    std::vector< TrendFollow::Types::InstrumentInfo>* tradeInsinfoVec{nullptr};
+    std::vector< Cosmos::Types::InstrumentInfo>* tradeInsinfoVec{nullptr};
     tradeInsinfoVec = trader.getInstrumentInfoVec();
 
     spdlog::info("initial policies");
     int policyID = 0;
     //initial policies
     spdlog::info("initial policies");
-    std::vector<TrendFollow::KBarEngine::KBarSaverEngine *> engines_vec;
-    TrendFollow::KBarEngine::KBarSaverEngine *saveEngine = nullptr;
+    std::vector<Cosmos::KBarEngine::KBarSaverEngine *> engines_vec;
+    Cosmos::KBarEngine::KBarSaverEngine *saveEngine = nullptr;
     for (auto policy_pt: boost::make_iterator_range(
-             pt.get_child("TrendFollow").get_child("Engines").equal_range("Engine"))) {
+             pt.get_child("Cosmos").get_child("Engines").equal_range("Engine"))) {
         auto engineName = policy_pt.second.get<std::string>("<xmlattr>.name");
         if (engineName.find("kbarsaver") != std::string::npos) {
             spdlog::info("initial policy {}", engineName.c_str());
-            saveEngine = new TrendFollow::KBarEngine::KBarSaverEngine(&driver, engineName, mySql, tradeInsinfoVec, tradingday);
+            saveEngine = new Cosmos::KBarEngine::KBarSaverEngine(&driver, engineName, mySql, tradeInsinfoVec, tradingday);
             //TradeBots::Engine::IPolicyFactory::CreateIPolicy();
             saveEngine->m_policyID = policyID++;
             engines_vec.emplace_back(saveEngine);
             for (auto param_pt: boost::make_iterator_range(policy_pt.second.get_child("params").equal_range("param"))) {
-                TrendFollow::Types::Param param;
+                Cosmos::Types::Param param;
                 param.name = param_pt.second.get<std::string>("<xmlattr>.name");
                 param.value = param_pt.second.get<std::string>("<xmlattr>.value");
                 saveEngine->onParams(param);
@@ -158,7 +158,7 @@ int main() {
 
 
     for (auto iengine: engines_vec) {
-        auto logStruct = new TrendFollow::Types::LogStruct();
+        auto logStruct = new Cosmos::Types::LogStruct();
         std::string record = "record";
         logStruct->recordLog = initLogs(record, iengine->m_engineName, record);
 
@@ -191,7 +191,7 @@ int main() {
             //     for (auto &kse: *kv.second) {
             //         fprintf(stderr, "crontab today_minutes=%d, instrumentid=%s, index=%d, peroid=%d\n", today_minutes,
             //                 kse.second->m_instrument.data(), kse.second->m_seriesIndex,
-            //                 TrendFollow::Types::KPeroidToIntervalMap[kse.first]);
+            //                 Cosmos::Types::KPeroidToIntervalMap[kse.first]);
             //         if (kse.second->m_kseries.size() > kse.second->m_seriesIndex) {
             //             saveEngine->saveKline(kse.second, kse.second->m_seriesIndex, kse.first);
             //         }

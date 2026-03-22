@@ -2,13 +2,13 @@
 // Created by zhangyw on 2/2/21.
 //
 
-#ifndef TRENDFOLLOW_LPOLICY_H
-#define TRENDFOLLOW_LPOLICY_H
+#ifndef Cosmos_LPOLICY_H
+#define Cosmos_LPOLICY_H
 
 #include "../Types/Symbol.h"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Policy {
 
 
@@ -295,4 +295,4 @@ namespace TrendFollow {
 }
 
 
-#endif //TRENDFOLLOW_LPOLICY_H
+#endif //Cosmos_LPOLICY_H

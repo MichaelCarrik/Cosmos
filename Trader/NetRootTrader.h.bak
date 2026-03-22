@@ -2,8 +2,8 @@
 // Created by zhangyw on 3/8/21.
 //
 
-#ifndef TRENDFOLLOW_NETROOTTRADE_H
-#define TRENDFOLLOW_NETROOTTRADE_H
+#ifndef Cosmos_NETROOTTRADE_H
+#define Cosmos_NETROOTTRADE_H
 
 #include <RootNetClientApi.h>
 #include "../Types/OrderField.h"
@@ -12,7 +12,7 @@
 #include "OrderCallBackHandler.h"
 #include <string>
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         struct NetRootConnect{
             std::string accountID{""};
@@ -56,4 +56,4 @@ namespace TrendFollow {
 }
 
 
-#endif //TRENDFOLLOW_NETROOTTRADE_H
+#endif //Cosmos_NETROOTTRADE_H

@@ -8,7 +8,7 @@
 #define HFT_MM_EWMAPRICEINDICATOR_H
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Utils {
         class EWMAPriceIndicator{
         private:

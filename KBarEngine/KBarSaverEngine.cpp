@@ -5,10 +5,15 @@
 #include "../Utils/Utils.h"
 #include "KBarSaverEngine.h"
 
+#include <stdlib.h>
 
-namespace TrendFollow {
+
+namespace Cosmos {
     namespace KBarEngine {
         void KBarSaverEngine::onStart() {
+
+            m_kDataManager = new KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice);
+
             for(auto& insItr :  m_instrumentInfoMap){
                   if (insItr.second.productIDClass == Types::ProductClass::future) {
                       Types::SubScribeQuote subScribeQuote;
@@ -26,7 +31,7 @@ namespace TrendFollow {
                         strcpy(underlyInsInfo.instrumentID.data(), insItr.second.underly.data());
                         underlyInsInfo.productIDClass =  Types::ProductClass::future;
                         m_instrumentInfoMap[insItr.second.underly] = underlyInsInfo;
-                        TrendFollow::Types::SubScribeQuote subScribeUnderly;
+                        Cosmos::Types::SubScribeQuote subScribeUnderly;
                         memcpy(&subScribeUnderly.instrumentID, &insItr.second.underly, sizeof(Types::Instrument_t));
                         subScribeUnderly.policyID = m_policyID;
                         m_driver->subscribeQuote(subScribeUnderly);
@@ -116,8 +121,12 @@ namespace TrendFollow {
 
         void KBarSaverEngine::onParams( Types::Param const &param) {
             fprintf(stderr, "[%s] OnSetParam, %s=%s\n", m_engineName.c_str(), param.name.c_str(), param.value.c_str());
-            if(strcmp(param.name.c_str(), "ctpQueryConfig") ==0){
-              //  m_ctpTradeConfig = param.value;
+            if(strcmp(param.name.c_str(), "isUseUnderlyPrice") ==0){
+
+                m_isUseUnderlyPrice = atof(param.value.c_str());
+            }else if(strcmp(param.name.c_str(), "isUseUnderlyPrice") ==0){
+                //  m_ctpTradeConfig = param.value;
+                m_isUseUnderlyPrice = atof(param.value.c_str());
             }
         }
         void KBarSaverEngine::onEventData(Types::EventData const &eventData) {

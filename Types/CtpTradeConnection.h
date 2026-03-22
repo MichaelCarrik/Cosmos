@@ -2,10 +2,10 @@
 // Created by zhangyw on 3/5/21.
 //
 
-#ifndef TRENDFOLLOW_CTPTRADECONNECTION_H
-#define TRENDFOLLOW_CTPTRADECONNECTION_H
+#ifndef Cosmos_CTPTRADECONNECTION_H
+#define Cosmos_CTPTRADECONNECTION_H
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
         struct CtpTradeConnection{
             std::string username;
@@ -20,4 +20,4 @@ namespace TrendFollow{
     }
 }
 
-#endif //TRENDFOLLOW_CTPTRADECONNECTION_H
+#endif //Cosmos_CTPTRADECONNECTION_H

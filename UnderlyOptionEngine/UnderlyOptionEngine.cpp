@@ -12,7 +12,7 @@
 #include "../Policy/Calendar.h"
 #include "../Policy/SellStrangleV2.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace UnderlyOptionEngine {
         void UnderlyOptionEngine::onStart() {
             if(m_isDay == false && ( (m_underlyInsMap.nearInstrument[0] == 'I' && m_underlyInsMap.nearInstrument[1] == 'F')

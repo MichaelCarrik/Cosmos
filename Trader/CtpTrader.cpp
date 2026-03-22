@@ -6,7 +6,7 @@
 #include "CtpTrader.h"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
 
         void CtpTrader::OnFrontConnected() {

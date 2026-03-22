@@ -22,7 +22,7 @@
 #include "../Driver/RealtimeDriver.h"
 #include "UpdateGreeks.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace KData {
         class KDataManager {
         public:
@@ -32,6 +32,7 @@ namespace TrendFollow {
             int m_tradingday{0};
             bool m_isUseUnderlyPrice{true};
             bool m_isDay{true};
+            bool m_isGetHistory{false};
             UpdateGreeks *m_updateGreeks{nullptr};
 
             KDataManager(int tradingDay, bool isDay, bool isUseUnderlyPrice) : m_tradingday(tradingDay),

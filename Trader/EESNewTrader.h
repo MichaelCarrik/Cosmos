@@ -19,7 +19,7 @@
 #include "../Types/QuerySymbol.h"
 #include "../Driver/RealtimeDriver.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         struct EESNewTradeConnection {
             std::string username;

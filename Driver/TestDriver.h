@@ -2,8 +2,8 @@
 // Created by zhangyw on 2/5/21.
 //
 
-#ifndef TRENDFOLLOW_TESTDRIVER_H
-#define TRENDFOLLOW_TESTDRIVER_H
+#ifndef Cosmos_TESTDRIVER_H
+#define Cosmos_TESTDRIVER_H
 
 #include "../Types/Type.h"
 #include "../Types/VarientTypes.h"
@@ -17,7 +17,7 @@
 //#define TESTMODEL
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Driver {
 
         class TestDriver {
@@ -172,4 +172,4 @@ namespace TrendFollow {
     }
 }
 
-#endif //TRENDFOLLOW_TESTDRIVER_H
+#endif //Cosmos_TESTDRIVER_H

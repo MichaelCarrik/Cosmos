@@ -12,7 +12,7 @@
 
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         class MockTrader {
             int m_tradingDay{0};

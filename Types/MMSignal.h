@@ -2,12 +2,12 @@
 // Created by zhangyingwei on 2022/1/18.
 //
 
-#ifndef TRENDFOLLOW_MMSIGNAL_H
-#define TRENDFOLLOW_MMSIGNAL_H
+#ifndef Cosmos_MMSIGNAL_H
+#define Cosmos_MMSIGNAL_H
 
 #include "Signal.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
         struct MMSignal {
             int abtrgId{-1};
@@ -18,4 +18,4 @@ namespace TrendFollow{
     }
 }
 
-#endif //TRENDFOLLOW_MMSIGNAL_H
+#endif //Cosmos_MMSIGNAL_H

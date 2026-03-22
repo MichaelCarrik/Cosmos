@@ -4,7 +4,7 @@
 
 #include "EESMarket.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Market {
         int EESMarket::start() {
             boost::property_tree::ptree pt;

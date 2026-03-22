@@ -33,7 +33,7 @@
 #include "mysql/mysql.h"
 #include "../Types/Type.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Utils{
         typedef unsigned int u_int;
         typedef unsigned long u_long;

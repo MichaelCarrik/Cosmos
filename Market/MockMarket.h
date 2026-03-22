@@ -24,7 +24,7 @@
 #include "set"
 #include "../KData/KDataManager.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Market {
         class MockMarket {
 

@@ -2,9 +2,9 @@
 // Created by zhangyw on 1/19/21.
 //
 
-#ifndef TRENDFOLLOW_KPERIOD_H
-#define TRENDFOLLOW_KPERIOD_H
-namespace TrendFollow{
+#ifndef Cosmos_KPERIOD_H
+#define Cosmos_KPERIOD_H
+namespace Cosmos{
     namespace Types {
         enum class KPeriod {
             Min1,
@@ -78,4 +78,4 @@ namespace TrendFollow{
     }
 }
 
-#endif //TRENDFOLLOW_KPERIOD_H
+#endif //Cosmos_KPERIOD_H

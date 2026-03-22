@@ -15,7 +15,7 @@
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/range/iterator_range_core.hpp>
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Utils{
 
         static const int DayBegin = 8*3600;

@@ -2,10 +2,12 @@
 // Created by zhangyw on 1/10/21.
 //
 
-#ifndef TRENDFOLLOW_UTILS_H
-#define TRENDFOLLOW_UTILS_H
+#ifndef Cosmos_UTILS_H
+#define Cosmos_UTILS_H
 
 #include <fstream>
+#include <stdlib.h>
+
 #include "../Types/Type.h"
 #include "../Types/MarketData.h"
 #include "../Types/InstrumentInfo.h"
@@ -13,7 +15,7 @@
 #include "../Types/ArbitrageOrderField.h"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Utils {
         static Types::ExchangeType getExchangeType(const char *inputExchange) {
             if (strcmp(inputExchange, "CFFEX") == 0) {
@@ -104,15 +106,15 @@ namespace TrendFollow {
             if (instrument[5] == 'C' or instrument[5] == 'P') {
                 std::copy(std::begin(instrument), std::begin(instrument) + 5, std::begin(underly));
                 optionType = instrument[5];
-                char strickStr[20]{""};
+                Types::Instrument_t strickStr{""};
                 std::copy(std::begin(instrument) + 6, std::end(instrument), std::begin(strickStr));
-                strickPrice = atof(strickStr);
+                strickPrice = atof(strickStr.data());
             } else {
                 std::copy(std::begin(instrument), std::begin(instrument) + 6, std::begin(underly));
                 optionType = instrument[6];
-                char strickStr[20]{""};
+                Types::Instrument_t strickStr{""};
                 std::copy(std::begin(instrument) + 7, std::end(instrument), std::begin(strickStr));
-                strickPrice = atof(strickStr);
+                strickPrice = atof(strickStr.data());
                 Types::Product_t productId{""};
                 InstrumentToProduct(instrument, productId);
                 if (strcmp(productId.data(), "IO") == 0) {
@@ -416,4 +418,4 @@ namespace TrendFollow {
 }
 
 
-#endif //TRENDFOLLOW_UTILS_H
+#endif //Cosmos_UTILS_H

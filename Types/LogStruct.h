@@ -2,11 +2,11 @@
 // Created by zhangyw on 2/6/21.
 //
 
-#ifndef TRENDFOLLOW_LOGSTRUCT_H
-#define TRENDFOLLOW_LOGSTRUCT_H
+#ifndef Cosmos_LOGSTRUCT_H
+#define Cosmos_LOGSTRUCT_H
 #include "Type.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Types {
         struct LogStruct{
             std::shared_ptr<spdlog::logger> recordLog;
@@ -16,4 +16,4 @@ namespace TrendFollow {
     }
 }
 
-#endif //TRENDFOLLOW_LOGSTRUCT_H
+#endif //Cosmos_LOGSTRUCT_H

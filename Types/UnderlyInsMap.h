@@ -9,7 +9,7 @@
 #include <map>
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Types {
         struct RiskOrderControl{
             bool callBuy{false};

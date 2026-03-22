@@ -17,7 +17,7 @@
 #include <algorithm>
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace KBarSaverEngine {
         struct SaveK {
              Types::Instrument_t instrument{""};
@@ -100,7 +100,7 @@ namespace TrendFollow {
                         strcpy(underlyInsInfo.instrumentID.data(), ins.underly.data());
                         underlyInsInfo.productIDClass =  Types::ProductClass::future;
                         m_instrumentInfoMap[ins.underly] = underlyInsInfo;
-                        TrendFollow::Types::SubScribeQuote subScribeUnderly;
+                        Cosmos::Types::SubScribeQuote subScribeUnderly;
                         memcpy(&subScribeUnderly.instrumentID, &ins.underly, sizeof(Types::Instrument_t));
                         subScribeUnderly.policyID = m_policyID;
                         m_driver->subscribeQuote(subScribeUnderly);
@@ -132,7 +132,6 @@ namespace TrendFollow {
                         assert(false);
                     }
                     initKSeries(m_tradingDay, m_isDay, itrInsInfo->second);
-
                 }
             };
 
@@ -153,10 +152,10 @@ namespace TrendFollow {
                     auto pMD = (const Types::MarketData *) eventData.point;
                     // if (pMD->instrumentID[4]!='5' ) {
                     //     return;
-                    // }
+                    // // }
                     // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, epoch_time=%ld \n",
                     //     pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->epoch_time);
-                    for (auto period: Types::m_kperoidVec) {
+                    for (auto period : Types::m_kperoidVec) {
                         m_kDataManager->KMAddTick(pMD, period);
                     }
                     // if (strcmp(pMD->instrumentID.data(),"IM2606") == 0 ) {
@@ -182,7 +181,7 @@ namespace TrendFollow {
                 }
             }
 
-             void _saveFutureKline(KData::KSeries *series, int saveIndex, Types::KPeriod period) {
+            void _saveFutureKline(KData::KSeries *series, int saveIndex, Types::KPeriod period) {
                 auto kline = series->m_KDataVecs[saveIndex];
                 if (strcmp(kline->m_instrument.data(), "") == 0) {
                     return;
@@ -194,10 +193,10 @@ namespace TrendFollow {
                 saveK.period = period;
 
 
-                if (period == TrendFollow::Types::KPeriod::D1 && m_isDay == true) {
+                if (period == Cosmos::Types::KPeriod::D1 && m_isDay == true) {
                     sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f",
                             kline->m_instrument.data(), kline->m_tradingday,
-                            TrendFollow::Types::KPeroidToIntervalMap[period],
+                            Cosmos::Types::KPeroidToIntervalMap[period],
                             kline->m_updateTimeBegin.data(),
                             kline->m_updateTimeEnd.data(),
                             kline->m_productID.data(), kline->m_open,
@@ -205,10 +204,10 @@ namespace TrendFollow {
                             kline->m_close, (double) kline->m_volume, kline->m_amount, kline->m_oi,
                             kline->m_upperLimit, kline->m_lowerLimit, kline->m_settlement);
                     m_futureDayQueue.emplace_back(saveK);
-                } else if (period == TrendFollow::Types::KPeriod::Min1 and strcmp(saveK.instrument.data(), "") != 0) {
+                } else if (period == Cosmos::Types::KPeriod::Min1 and strcmp(saveK.instrument.data(), "") != 0) {
                     sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d",
                             kline->m_instrument.data(), kline->m_tradingday,
-                            TrendFollow::Types::KPeroidToIntervalMap[period],
+                            Cosmos::Types::KPeroidToIntervalMap[period],
                             kline->m_updateTimeBegin.data(),
                             kline->m_updateTimeEnd.data(),
                             kline->m_productID.data(), kline->m_open,
@@ -216,13 +215,13 @@ namespace TrendFollow {
                             kline->m_close, (double) kline->m_volume, kline->m_amount, kline->m_oi,
                             kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume);
                     m_futureOneMinuteQueue.emplace_back(saveK);
-                } else if (period == TrendFollow::Types::KPeriod::Min5 ||
-                           period == TrendFollow::Types::KPeriod::Min15 ||
-                           period == TrendFollow::Types::KPeriod::Min30 ||
-                           period == TrendFollow::Types::KPeriod::H1) {
+                } else if (period == Cosmos::Types::KPeriod::Min5 ||
+                           period == Cosmos::Types::KPeriod::Min15 ||
+                           period == Cosmos::Types::KPeriod::Min30 ||
+                           period == Cosmos::Types::KPeriod::H1) {
                     sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d",
                             kline->m_instrument.data(), kline->m_tradingday,
-                            TrendFollow::Types::KPeroidToIntervalMap[period],
+                            Cosmos::Types::KPeroidToIntervalMap[period],
                             kline->m_updateTimeBegin.data(),
                             kline->m_updateTimeEnd.data(),
                             kline->m_productID.data(), kline->m_open,
@@ -236,7 +235,7 @@ namespace TrendFollow {
             };
 
 
-           void saveOptionKline(KData::KSeries *optionSeries, Types::KPeriod period) {
+            void saveOptionKline(KData::KSeries *optionSeries, Types::KPeriod period) {
                if (optionSeries->m_KDataVecs.size() > optionSeries->m_seriesIndex) {
                    auto optionKData = optionSeries->m_KDataVecs[optionSeries->m_KDataVecs.size() - 1];
                    if (optionKData->m_tradingday != 0 &&  optionSeries->m_underlySeries->m_lastPMD != nullptr) {
@@ -306,6 +305,9 @@ namespace TrendFollow {
             };
 
             void _dumpKline(std::vector<SaveK> &klineQueue, std::string &&name, std::string &fileName) {
+                if (klineQueue.size()==0) {
+                    return;
+                }
                 char savePath[256]{""};
                 std::ofstream outDayfile;
                 sprintf(savePath, "%s/%s_%s.txt", m_savePath.c_str(), name.c_str(), fileName.c_str());

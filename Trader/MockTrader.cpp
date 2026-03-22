@@ -4,7 +4,7 @@
 
 #include "MockTrader.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
 
         int MockTrader::start(int tradingday){

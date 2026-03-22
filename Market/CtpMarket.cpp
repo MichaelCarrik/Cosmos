@@ -9,7 +9,7 @@
 #include <../Utils/Utils.h>
 #include "iostream"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Market{
         int CtpMarket::start(std::vector<Types::MarketData *> const& initMarketDataVector){
             boost::property_tree::ptree pt;

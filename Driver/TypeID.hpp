@@ -13,7 +13,7 @@
 #include <vector>
 #include <functional>
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Driver {
 
         template<typename T>

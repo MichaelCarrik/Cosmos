@@ -11,7 +11,7 @@
 #include "cstring"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Utils {
         template<typename T , std::size_t _resize_numb>
         class MemoryList {

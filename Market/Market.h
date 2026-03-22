@@ -11,7 +11,7 @@
 #include "../KData/KDataManager.h"
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Market{
         template <class  T, class Driver>
         class Market {

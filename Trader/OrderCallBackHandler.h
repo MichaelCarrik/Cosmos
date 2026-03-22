@@ -5,7 +5,7 @@
 #include "RootNetMarketData.h"
 #include <string>
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         class OrderCallBackHandler : public RootNetTradeSpi, public RootNetMarketDataSpi
         {

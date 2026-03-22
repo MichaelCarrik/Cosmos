@@ -13,7 +13,7 @@
 #include "Type.h"
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
 
         struct QryRspTrade{

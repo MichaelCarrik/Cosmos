@@ -2,11 +2,11 @@
 // Created by Zhangyingwei on 2022/7/25.
 //
 
-#ifndef TRENDFOLLOW_ARBITRAGEMARKET_H
-#define TRENDFOLLOW_ARBITRAGEMARKET_H
+#ifndef Cosmos_ARBITRAGEMARKET_H
+#define Cosmos_ARBITRAGEMARKET_H
 #include "../Utils//EWMAPriceIndicator.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
         struct PairsMarketData {
             double mixBidPrice{0.0};
@@ -73,4 +73,4 @@ namespace TrendFollow{
         };
     }
 }
-#endif //TRENDFOLLOW_ARBITRAGEMARKET_H
+#endif //Cosmos_ARBITRAGEMARKET_H

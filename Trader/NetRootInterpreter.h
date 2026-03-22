@@ -2,8 +2,8 @@
 // Created by zhangyw on 3/8/21.
 //
 
-#ifndef TRENDFOLLOW_NETROOTINTERPRETER_H
-#define TRENDFOLLOW_NETROOTINTERPRETER_H
+#ifndef Cosmos_NETROOTINTERPRETER_H
+#define Cosmos_NETROOTINTERPRETER_H
 
 #include <RootNetClientApi.h>
 #include "Config.h"
@@ -11,7 +11,7 @@
 
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         struct NetRootConnect{
             std::string accountID{""};
@@ -344,4 +344,4 @@ namespace TrendFollow {
 }
 
 
-#endif //TRENDFOLLOW_NETROOTINTERPRETER_H
+#endif //Cosmos_NETROOTINTERPRETER_H

@@ -5,7 +5,7 @@
 #include "OstTrader.h.bak"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         int OstTrader::start(int &tradingday) {
             boost::property_tree::ptree pt;

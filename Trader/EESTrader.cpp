@@ -4,7 +4,7 @@
 
 #include "EESTrader.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         int EESTrader::start(int & tradingday) {
             boost::property_tree::ptree pt;

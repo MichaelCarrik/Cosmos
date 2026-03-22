@@ -33,7 +33,7 @@
 
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Utils{
         CppMySQLQuery::CppMySQLQuery()
         {

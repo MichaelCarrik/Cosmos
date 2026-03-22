@@ -15,7 +15,7 @@
 #include <set>
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace KBarEngine{
 
         class KBarSaverEngine{
@@ -29,7 +29,7 @@ namespace TrendFollow{
              Utils::MemoryList< std::array<char,512>, 9999999> m_sqlPool{0};
             KData::KDataManager * m_kDataManager{nullptr};
             std::map< Types::Instrument_t, Types::InstrumentInfo> m_instrumentInfoMap;
-            std::vector< TrendFollow::Types::InstrumentInfo>* m_tradeInsInfoVec{nullptr};
+            std::vector< Cosmos::Types::InstrumentInfo>* m_tradeInsInfoVec{nullptr};
         public:
             std::string m_engineName;
             double m_riskFreeR{0.023};
@@ -39,7 +39,7 @@ namespace TrendFollow{
             bool m_isUseUnderlyPrice{true};
 
             KBarSaverEngine( Driver::RealtimeDriver *driver, std::string &_policyName ,   Utils::CppMySQL3DB * mysql,
-                             std::vector< TrendFollow::Types::InstrumentInfo>* tradeInsInfoVec, int tradingday ) :
+                             std::vector< Cosmos::Types::InstrumentInfo>* tradeInsInfoVec, int tradingday ) :
                     m_engineName(_policyName), m_mysql(mysql), m_tradingDay(tradingday), m_tradeInsInfoVec{tradeInsInfoVec} {
                 m_driver = driver;
                 m_driver->add_receiver< Types::OnSubScribeQuote>(

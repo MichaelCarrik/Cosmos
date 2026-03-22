@@ -8,7 +8,7 @@
 #include "Strangle.h"
 #include "../Types/Type.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Policy {
 
         class Calendar : public Strangle {

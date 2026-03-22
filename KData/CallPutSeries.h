@@ -6,7 +6,7 @@
 #define OPTIONTRADING_V2_CALLPUTSERIES_H
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace KData {
         class KSeries;
         struct CallPutSeries{

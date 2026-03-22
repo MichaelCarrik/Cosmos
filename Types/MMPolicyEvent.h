@@ -10,7 +10,7 @@
 #include "../Utils/EWMAPriceIndicator.h"
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
         struct MMPolicyEvent {
             int subPolicyID{-1};

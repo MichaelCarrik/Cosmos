@@ -13,7 +13,7 @@
 #include <termstructures/yield/flatforward.hpp>
 #include <termstructures/volatility/equityfx/blackconstantvol.hpp>
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace KData {
         class BSModelQuantLib {
         public:

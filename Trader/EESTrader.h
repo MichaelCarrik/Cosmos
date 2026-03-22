@@ -2,8 +2,8 @@
 // Created by zhangyw on 3/9/21.
 //
 
-#ifndef TRENDFOLLOW_EESTRADER_H_BAK
-#define TRENDFOLLOW_EESTRADER_H_BAK
+#ifndef Cosmos_EESTRADER_H_BAK
+#define Cosmos_EESTRADER_H_BAK
 
 #include "TapTradeAPI.h"
 #include "TapAPIError.h"
@@ -17,7 +17,7 @@
 #include "NetRootTrader.h.bak"
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
 
         struct QueryPosition{
@@ -215,4 +215,4 @@ namespace TrendFollow {
     }
 }
 
-#endif //TRENDFOLLOW_EESTRADER_H_BAK
+#endif //Cosmos_EESTRADER_H_BAK

@@ -8,7 +8,7 @@
 #include "../Types/Type.h"
 #include "CallPutSeries.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace KData {
         class KData {
         public:

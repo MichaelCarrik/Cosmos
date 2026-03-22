@@ -8,7 +8,7 @@
 #include "IOptionPolicy.h"
 #include "../Types/Type.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Policy {
         struct SARStruct {
             int trend{0};

@@ -22,7 +22,7 @@
 #include <set>
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         struct CtpPosition{
             int buy_position{0};

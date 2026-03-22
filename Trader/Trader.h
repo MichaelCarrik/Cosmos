@@ -13,7 +13,7 @@
 #include "../Types/QuerySymbol.h"
 
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Trader{
 
 

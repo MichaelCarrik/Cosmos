@@ -2,12 +2,12 @@
 // Created by zhangyw on 2/4/21.
 //
 
-#ifndef TRENDFOLLOW_INDICATOR_H
-#define TRENDFOLLOW_INDICATOR_H
+#ifndef Cosmos_INDICATOR_H
+#define Cosmos_INDICATOR_H
 
 #include "../Types/Type.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Indicator {
 
         template<typename T>
@@ -182,4 +182,4 @@ namespace TrendFollow {
 
     }
 }
-#endif //TRENDFOLLOW_INDICATOR_H
+#endif //Cosmos_INDICATOR_H

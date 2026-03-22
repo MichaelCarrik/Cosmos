@@ -2,12 +2,12 @@
 // Created by zhangyingwei on 2021/11/25.
 //
 
-#ifndef TRENDFOLLOW_ARBITRAGESIGNAL_H
-#define TRENDFOLLOW_ARBITRAGESIGNAL_H
+#ifndef Cosmos_ARBITRAGESIGNAL_H
+#define Cosmos_ARBITRAGESIGNAL_H
 
 #include "Signal.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
         struct ArbitrageSignal {
             int abtrgId{-1};
@@ -19,4 +19,4 @@ namespace TrendFollow{
 }
 
 
-#endif //TRENDFOLLOW_ARBITRAGESIGNAL_H
+#endif //Cosmos_ARBITRAGESIGNAL_H

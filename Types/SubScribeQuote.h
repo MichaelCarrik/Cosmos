@@ -12,7 +12,7 @@
 #include "../Types/KPeriod.h"
 #include "../KData/KSeries.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types{
         class SubScribeQuote{
         public:

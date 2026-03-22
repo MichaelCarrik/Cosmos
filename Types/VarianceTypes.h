@@ -6,7 +6,7 @@
 #define OPTIONTRADING_VARIANCETYPES_H
 #include "Type.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Types {
         struct VarianceTypes {
              Types::Instrument_t m_instrument{""};

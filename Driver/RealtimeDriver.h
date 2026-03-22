@@ -18,7 +18,7 @@
 //#define TESTMODEL
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Driver {
 
         class RealtimeDriver {

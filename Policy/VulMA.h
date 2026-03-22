@@ -2,9 +2,9 @@
 // Created by zhangyw on 2/14/21.
 //
 
-#ifndef TRENDFOLLOW_VULMA_H
-#define TRENDFOLLOW_VULMA_H
-namespace TrendFollow {
+#ifndef Cosmos_VULMA_H
+#define Cosmos_VULMA_H
+namespace Cosmos {
     namespace Policy {
         class VulMA : public LPolicy {
         private:
@@ -268,4 +268,4 @@ namespace TrendFollow {
         };
     }
 }
-#endif //TRENDFOLLOW_VULMA_H
+#endif //Cosmos_VULMA_H

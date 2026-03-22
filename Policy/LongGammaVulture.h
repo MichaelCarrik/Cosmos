@@ -10,7 +10,7 @@
 #include "../Utils/Indicator.h"
 #include <vector>
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Policy {
 
         class LongGammaVulture : public IOptionPolicy {

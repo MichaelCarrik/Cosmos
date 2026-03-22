@@ -9,7 +9,7 @@
 #include "../Types/KPeriod.h"
 #include "KSeries.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace KData {
 
 
@@ -64,6 +64,11 @@ namespace TrendFollow {
             }
 
             void updateSingleOptionGreeks(KSeries *optionSeries, double forwardPrice, int updateUnderlyIndex, int updateOptionIndex) {
+
+                 if (optionSeries->m_lastPMD == nullptr) {
+                     return;
+                 }
+
                 int updateBeginPsTime = optionSeries->m_underlySeries->m_KDataVecs[updateUnderlyIndex]->m_beginPsTime;
                 if (optionSeries->m_KDataVecs[updateOptionIndex]->m_tradingday == 0) {
                     optionSeries->ffill(updateBeginPsTime);

@@ -25,9 +25,8 @@
 #include <fstream>
 #include <algorithm>
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace UnderlyOptionEngine {
-
         class UnderlyOptionEngine {
         private:
             bool m_isReal{true};

@@ -10,7 +10,7 @@
 #include "../Types/PairsMarketData.h"
 //#include "../Utils//EWMAPriceIndicator.h"
 
-namespace TrendFollow{
+namespace Cosmos{
     namespace Types {
 
         struct ArbitragePolicyEvent {

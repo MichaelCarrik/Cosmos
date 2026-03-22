@@ -21,7 +21,7 @@
 #include <sys/syscall.h>
 
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace ThreadPool {
 
         class ThreadPool {

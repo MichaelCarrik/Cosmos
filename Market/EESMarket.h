@@ -2,8 +2,8 @@
 // Created by zhangyw on 3/9/21.
 //
 
-#ifndef TRENDFOLLOW_EESMARKET_H_BAK
-#define TRENDFOLLOW_EESMARKET_H_BAK
+#ifndef Cosmos_EESMARKET_H_BAK
+#define Cosmos_EESMARKET_H_BAK
 
 #include "TapAPIError.h"
 #include "TapQuoteAPI.h"
@@ -13,7 +13,7 @@
 #include <set>
 #include "../KData/KDataManager.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Market {
         class EESMarket : public ITapQuoteAPINotify {
             struct MarketConnect{
@@ -63,4 +63,4 @@ namespace TrendFollow {
     }
 }
 
-#endif //TRENDFOLLOW_EESMARKET_H_BAK
+#endif //Cosmos_EESMARKET_H_BAK

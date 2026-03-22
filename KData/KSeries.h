@@ -2,8 +2,8 @@
 // Created by zhangyw on 1/11/21.
 //
 
-#ifndef TRENDFOLLOW_KSERIES_H
-#define TRENDFOLLOW_KSERIES_H
+#ifndef Cosmos_KSERIES_H
+#define Cosmos_KSERIES_H
 
 #include <iostream>
 #include "KSeriesTime.h"
@@ -11,7 +11,7 @@
 #include "KData.h"
 #include "CallPutSeries.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace KData {
         class KSeries {
         public:
@@ -44,11 +44,11 @@ namespace TrendFollow {
 				
 				int secondsBias{0};
                 if (period ==  Types::KPeriod::Min1 || period ==  Types::KPeriod::Min5) {
-                  //  secondsBias = -10;
+                    secondsBias = -10;
                 }else if(period ==  Types::KPeriod::Min15){
-                 //   secondsBias = -60;
+                    secondsBias = -60;
                 }else if(period ==  Types::KPeriod::Min30 || period ==  Types::KPeriod::H1) {
-                  //  secondsBias = -300;
+                    secondsBias = -300;
                 }
 				
 				m_kseriesTime = new KSeriesTime(tradingday, period, secondsBias);
@@ -147,7 +147,9 @@ namespace TrendFollow {
 
             void ffill( int psTime ) {
                 while (m_kseriesTime->isLast() == false and psTime > m_kTime->endPstime) {  //qianzhi bu
-
+                    if (m_lastPMD ==nullptr) {
+                        int a = 1;
+                    }
                     if (strcmp(m_KDataVecs[m_seriesIndex]->m_instrument.data(), "") == 0) {
                         //                        fprintf(stderr, "init k pmd 1 : instrumentid=%s, updateTime=%s, millisec=%d, volume=%d, m_seriesIndex=%d, m_kseries.size()=%d\n",
                         //                                pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, m_seriesIndex, m_kseries.size());
@@ -161,6 +163,7 @@ namespace TrendFollow {
                     if (psTime > m_kTime->endPstime) {
                         //                        fprintf(stderr, "init k pmd 2 : instrumentid=%s, updateTime=%s, millisec=%d, volume=%d, m_seriesIndex=%d, m_kseries.size()=%d\n",
                         //                                pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, m_seriesIndex, m_kseries.size());
+
                         m_KDataVecs[m_seriesIndex]->initKBar(m_insInfo.instrumentID, std::max(m_kTime->beginPstime, 0), m_kTime->endPstime,
                                                     m_tradingday,m_lastPMD);
                     }
@@ -269,4 +272,4 @@ namespace TrendFollow {
 }
 
 
-#endif //TRENDFOLLOW_KSERIES_H
+#endif //Cosmos_KSERIES_H

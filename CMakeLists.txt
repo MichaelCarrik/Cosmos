@@ -5,9 +5,9 @@ cmake_minimum_required(VERSION 3.14)
 project(Cosmos)
 
 set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
 
 INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIRS})
 
@@ -48,20 +48,20 @@ include_directories(./Utils)
 add_subdirectory(Utils)
 
 
-#
-#add_executable(OptionKBReader_V2 KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp
-#		Types/InstrumentInfo.h)
-#target_link_libraries(OptionKBReader_V2 Market Trader  Utils KData
-#	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
-#		        ${LIB_MYSQL} Threads::Threads stdc++fs)
 
-add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
-target_link_libraries(CosmosKBSaver Market
-		Trader
-		KBarEngine Utils
-		${LIB_CTPMD} ${LIB_QUANTLIB}
-		${LIB_CTPTRADE} ${LIB_MYSQL}
-		Threads::Threads stdc++fs)
+add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp
+		Types/InstrumentInfo.h)
+target_link_libraries(CosmosKBReader Market Trader  Utils KData
+	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
+		        ${LIB_MYSQL} Threads::Threads stdc++fs)
+
+#add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
+#target_link_libraries(CosmosKBSaver Market
+#		Trader
+#		KBarEngine Utils
+#		${LIB_CTPMD} ${LIB_QUANTLIB}
+#		${LIB_CTPTRADE} ${LIB_MYSQL}
+#		Threads::Threads stdc++fs)
 
 
 #add_executable(Underly_Test UnderlyOptionEngine/UOTradingTest_main.cpp)

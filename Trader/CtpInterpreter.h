@@ -2,12 +2,12 @@
 // Created by zhangyw on 3/5/21.
 //
 
-#ifndef TrendFollow_CTPINTERPRETER_H
-#define TrendFollow_CTPINTERPRETER_H
+#ifndef Cosmos_CTPINTERPRETER_H
+#define Cosmos_CTPINTERPRETER_H
 
 #include "../Types/CtpTradeConnection.h"
 
-namespace TrendFollow {
+namespace Cosmos {
     namespace Trader {
         class CtpInterpreter{
              Utils::MemoryList<CThostFtdcInputOrderField,  Types::OrderBuffSize> m_ctpOrderList{0};
