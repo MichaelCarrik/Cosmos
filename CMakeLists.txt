@@ -5,9 +5,9 @@ cmake_minimum_required(VERSION 3.14)
 project(Cosmos)
 
 set(CMAKE_CXX_STANDARD 17)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
 
 INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIRS})
 
@@ -37,11 +37,11 @@ add_subdirectory(Trader)
 include_directories(./Market)
 add_subdirectory(Market)
 
-include_directories(./KBarEngine)
-add_subdirectory(KBarEngine)
+#include_directories(./KBarEngine)
+#add_subdirectory(KBarEngine)
 
-#include_directories(./UnderlyOptionEngine)
-#add_subdirectory(UnderlyOptionEngine)
+include_directories(./UnderlyOptionEngine)
+add_subdirectory(UnderlyOptionEngine)
 
 
 include_directories(./Utils)
@@ -49,11 +49,10 @@ add_subdirectory(Utils)
 
 
 
-add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp
-		Types/InstrumentInfo.h)
-target_link_libraries(CosmosKBReader Market Trader  Utils KData
-	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
-		        ${LIB_MYSQL} Threads::Threads stdc++fs)
+#add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp)
+#target_link_libraries(CosmosKBReader Market Trader  Utils KData
+#	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
+#		        ${LIB_MYSQL} Threads::Threads stdc++fs)
 
 #add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
 #target_link_libraries(CosmosKBSaver Market
@@ -64,11 +63,12 @@ target_link_libraries(CosmosKBReader Market Trader  Utils KData
 #		Threads::Threads stdc++fs)
 
 
-#add_executable(Underly_Test UnderlyOptionEngine/UOTradingTest_main.cpp)
-#
-#target_link_libraries(Underly_Test Market Trader KData Utils UnderlyOptionEngine
-#		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
-#		${LIB_MYSQL} Threads::Threads stdc++fs)
+add_executable(CosmosHedge_Test UnderlyOptionEngine/UOTradingTest_main.cpp
+		Policy/FuturePolicy/Vulture.h)
+
+target_link_libraries(CosmosHedge_Test Market Trader KData Utils UnderlyOptionEngine
+		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
+		${LIB_MYSQL} Threads::Threads stdc++fs)
 
 #add_executable(Underly_Option UnderlyOptionEngine/UOTrading_main.cpp)
 #
