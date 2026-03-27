@@ -26,6 +26,8 @@
 namespace Cosmos{
     namespace Types{
 
+        constexpr int SingeInstrumenBuffSize = 9;
+
         constexpr int MarketBuffSize = 90000;
 
         constexpr int OrderBuffSize = 20000;
@@ -42,7 +44,7 @@ namespace Cosmos{
 
         enum class OrderStatus{signal,cancel,accept,partTraded,allTraded,failed,canceled,unknown};
 
-        enum class SignalIntension{put, hit, profit, noTrade};
+        enum class SignalIntension{put, hit, mid};
 
         enum class ChangeStatus{symbolA, symbolB};
 
@@ -55,6 +57,8 @@ namespace Cosmos{
         enum class QuoteType{MarketData, MonthMarket, CrossMarket};
 
         enum class ProductClass{future, option};
+
+
            //     BuyInventory, SellInventory,
             //SpreadAggressive,  BuyHedgeOpen, SellHedgeOpen, BuyHedgeClose, SellHedgeClose};
 
@@ -88,11 +92,7 @@ namespace Cosmos{
                 {HedgeType::hedge,  std::array<char,9>{"hedg"}},
                 {HedgeType::spec,  std::array<char,9>{"spec"}}};
 
-        static std::unordered_map<SignalIntension, std::array<char,9>>  intensionMap{
-                {SignalIntension::put,  std::array<char,9>{"put"}},
-                {SignalIntension::hit,  std::array<char,9>{"hit"}},
-                {SignalIntension::profit,  std::array<char,9>{"profit"}},
-                {SignalIntension::noTrade,  std::array<char,9>{"noTrade"}}};
+
         static std::unordered_map<ExchangeType, std::array<char,9>>  exchangeMap{
                 {ExchangeType::CFFEX,  std::array<char,9>{"cffex"}},
                 {ExchangeType::SHFE,  std::array<char,9>{"SHFE"}},
@@ -107,6 +107,18 @@ namespace Cosmos{
                 {EventType::arbitrage,  std::array<char,9>{"abtrg"}},
                 {EventType::filled,  std::array<char,9>{"filled"}}
         };
+
+
+        static std::unordered_map<SignalIntension, std::array<char,9>>  signalIntensionMap{
+                    {SignalIntension::put,  std::array<char,9>{"put"}},
+                    {SignalIntension::hit,  std::array<char,9>{"hit"}},
+                    {SignalIntension::mid,  std::array<char,9>{"mid"}}};
+
+        static const std::unordered_map<std::string, SignalIntension> configParamToSIMap{
+                    {"put", SignalIntension::put},
+                    {"hit", SignalIntension::hit},
+                    {"mid", SignalIntension::mid}
+            };
 
 
 

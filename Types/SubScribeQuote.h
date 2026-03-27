@@ -7,7 +7,6 @@
 
 #include "Type.h"
 #include "MarketData.h"
-#include "VarientTypes.h"
 #include "../Utils/MemoryList.h"
 #include "../Types/KPeriod.h"
 #include "../KData/KSeries.h"
@@ -31,8 +30,8 @@ namespace Cosmos{
         class PushMarket{
         public:
             PushMarket(int index):marketDataList(0),eventDataList(0){};
-             Utils::MemoryList<MarketData,  Types::MarketBuffSize> marketDataList;
-             Utils::MemoryList<EventData,  Types::MarketBuffSize> eventDataList;
+             Utils::MemoryList<MarketData,  Types::SingeInstrumenBuffSize> marketDataList;
+             Utils::MemoryList<EventData,  Types::SingeInstrumenBuffSize> eventDataList;
             std::vector<int> subscribePolicy;
             QuoteType quoteType;
         };

@@ -9,7 +9,6 @@
 #include "../Utils/MemoryList.h"
 #include "../dependencies/sdk/ctp/v6.6.9/ThostFtdcTraderApi.h"
 #include "../Types/OrderField.h"
-#include "../Types/ArbitrageOrderField.h"
 #include "../Driver/RealtimeDriver.h"
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
@@ -95,7 +94,7 @@ namespace Cosmos {
 
             std::string m_configPath;
             double m_preSettlementPrice{0.0};
-            std::vector< Types::InstrumentInfo> m_tradeInsinfoVec;
+            std::vector< Types::InstrumentInfo*> m_tradeInsInfoVec;
             std::map<std::string, PO> m_queryOrderStatusMap;
 
             CtpInterpreter * m_interpreter;
@@ -111,22 +110,11 @@ namespace Cosmos {
                 return event;
             }
 
-            template<typename T>
-             Types::EventData* convertToAbtrgEvent(const  Types::ArbitrageOrderField * orderField,  T* list){
-                auto event = list->getNewMemory();
-                event->point = orderField;
-                event->type =2;
-                return event;
-            }
-
-
             int queryTradeInstrument( );
 
              Utils::MemoryList< Types::EventData,  Types::OrderBuffSize> m_eventDataList{0};
 
              Utils::MemoryList< Types::OrderField,  Types::OrderBuffSize> m_receiveOrderList{0};
-             Utils::MemoryList< Types::ArbitrageOrderField,  Types::OrderBuffSize> m_receiveAbtrgOrderList{0};
-
 
 
 ///?��???��???????��?��?????????????????��???????????��??????????��??��????
@@ -646,8 +634,6 @@ namespace Cosmos {
             void updateOrder_with(const CThostFtdcOrderField * info,  Types::OrderField *pOrder);
 
             void sendOrder(  Types::OrderField const & orderField);
-            void sendAbtrgOrder(  Types::ArbitrageOrderField const & orderField);
-
             int _queryAllPosition();
 
             int _querySinglePosition( Types::Instrument_t const & queyInstrument );
@@ -657,13 +643,12 @@ namespace Cosmos {
 
             bool cancelOrder( Types::OrderField const & inputOrder, int64_t& epoch_time) ;
 
-            bool cancelAbtrgOrder( Types::ArbitrageOrderField const & inputOrder, int64_t& epoch_time) ;
             void onUnderlyInfo(Types::UnderlyInfo const& underlyInfo);
             void onQuerySymbol( Types::QuerySymbol const & querySymbol);
 
 
-            const std::vector<Types::InstrumentInfo>* getInstrumentInfoVec() {
-                return &m_tradeInsinfoVec;
+            const std::vector<Types::InstrumentInfo*>* getInstrumentInfoVec() {
+                return &m_tradeInsInfoVec;
             };
 
         };

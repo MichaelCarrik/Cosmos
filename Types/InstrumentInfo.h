@@ -11,7 +11,7 @@ namespace Cosmos {
     namespace Types {
         struct UnderlyInfo{
             Instrument_t instrumentID{""};
-            Product_t productID{""};
+            bool isWithOption{false};
         };
 
         struct InstrumentInfo{

@@ -19,7 +19,7 @@
 #include "folly/SpinLock.h"
 #include "../Types/SubPolicy.h"
 #include <sys/syscall.h>
-
+#include "../Types/VarientTypes.h"
 
 namespace Cosmos {
     namespace ThreadPool {

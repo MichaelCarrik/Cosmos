@@ -35,14 +35,15 @@ namespace Cosmos {
             bool m_isGetHistory{false};
             UpdateGreeks *m_updateGreeks{nullptr};
 
-            KDataManager(int tradingDay, bool isDay, bool isUseUnderlyPrice) : m_tradingday(tradingDay),
-                                                                               m_isDay(isDay),
-                                                                               m_isUseUnderlyPrice(isUseUnderlyPrice) {
+            KDataManager(int tradingDay, bool isDay, bool isUseUnderlyPrice,
+                         Utils::CppMySQL3DB *mysql) : m_tradingday(tradingDay),
+                                                      m_isDay(isDay),
+                                                      m_isUseUnderlyPrice(isUseUnderlyPrice), m_mysql(mysql) {
                 m_updateGreeks = new UpdateGreeks();
             }
 
 
-            KSeries* KMAddTick(const Types::MarketData *pMD, Types::KPeriod period) {
+            KSeries *KMAddTick(const Types::MarketData *pMD, Types::KPeriod period) {
                 // auto itr = this->m_allKLineSeries.find(pMD->instrumentID);
                 // if (itr == this->m_allKLineSeries.end()) {
                 //     fprintf(stderr, "onEventData %s\n", pMD->instrumentID.data());
@@ -53,6 +54,10 @@ namespace Cosmos {
                 auto series = this->getSeries(pMD->instrumentID, period);
                 int lastSeriesIndex = series->m_seriesIndex;
                 series->addTick(pMD);
+                if (pMD->isInit == 1) {
+                    lastSeriesIndex = series->m_seriesIndex;
+                    series->m_recordIndex = series->m_seriesIndex;
+                }
                 if (lastSeriesIndex < series->m_seriesIndex) {
                     this->checkSeriesRecord(series, period, lastSeriesIndex);
                     return series;
@@ -60,15 +65,36 @@ namespace Cosmos {
                 return nullptr;
             }
 
+
+            void KMAddTick(const Types::MarketData *pMD) {
+                auto itr = m_allKLineSeries.find(pMD->instrumentID);
+                if (itr == m_allKLineSeries.end()) {
+                    assert(false && "KLineManager addTick ");
+                }
+                for (auto &itrIns: *(itr->second)) {
+                    auto period = itrIns.first;
+                    auto series = itrIns.second;
+                    int lastSeriesIndex = series->m_seriesIndex;
+                    series->addTick(pMD);
+                    if (pMD->isInit == 1) {
+                        lastSeriesIndex = series->m_seriesIndex;
+                        series->m_recordIndex = series->m_seriesIndex;
+                    }
+                    if (lastSeriesIndex < series->m_seriesIndex) {
+                        this->checkSeriesRecord(series, period, lastSeriesIndex);
+                    }
+                }
+            }
+
             KSeries *getSeries(Types::Instrument_t const &instrument, Types::KPeriod period) {
                 auto itr = m_allKLineSeries.find(instrument);
                 if (itr == m_allKLineSeries.end()) {
-                    assert(false && "KLineManager addTick");
+                    assert(false && "KLineManager getSeries");
                 }
 
                 auto peroid_itr = itr->second->find(period);
                 if (peroid_itr == itr->second->end()) {
-                    assert(false && "KLineManager period addTick");
+                    assert(false && "KLineManager period getSeries");
                 }
                 return peroid_itr->second;
             }
@@ -77,9 +103,9 @@ namespace Cosmos {
                              Types::KPeriod period, std::vector<KData *> &hisKdata,
                              int tradingday, bool isReal, bool isKbarSaver) {
                 std::array<char, 400> sql{""};
-                int limitValue = 350;
+                int limitValue = 1350;
                 if (period == Types::KPeriod::Min1) {
-                    limitValue = 350;
+                    limitValue = 1350;
                 }
 
                 std::string tradingdayComp = "<";
@@ -88,7 +114,7 @@ namespace Cosmos {
                     tradingdayComp = "<=";
                 }
 
-                decltype( Types::KPeroidToFutureTableMap) *kptmp = &Types::KPeroidToFutureTableMap;
+                decltype( Types::KPeroidToFutureTableVec) *kptmp = &Types::KPeroidToFutureTableVec;
                 if (productClass == Types::ProductClass::option) {
                     //  kptmp = & Types::KPeroidToOptionTableMap;
                     return;
@@ -96,29 +122,31 @@ namespace Cosmos {
                 if (period == Types::KPeriod::D1 || period == Types::KPeriod::Min30) {
                     if (isKbarSaver == true) {
                         sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay = %d order by tradingDay DESC,updateTime DESC limit %d",
-                                (*kptmp)[period].data(), instrument.data(),
-                                Types::KPeroidToIntervalMap[period], tradingday,
+                                "select * from %s where instrument='%s' and period=%d and tradingDay = %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
+                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday,
                                 limitValue);
                     } else {
                         sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay %s %d order by tradingDay DESC,updateTime DESC limit %d",
-                                (*kptmp)[period].data(), instrument.data(),
-                                Types::KPeroidToIntervalMap[period], tradingdayComp.c_str(), tradingday,
+                                "select * from %s where instrument='%s' and period=%d and tradingDay %s %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
+                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingdayComp.c_str(),
+                                tradingday,
                                 limitValue);
                     }
                 } else {
                     if (isKbarSaver == true) {
                         sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay = %d order by tradingDay DESC,updateTime DESC limit %d",
-                                (*kptmp)[period].data(), instrument.data(),
-                                Types::KPeroidToIntervalMap[period], tradingday,
+                                "select * from %s where instrument='%s' and period=%d and tradingDay = %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
+                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday,
                                 limitValue);
                     } else {
                         sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay %s %d order by tradingDay DESC,updateTime DESC limit %d",
-                                (*kptmp)[period].data(), instrument.data(),
-                                Types::KPeroidToIntervalMap[period], tradingdayComp.c_str(), tradingday,
+                                "select * from %s where instrument='%s' and period=%d and tradingDay %s %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
+                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingdayComp.c_str(),
+                                tradingday,
                                 limitValue);
                     }
 
@@ -183,7 +211,8 @@ namespace Cosmos {
                     spdlog::info(
                         "initKSeries instrument={}, peroid={}, historeKline length={}, lastBar={}-{}, firstBar={}-{}",
                         insInfo.instrumentID.data(),
-                        Types::KPeroidToIntervalMap[period], historyKline.size(), historyKline[0]->m_tradingday,
+                        Types::KPeroidToIntervalVec[static_cast<int>(period)], historyKline.size(),
+                        historyKline[0]->m_tradingday,
                         historyKline[0]->m_updateTimeBegin.data(),
                         historyKline[historyKline.size() - 1]->m_tradingday,
                         historyKline[historyKline.size() - 1]->m_updateTimeBegin.data());
@@ -219,7 +248,6 @@ namespace Cosmos {
                             assert(false);
                         }
                         kSeries->setUnderlySeries(itrUnderlySeries->second);
-
                         _initUnderlyToOptionSeriesMap(kSeries, period);
                         m_updateGreeks->init(kSeries, period, m_tradingday, m_isDay);
                     }

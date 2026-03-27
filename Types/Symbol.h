@@ -101,7 +101,7 @@ namespace Cosmos {
             int readKlineIndex{0};
             ExchangeType exchangeId;
             SignalIntension intension{SignalIntension::put};
-            std::shared_ptr<spdlog::logger> m_positionLog{nullptr};
+            spdlog::logger* m_positionLog{nullptr};
             std::map<Types::KPeriod, const  KData::KSeries*> m_kSeriesMap;
 
             int getPendingPosition(){

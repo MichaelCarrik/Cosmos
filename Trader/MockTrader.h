@@ -28,6 +28,7 @@ namespace Cosmos {
             std::vector< Types::InstrumentInfo> * m_queryInstruments{nullptr};
 
         public:
+            std::vector< Types::InstrumentInfo*> m_tradeInsInfoVec;
             std::vector<Types::MarketData *> m_initMarketDataVector;
             MockTrader( Driver::TestDriver *driver,std::string& rawTickPath, int tradingDay, int isDay):
             m_driver(driver), m_rawTickPath(rawTickPath),m_tradingDay(tradingDay), m_isDay(isDay){
@@ -43,13 +44,8 @@ namespace Cosmos {
 
             }
             void sendOrder( Types::OrderField const &OrderField);
-            void sendAbtrgOrder(  Types::ArbitrageOrderField const & orderField){
-                fprintf(stderr, "instrument=%s, orderSide=%s, orderPrice=%f, orderVolume=%d", orderField.instrumentIDs.data(),
-                       Types::orderSideMap[orderField.orderSides[0]].data(), orderField.orderPrice, orderField.orderVolume);
-            };
 
             void cancelOrder( Types::OrderField const &cancelOrderField, int64_t &epoch_time);
-            bool cancelAbtrgOrder( Types::ArbitrageOrderField const & inputOrder, int64_t& epoch_time){ return true;} ;
 
             int start(int tradingday);
 
@@ -62,6 +58,7 @@ namespace Cosmos {
             void simMatch();
 
             void onRtnOrder(const  Types::OrderField * );
+
 
         };
     }

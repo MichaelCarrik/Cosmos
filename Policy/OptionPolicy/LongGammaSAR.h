@@ -40,7 +40,7 @@ namespace Cosmos {
         private:
             int m_configIndex{0};
             bool m_isCheck{false};
-            double m_mv{0.0};
+            double m_MV{0.0};
             double m_multi{1000.0};
             int m_lastPsTime{0};
             int m_maxPosition{0};
@@ -65,7 +65,7 @@ namespace Cosmos {
                          std::string &engineName,
                          Types::Instrument_t &instrument, double multi, int tradingday, int maxPosition,
                          double openAtDelta) :
-                    m_mv(mv),
+                    m_MV(mv),
                     m_multi(multi), m_maxPosition(maxPosition),
                     m_openAtDelta(openAtDelta) {
 
@@ -81,7 +81,7 @@ namespace Cosmos {
                 m_length = 1000 *5 /30;
                 spdlog::info("createPolicy engineName={}, policyName={}, kperiod={}  mv={}, tradingday={}, "
                              "underly={}, , maxPosition={}, openAtDelta={}",
-                             engineName, policyName, (int) kperiod, m_mv, m_tradingday, m_underlyInstrument.data(),
+                             engineName, policyName, (int) kperiod, m_MV, m_tradingday, m_underlyInstrument.data(),
                              m_maxPosition, m_openAtDelta);
                 _initPolicyLogger();
             }
@@ -253,9 +253,9 @@ namespace Cosmos {
             //    _writePolicyLog(lastUnderlyBar,lastSAR);
 
                 fprintf(stderr,
-                        "[%s_%s] start, m_kperiod=%dMins, m_mv=%.3f, m_multi=%.3f, maxPosition=%d, "
+                        "[%s_%s] start, m_kperiod=%dMins, m_MV=%.3f, m_multi=%.3f, maxPosition=%d, "
                         "openAtDelta=%.3f, expireday=%d, marketPosition=%d, preMarketPostion=%d, signalPrice=%.3f, holdStrikePrice=%.3f, "
-                        "configIndex=%d\n", m_engineName.c_str(), m_policyName.c_str(), Types::KPeroidToIntervalMap[m_kperiod], m_mv, m_multi,
+                        "configIndex=%d\n", m_engineName.c_str(), m_policyName.c_str(), Types::KPeroidToIntervalMap[m_kperiod], m_MV, m_multi,
                         m_maxPosition, m_openAtDelta, m_expireday, m_marketPosition, m_preMarketPosition,
                         m_signalPrice, m_holdStrikePrice ,m_configIndex);
                 m_configIndex++;
@@ -310,7 +310,7 @@ namespace Cosmos {
                                   "minsMA={:.3f}, marketPosition={}, preMarketPosition={}, signalPrice={:.3f}, "
                                   "holdStrikePrice={:.3f}",
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
-                                  lastUnderlyKB->m_updateTime.data(), lastUnderlyKB->m_psTime, lastUnderlyKB->m_close,
+                                  lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime, lastUnderlyKB->m_close,
                                   sarStruct->trend, // sarStruct->sar, sarStruct->realSAR, sarStruct->ep,  sarStruct->af, 
                                   sarStruct->high, sarStruct->low, m_minsMA, m_marketPosition,
                                   m_preMarketPosition, m_signalPrice, m_holdStrikePrice);
@@ -375,13 +375,13 @@ namespace Cosmos {
 
                     _setTargetAllTargetPosZero(m_putPolicySymbols.optionTargetPosMaps);
 
-                    double targetDelta=  m_mv / (lastUnderlyBar->m_close * m_multi);
+                    double targetDelta=  m_MV / (lastUnderlyBar->m_close * m_multi);
                     _setOpenPostion(m_callPolicySymbols, targetDelta, 'C',lastUnderlyBar->m_close);
                 } else if (marketPosition == -1 && preMarketPosition != marketPosition) {
 
                     _setTargetAllTargetPosZero(m_callPolicySymbols.optionTargetPosMaps);
 
-                    double targetDelta=  -m_mv / (lastUnderlyBar->m_close * m_multi);
+                    double targetDelta=  -m_MV / (lastUnderlyBar->m_close * m_multi);
                     _setOpenPostion(m_putPolicySymbols, targetDelta,  'P',lastUnderlyBar->m_close);
                 } else if (marketPosition == 0 && preMarketPosition != marketPosition) {// minus delta
 

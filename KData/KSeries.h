@@ -47,7 +47,7 @@ namespace Cosmos {
                     secondsBias = -10;
                 }else if(period ==  Types::KPeriod::Min15){
                     secondsBias = -60;
-                }else if(period ==  Types::KPeriod::Min30 || period ==  Types::KPeriod::H1) {
+                }else if(period ==  Types::KPeriod::Min30 ) {
                     secondsBias = -300;
                 }
 				
@@ -89,7 +89,7 @@ namespace Cosmos {
                             underlyKData->m_tradingday, underlyKData->m_updateTimeBegin.data(),
                             this->m_insInfo.instrumentID.data(),
                             optionKData->m_tradingday, optionKData->m_updateTimeBegin.data(),
-                            Types::KPeroidToIntervalMap[this->m_Period]);
+                            Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)]);
                       if (strcmp(this->m_insInfo.productID.data(),"MO")!=0 &&
                         strcmp(this->m_insInfo.productID.data(),"HO")!=0 &&
                         strcmp(this->m_insInfo.productID.data(),"IO")!=0 ) {
@@ -120,19 +120,19 @@ namespace Cosmos {
                     }
                     m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->delta;
                 } catch (std::exception &e) {
-                   if ( strcmp(this->m_insInfo.productID.data() , "si")==0 ) {
-                        fprintf(stderr,"%s-%d-%s, %s\n", this->m_KDataVecs[optionUpdateIndex]->m_instrument.data(),Types::KPeroidToIntervalMap[this->m_Period],
-                             this->m_KDataVecs[optionUpdateIndex]->m_updateTimeBegin.data() ,e.what());
-                        std::cerr << e.what() << std::endl;
-                        fprintf(stderr, "calGreeks exception underly=%s %s (%.3f) , optionKD=%s %s (%.3f)\n",
-                                underlyKData->m_instrument.data(),
-                                underlyKData->m_updateTimeBegin.data(),
-                                optionKData->m_forwardPrice,
-                                optionKData->m_instrument.data(),
-                                optionKData->m_updateTimeBegin.data(),
-                                optionFairPrice);
+                //   if ( strcmp(this->m_insInfo.productID.data() , "si")==0 ) {
+                        // fprintf(stderr,"%s-%d-%s, %s\n", this->m_KDataVecs[optionUpdateIndex]->m_instrument.data(),Types::KPeroidToIntervalMap[this->m_Period],
+                        //      this->m_KDataVecs[optionUpdateIndex]->m_updateTimeBegin.data() ,e.what());
+                      //  std::cerr << e.what() << std::endl;
+                        // fprintf(stderr, "calGreeks exception underly=%s %s (%.3f) , optionKD=%s %s (%.3f)\n",
+                        //         underlyKData->m_instrument.data(),
+                        //         underlyKData->m_updateTimeBegin.data(),
+                        //         optionKData->m_forwardPrice,
+                        //         optionKData->m_instrument.data(),
+                        //         optionKData->m_updateTimeBegin.data(),
+                        //         optionFairPrice);
 
-                    }
+              //      }
                     if (std::abs(this->m_KDataVecs[optionUpdateIndex]->delta) < 0.001) {
                         this->m_KDataVecs[optionUpdateIndex]->delta = m_lastDelta;
                     }

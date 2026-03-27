@@ -4,13 +4,12 @@
 
 #ifndef Cosmos_LPOLICY_H
 #define Cosmos_LPOLICY_H
-
+#include "../IPolicy.h"
 #include "../Types/Symbol.h"
-
+#include "../Utils/LogUtils.h"
 
 namespace Cosmos {
     namespace Policy {
-
 
         struct FileRead {
             std::string instrumentStr{""};
@@ -22,49 +21,40 @@ namespace Cosmos {
             std::string basePriceStr{""};
         };
 
-
-
         struct PolicySymbolStruct{
             std::vector<const Types::Symbol *> optionSymbolVecs;
             std::map<Types::Instrument_t, int> optionTargetPosMaps;
             std::map<Types::Instrument_t, int> optionLastTargetPosMaps;
         };
 
-        class IOptionPolicy {
+        class IOptionPolicy  :  public IPolicy{
 
         public:
-            std::string m_policyName{""};
-            std::string m_engineName{""};
-            int m_configIndex{0};
-             Types::KPeriod m_kperiod;
-            const KData::KSeries *m_underlyKseries{nullptr};
-            int m_lastUnderlyBarIndex{0};
 
+            int m_configIndex{0};
             PolicySymbolStruct m_callPolicySymbols;
             PolicySymbolStruct m_putPolicySymbols;
+            int m_expireDay{0};
+            int m_underlyToBeginIndex{0};
+            IOptionPolicy(std::string const &policyName, std::string const &engineName,
+                          Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
+                          Types::SignalIntension si, int tradingDay, int expireDay ) : IPolicy(policyName, engineName,
+                                                                     instrument, kperiod, mv, multi, si, tradingDay) , m_expireDay(expireDay)
+            {
 
-            int m_tradingday{0};
-            int m_expireday{0};
-             Types::Instrument_t m_underlyInstrument{""};
+            }
 
-             Types::SignalIntension m_intension{Types::SignalIntension::put};
-            std::shared_ptr<spdlog::logger> m_configLog;
 
-            virtual void
-            start(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &m_symbolNearMap) = 0;
-
-            virtual void runTick(const  Types::MarketData *pMD) = 0;
-
-            int _initOptionPolicySymbolVecs(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &inputSymbolMap,
+            void _initOptionPolicySymbolVecs(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &inputSymbolMap,
                                        Types::Instrument_t const& underlyInstrument, PolicySymbolStruct & policySymbols,
                                        std::vector<FileRead>const& fileReadVecs, char optionType ){
-                int expireDay =0;
+               // int expireDay =0;
                 for(auto symbolItr : inputSymbolMap){
                     if ( symbolItr.second->instrumentInfo.productIDClass == Types::ProductClass::option &&
                           symbolItr.second->instrumentInfo.optionType == optionType &&
                             strcmp(symbolItr.second->instrumentInfo.underly.data(), underlyInstrument.data()) ==0)
                     {
-                        expireDay = symbolItr.second->instrumentInfo.expireDate;
+                    //    expireDay = symbolItr.second->instrumentInfo.expireDate;
                         policySymbols.optionSymbolVecs.emplace_back(symbolItr.second);
                         for(auto fileReadItr : fileReadVecs){
                             if(strcmp(fileReadItr.instrumentStr.c_str(), symbolItr.second->instrumentInfo.instrumentID.data())==0){
@@ -85,70 +75,10 @@ namespace Cosmos {
                         return symbol_a->instrumentInfo.strikePrice > symbol_b->instrumentInfo.strikePrice;
                     });
                 }
-
-
-                return expireDay;
-
+             //   return expireDay;
             }
 
-            void _getValueInLine(char *buf, char *valueName, std::string &value) {
-                char *field = strstr(buf, valueName);
 
-                if (field) {
-                    std::string substr = field + strlen(valueName) + 1;
-                    auto index = substr.find_first_of(',', 0);
-                    if (index != std::string::npos) {
-                        value = substr.substr(0, index).c_str();
-                    } else {
-                        value = substr.c_str();
-                    }
-                }
-            }
-
-            void _initPolicyLogger() {
-                char logSymbolPath[128];
-                memset(logSymbolPath, 0, sizeof(128));
-                sprintf(logSymbolPath, "./logs/policy/%s_%s_%s.txt", m_engineName.c_str(), m_policyName.c_str(),
-                        m_underlyInstrument.data());
-
-                std::filesystem::path tradeSymbolPath(logSymbolPath);
-                if (!std::filesystem::exists(tradeSymbolPath.parent_path())) {
-                    std::filesystem::create_directories(tradeSymbolPath.parent_path());
-                }
-                char logKey[128]{""};
-                sprintf(logKey, ".policy_%s_%s_%s", m_engineName.c_str(), m_policyName.c_str(),
-                        m_underlyInstrument.data());
-                fprintf(stderr, "initLogs %s %s\n", logKey, logSymbolPath);
-
-                m_configLog = spdlog::basic_logger_st(logKey, logSymbolPath);
-            }
-
-            std::string GetLastValueFromFile(char *filename, const char *valuename) {
-                char buf[BUFSIZ], *field;
-                std::string value{""};
-                FILE *fp = NULL;
-                fp = fopen(filename, "r");
-                if (fp == NULL) {
-                    printf("OnStarted, Warning: Cannot open file: %s !!!\n", filename);
-                    return 0;
-                } else {
-                    while (fgets(buf, BUFSIZ, fp) != NULL) {
-                        //  printf("buf : %s",buf);
-                        field = strstr(buf, valuename);
-                        if (field) {
-                            std::string substr = field + strlen(valuename) + 1;
-                            auto index = substr.find_first_of(',', 0);
-                            if (index != std::string::npos) {
-                                value = substr.substr(0, index);
-                            } else {
-                                value = substr;
-                            }
-                        }
-                    }
-                }
-                fclose(fp);
-                return value;
-            }
 
             bool isHaveZeroDeltaPos(PolicySymbolStruct & policySymbols) {
                 for (auto & optionSymbol: policySymbols.optionSymbolVecs) {
@@ -158,8 +88,8 @@ namespace Cosmos {
                         auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
                         auto lastOptionK = series->m_KDataVecs[lastIndex];
                         if ( abs(lastOptionK->delta) < 0.00001 && optionSymbol->lastMD->askPrice[0] > 10* optionSymbol->instrumentInfo.tickSize) {
-                            fprintf(stderr, "policyName=%s, instrument=%s, updateTime=%s, pos=%d,  delta=%.3f\n", m_policyName.c_str(), optionSymbol->instrumentInfo.instrumentID.data(),
-                                lastOptionK->m_updateTime.data(), targetPosition, lastOptionK->delta);
+                            fprintf(stderr, "policyName=%s, instrument=%s, updateTimeBegin=%s, pos=%d,  delta=%.3f\n", m_policyName.c_str(), optionSymbol->instrumentInfo.instrumentID.data(),
+                                lastOptionK->m_updateTimeBegin.data(), targetPosition, lastOptionK->delta);
                             return true;
                         }
                     }
@@ -167,7 +97,8 @@ namespace Cosmos {
                 return false;
             }
 
-            void _writeOptionPolicyLog( PolicySymbolStruct & policySymbols, int configIndex) {
+            void _writeOptionPolicyLog( PolicySymbolStruct & policySymbols,  int configIndex) {
+                auto optionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 for (auto & optionSymbol: policySymbols.optionSymbolVecs) {
                     int  targetPosition =  getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.optionTargetPosMaps);
                     int lastTargetPosition  = getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.optionLastTargetPosMaps);
@@ -175,19 +106,19 @@ namespace Cosmos {
 
 
                         auto series = optionSymbol->m_kSeriesMap.at(m_kperiod);
-                        auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
-                        auto lastOptionK = series->m_KDataVecs[lastIndex];
+                 //       auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
+                        auto lastOptionK = series->m_KDataVecs[optionIndex];
 
 //                        if(lastOptionK->m_tradingday ==0){
 //                            assert(false);
-//                        }
+//                        }down
                         m_configLog->info(
                                 "configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
                                 "targetPosition={}, seriesIndex={}",
                                 configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingday,
-                                lastOptionK->m_updateTime.data(), lastOptionK->m_psTime,
+                                lastOptionK->m_updateTimeBegin.data(), lastOptionK->m_endPsTime,
                                 lastOptionK->m_close, lastOptionK->delta, targetPosition,
-                                lastIndex);
+                                optionIndex);
                     }
                 }
                 policySymbols.optionLastTargetPosMaps.clear();
@@ -208,13 +139,13 @@ namespace Cosmos {
 
 
             const Types::Symbol* getApproxiDeltaSymbol(decltype(m_callPolicySymbols.optionSymbolVecs) const& symbolCallVecs,
-                                                       double findAtDelta , char optionType, double undelyClose){
+                                                       double findAtDelta , char optionType, double undelyClose, int optionKBarIndex){
                 std::vector<const Types::Symbol *> filterSymbolVecs;
                 int itmIndex =0 ;
                 // for (auto symbolItr: symbolCallVecs) {
                 for (auto itr = symbolCallVecs.rbegin(); itr != symbolCallVecs.rend(); itr++) {
                     auto symbolItr = *itr;
-                    if (symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex > 0) {
+                //    if (symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex > 0) {
                         if (std::abs(symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta) < 0.00001 ||
                             std::abs(symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta) > 0.70) {
                             continue;
@@ -229,17 +160,13 @@ namespace Cosmos {
                        // fprintf(stderr, "add delta Filter %s, delta=%.3f, underlyClose=%.3f\n", symbolItr->instrumentInfo.instrumentID.data(), 
 			//symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta, undelyClose);
                         filterSymbolVecs.emplace_back(symbolItr);
-                    }
+                //    }
                 }
                 if (filterSymbolVecs.size() > 0) {
                     auto specialDeltaItr = std::min_element(filterSymbolVecs.begin(), filterSymbolVecs.end(),
-                                                       [findAtDelta, this](auto &symbol_a, auto &symbol_b) {
-                                                           auto kbar_a = symbol_a->m_kSeriesMap.at(
-                                                                   m_kperiod)->m_KDataVecs[symbol_a->m_kSeriesMap.at(
-                                                                   m_kperiod)->m_seriesIndex - 1];
-                                                           auto kbar_b = symbol_b->m_kSeriesMap.at(
-                                                                   m_kperiod)->m_KDataVecs[symbol_b->m_kSeriesMap.at(
-                                                                   m_kperiod)->m_seriesIndex - 1];
+                                                       [findAtDelta, optionKBarIndex, this](auto &symbol_a, auto &symbol_b) {
+                                                           auto kbar_a = symbol_a->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[optionKBarIndex];
+                                                           auto kbar_b = symbol_b->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[optionKBarIndex];
                                                            return std::abs(
                                                                    std::abs(kbar_a->delta) - std::abs(findAtDelta)) <
                                                                   std::abs(std::abs(kbar_b->delta) -

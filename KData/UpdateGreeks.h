@@ -14,27 +14,27 @@ namespace Cosmos {
 
 
         class UpdateGreeks {
-            std::map<std::tuple< Types::Instrument_t,  Types::KPeriod>, int *> *m_allKLineIndexs;
+
             std::map<std::tuple< Types::Instrument_t,  Types::KPeriod>, std::vector<KSeries *> *> m_underlyToOptionSeriesMap;
-            std::map< Types::KPeriod, int> m_underlyTodayBeginIndexMap;
+            std::map< std::tuple< Types::Instrument_t,  Types::KPeriod>, int> m_underlyTodayBeginIndexMap;
 
         public:
             UpdateGreeks() {
-                m_allKLineIndexs = new std::map<std::tuple< Types::Instrument_t,  Types::KPeriod>, int *>();
+
             }
             void  init(KSeries *series, Types::KPeriod const& period,int tradingDay, bool m_isDay) {
 
                         std::tuple< Types::Instrument_t,  Types::KPeriod> key = std::make_tuple(
                                 series->m_insInfo.instrumentID, period);
-                        m_allKLineIndexs->insert(std::make_pair(key, new int(series->m_seriesIndex)));
+
 
                         if (series->m_insInfo.productIDClass == Types::ProductClass::option) {
                             auto optionSeries = series;
                             auto keyUnderly = std::make_pair(optionSeries->m_insInfo.underly, period);
 
-                            auto underlyTodayBeginIndexItr = m_underlyTodayBeginIndexMap.find(period);
+                            auto underlyTodayBeginIndexItr = m_underlyTodayBeginIndexMap.find(keyUnderly);
                             if (underlyTodayBeginIndexItr == m_underlyTodayBeginIndexMap.end()) {
-                                m_underlyTodayBeginIndexMap[period] = 0;
+                                m_underlyTodayBeginIndexMap[keyUnderly] = 0;
                             }
 
                             auto itrutom = m_underlyToOptionSeriesMap.find(keyUnderly);
@@ -52,11 +52,11 @@ namespace Cosmos {
                                         break;
                                     }
 
-                                    m_underlyTodayBeginIndexMap[period] = i;
+                                    m_underlyTodayBeginIndexMap[keyUnderly] = i;
                                 }
 
-                                if(m_underlyTodayBeginIndexMap[period] >0){
-                                    m_underlyTodayBeginIndexMap[period] = m_underlyTodayBeginIndexMap[period]+1;
+                                if(m_underlyTodayBeginIndexMap[keyUnderly] >0){
+                                    m_underlyTodayBeginIndexMap[keyUnderly] = m_underlyTodayBeginIndexMap[keyUnderly]+1;
                                 }
                             }
                             itrutom->second->emplace_back(optionSeries);
@@ -78,21 +78,26 @@ namespace Cosmos {
 
             }
 
-            void updateGreeks(KSeries* underlySeries, double forwardPrice, std::map<int, CallPutSeries *>* calPutMap, int lastSeriesIndex) {
+            int getUnderlyTodayBeginIndex(Types::Instrument_t const& instrumentID, Types::KPeriod period) {
+                std::tuple< Types::Instrument_t,  Types::KPeriod> key = std::make_tuple(
+                  instrumentID, period);
 
-                auto underlyTodayBeginIndexItr = m_underlyTodayBeginIndexMap.find(underlySeries->m_Period);
+                auto underlyTodayBeginIndexItr = m_underlyTodayBeginIndexMap.find(key);
                 if (underlyTodayBeginIndexItr == m_underlyTodayBeginIndexMap.end()) {
-                    fprintf(stderr, "instrument=%s\n", underlySeries->m_insInfo.instrumentID.data());
+                    fprintf(stderr, "instrument=%s, period=%d\n", instrumentID, static_cast<int>(period));
                     assert(false);
                 }
 
 
-                if ( strcmp(underlySeries->m_lastPMD->instrumentID.data() , "IM2606") ==0 ) {
-                    int a = 1;
-                }
+               return  underlyTodayBeginIndexItr->second;
+            }
+
+            void updateGreeks(KSeries* underlySeries, double forwardPrice, std::map<int, CallPutSeries *>* calPutMap, int lastSeriesIndex) {
 
 
-                int updateOptionIndex = lastSeriesIndex - underlyTodayBeginIndexItr->second;
+                int UnderlyTodayBeginIndex = getUnderlyTodayBeginIndex(underlySeries->m_insInfo.instrumentID, underlySeries->m_Period);
+
+                int updateOptionIndex = lastSeriesIndex - UnderlyTodayBeginIndex;
 
                 for (auto & calPutItr : *calPutMap) {
                     updateSingleOptionGreeks(calPutItr.second->callSeries, forwardPrice, lastSeriesIndex,  updateOptionIndex);

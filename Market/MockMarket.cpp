@@ -72,10 +72,6 @@ namespace Cosmos {
             }
         }
 
-
-
-
-
         int MockMarket::start(int tradingday, bool isDay) {
 
             std::string dayOrNigh = isDay == true ? "day" : "ngt";

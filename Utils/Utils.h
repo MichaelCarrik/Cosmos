@@ -7,12 +7,12 @@
 
 #include <fstream>
 #include <stdlib.h>
-
+#include "../dependencies/sdk/ctp/v6.6.9/ThostFtdcTraderApi.h"
 #include "../Types/Type.h"
 #include "../Types/MarketData.h"
 #include "../Types/InstrumentInfo.h"
 #include "../Types/OrderField.h"
-#include "../Types/ArbitrageOrderField.h"
+
 
 
 namespace Cosmos {
@@ -22,17 +22,13 @@ namespace Cosmos {
                 return Types::ExchangeType::CFFEX;
             } else if (strcmp(inputExchange, "SHFE") == 0) {
                 return Types::ExchangeType::SHFE;
-            }
-            else if (strcmp(inputExchange, "INE") == 0) {
+            } else if (strcmp(inputExchange, "INE") == 0) {
                 return Types::ExchangeType::INE;
-            }
-            else if (strcmp(inputExchange, "CZCE") == 0) {
+            } else if (strcmp(inputExchange, "CZCE") == 0) {
                 return Types::ExchangeType::ZCE;
-            }
-            else if (strcmp(inputExchange, "DCE") == 0) {
+            } else if (strcmp(inputExchange, "DCE") == 0) {
                 return Types::ExchangeType::DCE;
-            }
-            else if (strcmp(inputExchange, "GFEX") == 0) {
+            } else if (strcmp(inputExchange, "GFEX") == 0) {
                 return Types::ExchangeType::GFE;
             }
             assert(false);
@@ -63,13 +59,6 @@ namespace Cosmos {
             sprintf(updateTime.data(), "%02d:%02d:%02d", hour, minutes, seconds);
         }
 
-        static bool isAbtrgInstrument(const char *instrument) {
-            if ((instrument[0] == 'S' && instrument[1] == 'P') || (instrument[0] == 'I' && instrument[1] == 'P')) {
-                return true;
-            }
-            return false;
-        }
-
         static bool isSTGInstrument(const char *instrument) {
             if ((instrument[0] == 'S' && instrument[1] == 'T' & instrument[2] == 'G') ||
                 (instrument[0] == 'P' && instrument[1] == 'R' & instrument[2] == 'T')) {
@@ -78,17 +67,8 @@ namespace Cosmos {
             return false;
         }
 
-
         static void InstrumentToProduct(Types::Instrument_t const &instrument, Types::Product_t &productId) {
-            if (Utils::isAbtrgInstrument(instrument.data()) == true) {
-                int p = 0;
-                for (auto i = 0; i < instrument.size() || instrument[i] == '\0'; i++) {
-                    if (instrument[i] < '0' || instrument[i] > '9') {
-                        productId[p] = instrument[i];
-                        p++;
-                    }
-                }
-            } else {
+
                 for (auto i = 0; i < 5; i++) {
                     if (instrument[i] >= '0' && instrument[i] <= '9') {
                         std::copy(std::begin(instrument), std::begin(instrument) + i, std::begin(productId));
@@ -98,7 +78,6 @@ namespace Cosmos {
                         assert(false && "InstrumentToProduct");
                     }
                 }
-            }
         }
 
         static void parseInstruemnt(Types::Instrument_t const &instrument, Types::Instrument_t &underly,
@@ -129,45 +108,6 @@ namespace Cosmos {
                 }
             }
         }
-
-
-        template<class T>
-        static void logOrder(const Types::OrderField *orderField, std::shared_ptr<spdlog::logger> m_orderLog,
-                             const T *symbol, const Types::OrderStatus orderStatus, int tradingday,
-                             const int64_t epoch_time) {
-            auto log_epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-
-
-            m_orderLog->info(
-                "{}, {}, {}, {:03d}, {}, {}, {}, {}, {}, {}, {}, {:.3f}, {}, {:.3f}, {}, {}, delta={}, {:.3f}, {}, {}, {}",
-                orderField->instrumentID.data(), tradingday,
-                symbol->lastMD->updateTime.data(), symbol->lastMD->milliSeconds,
-                Types::orderStatusMap[orderStatus].data(),
-                orderField->pOrderID, orderField->tOrderID,
-                Types::positionEffectMap[orderField->pet].data(),
-                Types::orderSideMap[orderField->orderSide].data(),
-                Types::intensionMap[orderField->intension].data(),
-                Types::hedgeMap[orderField->hedgeType].data(),
-                orderField->orderPrice, orderField->orderVolume, orderField->lastFilledPrice,
-                orderField->lastFilledVolume, orderField->filledVolume, symbol->tradePosition.filledPosition,
-                symbol->tradePosition.averagePrice,
-                orderField->orderSysID.data(), epoch_time, log_epoch_time - epoch_time);
-        }
-
-        static std::shared_ptr<spdlog::logger> initOrderLog(std::string &engineName) {
-            char recordFileNames[128];
-            char recordF[128];
-            sprintf(recordFileNames, "logs/record/%s.txt", engineName.c_str());
-            std::filesystem::path path(recordFileNames);
-            if (!std::filesystem::exists(path.parent_path())) {
-                std::filesystem::create_directories(path.parent_path());
-            }
-
-            sprintf(recordF, "record_%s", engineName.c_str());
-            return spdlog::basic_logger_st<spdlog::synchronous_factory>(recordF, recordFileNames);
-        }
-
 
         static bool checkTerminal(Types::OrderField *orderField) {
             if (orderField->orderStatus == Types::OrderStatus::allTraded ||
@@ -222,95 +162,12 @@ namespace Cosmos {
             }
         }
 
-        static bool updateArbitrageOrder(Types::ArbitrageOrderField *abtrgOrderField,
-                                         const Types::ArbitrageOrderField *abtrgInputOrder) {
-            strcpy(abtrgOrderField->orderSysID.data(), abtrgInputOrder->orderSysID.data());
-            abtrgOrderField->lastFilledPrice[0] = abtrgInputOrder->lastFilledPrice[0];
-            abtrgOrderField->lastFilledPrice[1] = abtrgInputOrder->lastFilledPrice[1];
-            abtrgOrderField->lastFilledVolume[0] = abtrgInputOrder->lastFilledVolume[0];
-            abtrgOrderField->lastFilledVolume[1] = abtrgInputOrder->lastFilledVolume[1];
-            abtrgOrderField->filledVolume[0] = abtrgInputOrder->filledVolume[0];
-            abtrgOrderField->filledVolume[1] = abtrgInputOrder->filledVolume[1];
-            // cancel order cause failed, may by not cancel succcess
-            Utils::updateOrderStatus(abtrgOrderField->orderStatus, abtrgInputOrder->orderStatus);
-
-            abtrgOrderField->tOrderID = abtrgInputOrder->tOrderID;
-            abtrgOrderField->epoch_time = abtrgInputOrder->epoch_time;
-            abtrgOrderField->isTerminal = checkTerminal(abtrgOrderField->orderStatus);
-            return true;
-        }
-
-        template<class T>
-        static void logAbtrgOrder(const Types::ArbitrageOrderField *abtrgorderField,
-                                  std::shared_ptr<spdlog::logger> m_orderLog,
-                                  T *abtrgPolicyEvent,
-                                  const Types::OrderStatus orderStatus, int tradingday,
-                                  const int64_t epoch_time) {
-            auto log_epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
-                std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-
-
-            m_orderLog->info(
-                "{} {}&{}, {}, {} {:03d} {} {:03d}, {}, {}, {}, {}, {} {}, {} {}, {}, {:.3f}, {}, {:.3f} {:.3f}, {} {}, {} {}, delta={}, {:.3f}, {}, {}, {}",
-                abtrgorderField->orderPrex.data(), abtrgorderField->instrumentIDs[0].data(),
-                abtrgorderField->instrumentIDs[1].data(),
-                tradingday, abtrgPolicyEvent->hedgeMD->updateTime.data(), abtrgPolicyEvent->hedgeMD->milliSeconds,
-                abtrgPolicyEvent->tradeMD->updateTime.data(), abtrgPolicyEvent->tradeMD->milliSeconds,
-                Types::orderStatusMap[orderStatus].data(),
-                abtrgorderField->subPolicyID, abtrgorderField->pOrderID, abtrgorderField->tOrderID,
-                Types::positionEffectMap[abtrgorderField->pets[0]].data(),
-                Types::positionEffectMap[abtrgorderField->pets[1]].data(),
-                Types::orderSideMap[abtrgorderField->orderSides[0]].data(),
-                Types::orderSideMap[abtrgorderField->orderSides[1]].data(),
-                Types::intensionMap[abtrgorderField->intension].data(),
-                abtrgorderField->orderPrice, abtrgorderField->orderVolume, abtrgorderField->lastFilledPrice[0],
-                abtrgorderField->lastFilledPrice[1],
-                abtrgorderField->lastFilledVolume[0], abtrgorderField->lastFilledVolume[1],
-                abtrgorderField->filledVolume[0], abtrgorderField->filledVolume[1],
-                abtrgPolicyEvent->hedgeSymbol->tradePosition.filledPosition,
-                abtrgPolicyEvent->hedgeSymbol->tradePosition.averagePrice,
-                abtrgorderField->orderSysID.data(), epoch_time, log_epoch_time - epoch_time);
-
-            //            m_orderLog->info(
-            //                    "{}, {}, {}, {:03d}, {}, {}, {}, {}, {}, {}, {}, {:.3f}, {}, {:.3f}, {}, {}, delta={}, {:.3f}, {}, {}, {}",
-            //                    abtrgorderField->instrumentIDs[1].data(), tradingday,
-            //                    marketData->updateTime.data(), marketData->milliSeconds,
-            //                    Types::orderStatusMap[orderStatus].data(),
-            //                    abtrgorderField->subPolicyID, abtrgorderField->pOrderID, abtrgorderField->tOrderID,
-            //                    Types::positionEffectMap[abtrgorderField->pets[1]].data(),
-            //                    Types::orderSideMap[abtrgorderField->orderSides[1]].data(),
-            //                    Types::intensionMap[abtrgorderField->intension].data(),
-            //                    abtrgorderField->orderPrice, abtrgorderField->orderVolume, abtrgorderField->lastFilledPrice[1],
-            //                    abtrgorderField->lastFilledVolume[1], abtrgorderField->filledVolume[1],
-            //                    tradeSymbol->tradePosition.filledPosition,
-            //                    tradeSymbol->tradePosition.averagePrice,
-            //                    abtrgorderField->orderSysID.data(), epoch_time, log_epoch_time - epoch_time);
-        }
-
-        static std::shared_ptr<spdlog::logger> initLogs(std::string &typeName, char *policyName) {
-            char logSymbolPath[128];
-            memset(logSymbolPath, 0, sizeof(128));
-            sprintf(logSymbolPath, "./logs/%s/%s.txt", typeName.c_str(), policyName);
-
-            std::filesystem::path tradeSymbolPath(logSymbolPath);
-            if (!std::filesystem::exists(tradeSymbolPath.parent_path())) {
-                std::filesystem::create_directories(tradeSymbolPath.parent_path());
-            }
-            char logKey[128]{""};
-            sprintf(logKey, ".%s_%s_%s", typeName.c_str(), typeName.c_str(), policyName);
-            fprintf(stderr, "initLogs %s %s\n", logKey, logSymbolPath);
-
-            return spdlog::basic_logger_st(logKey, logSymbolPath);
-        }
-
-
         static bool is_day(void) {
             auto current_time = std::time(nullptr);
             auto ptm = std::localtime(&current_time);
 
             return ptm->tm_hour >= 6 && ptm->tm_hour < 18;
         }
-
 
         static std::string GetLastValueFromFile(char *filename, const char *valuename, const char *instrument) {
             char buf[BUFSIZ], *field;
@@ -348,7 +205,6 @@ namespace Cosmos {
             return value;
         }
 
-
         static void readInstrumentsFromFiles(int tradingday, Types::Instrument_t const &filterUnderly,
                                              std::string &rawPath, std::vector<Types::InstrumentInfo> &testSymbols,
                                              int isDay) {
@@ -379,41 +235,109 @@ namespace Cosmos {
                     do {
                         if (index != std::string::npos) {
                             substring = strLine.substr(start, index - start);
-
                             line_vector.emplace_back(substring);
                             start = index + separator.size();
                             index = strLine.find(separator, start);
-
-
                             if (start == std::string::npos) {
                                 break;
                             }
                         }
                     } while (index != std::string::npos);
                     line_vector.emplace_back(strLine.substr(start, index - start));
-                    if (line_vector.size() < 45 && !(
-                            atoi(line_vector[6].c_str()) == 2 || atoi(line_vector[6].c_str()) == 6)) {
+                    if (line_vector.size() < 20 ) {
                         continue;
-                    }
+                            }
                     Types::InstrumentInfo instrumentInfo;
                     //   fprintf(stderr, "%s\n", line_vector[1].c_str());
                     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'),
                                          line_vector[1].end());
                     strcpy(instrumentInfo.instrumentID.data(), line_vector[1].c_str());
-                    instrumentInfo.productIDClass = Types::ProductClass::option; // atoi(line_vector[6].c_str());
+                    // if (strcmp(instrumentInfo.instrumentID.data(), "i2405") ==0) {
+                    //     fprintf(stderr,"instrument=%s\n",instrumentInfo.instrumentID.data());
+                    // }
+                    instrumentInfo.multi = atof(line_vector[13].c_str());
+                    instrumentInfo.tickSize = atof(line_vector[14].c_str());
+                    int PIC = atoi(line_vector[6].c_str()) ;
+                    if (PIC == 1) {
+                        instrumentInfo.productIDClass = Types::ProductClass::future ;
+                    }else if (PIC == 2 || PIC == 6) {
+                        instrumentInfo.productIDClass = Types::ProductClass::option ;
+                    }else {
+                        continue;
+                    }
+
                     instrumentInfo.expireDate = atoi(line_vector[17].c_str());
-
-
                     Utils::InstrumentToProduct(instrumentInfo.instrumentID, instrumentInfo.productID);
                     Utils::parseInstruemnt(instrumentInfo.instrumentID, instrumentInfo.underly,
                                            instrumentInfo.optionType, instrumentInfo.strikePrice);
-                    if (strcmp(instrumentInfo.underly.data(), filterUnderly.data()) == 0) {
+
+                    if (strcmp(instrumentInfo.instrumentID.data(), filterUnderly.data()) == 0){
+
+                        testSymbols.emplace_back(instrumentInfo);
+                    }
+                    else if (strcmp(instrumentInfo.underly.data(), filterUnderly.data()) == 0) {
+                      //  fprintf(stderr,"instrument=%s\n",instrumentInfo.instrumentID.data());
                         testSymbols.emplace_back(instrumentInfo);
                     }
                 }
                 i++;
             }
         }
+
+        static void convertToMarketDaTa(const CThostFtdcDepthMarketDataField *pDepthMarketData,
+                                        Types::MarketData *marketData) {
+            marketData->lastPrice = pDepthMarketData->LastPrice;
+            marketData->upperLimitPrice = pDepthMarketData->UpperLimitPrice;
+            marketData->lowerLimitPrice = pDepthMarketData->LowerLimitPrice;
+            marketData->settlementPrice = pDepthMarketData->SettlementPrice;
+            marketData->highestPrice = pDepthMarketData->HighestPrice;
+            marketData->lowestPrice = pDepthMarketData->LowestPrice;
+            marketData->openPrice = pDepthMarketData->OpenPrice;
+
+            marketData->lastPrice = Utils::checkPriceValid(marketData->lastPrice);
+            if (marketData->openPrice > 999999999.9) {
+                marketData->highestPrice = marketData->lastPrice;
+                marketData->lowestPrice = marketData->lastPrice;
+                marketData->openPrice = marketData->lastPrice;
+            }
+
+            marketData->bidPrice[0] = pDepthMarketData->BidPrice1;
+            marketData->askPrice[0] = pDepthMarketData->AskPrice1;
+            marketData->midPrice = (marketData->bidPrice[0] + marketData->askPrice[0]) * 0.5;
+            if (pDepthMarketData->BidVolume1 == 0) {
+                marketData->bidPrice[0] = marketData->lastPrice;
+                marketData->midPrice = marketData->lastPrice;
+            }
+            if (pDepthMarketData->AskVolume1 == 0) {
+                marketData->askPrice[0] = marketData->lastPrice;
+                marketData->midPrice = marketData->lastPrice;
+            }
+            std::copy(std::begin(pDepthMarketData->InstrumentID),
+                      std::begin(pDepthMarketData->InstrumentID) + marketData->instrumentID.size(),
+                      std::begin(marketData->instrumentID));
+
+            marketData->bidVolume[0] = pDepthMarketData->BidVolume1;
+            marketData->askVolume[0] = pDepthMarketData->AskVolume1;
+            std::copy(std::begin(pDepthMarketData->UpdateTime),
+                      std::begin(pDepthMarketData->UpdateTime) + marketData->updateTime.size(),
+                      std::begin(marketData->updateTime));
+
+            marketData->milliSeconds = pDepthMarketData->UpdateMillisec;
+
+            marketData->psSecond = Utils::ToPsSeconds(marketData->updateTime);
+
+            marketData->amount = checkPriceValid(pDepthMarketData->Turnover);
+            marketData->volume = pDepthMarketData->Volume;
+            marketData->oi = checkPriceValid(pDepthMarketData->OpenInterest);
+        }
+
+        static std::string getParamMapValue(std::map<std::string, std::string> const& paramsMap, std::string&& key){
+            auto itr = paramsMap.find(key);
+            if (itr == paramsMap.end()){
+                assert(false);
+            }
+            return itr->second;
+        };
     }
 }
 

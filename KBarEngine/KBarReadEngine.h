@@ -82,7 +82,7 @@ namespace Cosmos {
 
             void onStart() {
 
-                m_kDataManager = new  KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice);
+                m_kDataManager = new  KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice, nullptr);
                 for (auto &ins: *m_futureInstruments) {
                   //  fprintf(stderr, "KBarReadEngine::onStart futureInstruments : instrument=%s\n", ins.instrumentID.data());
                     Types::SubScribeQuote subScribeQuote;
@@ -196,7 +196,7 @@ namespace Cosmos {
                 if (period == Cosmos::Types::KPeriod::D1 && m_isDay == true) {
                     sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f",
                             kline->m_instrument.data(), kline->m_tradingday,
-                            Cosmos::Types::KPeroidToIntervalMap[period],
+                           Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(),
                             kline->m_updateTimeEnd.data(),
                             kline->m_productID.data(), kline->m_open,
@@ -207,7 +207,7 @@ namespace Cosmos {
                 } else if (period == Cosmos::Types::KPeriod::Min1 and strcmp(saveK.instrument.data(), "") != 0) {
                     sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d",
                             kline->m_instrument.data(), kline->m_tradingday,
-                            Cosmos::Types::KPeroidToIntervalMap[period],
+                          Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(),
                             kline->m_updateTimeEnd.data(),
                             kline->m_productID.data(), kline->m_open,
@@ -217,11 +217,10 @@ namespace Cosmos {
                     m_futureOneMinuteQueue.emplace_back(saveK);
                 } else if (period == Cosmos::Types::KPeriod::Min5 ||
                            period == Cosmos::Types::KPeriod::Min15 ||
-                           period == Cosmos::Types::KPeriod::Min30 ||
-                           period == Cosmos::Types::KPeriod::H1) {
+                           period == Cosmos::Types::KPeriod::Min30 ) {
                     sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d",
                             kline->m_instrument.data(), kline->m_tradingday,
-                            Cosmos::Types::KPeroidToIntervalMap[period],
+                            Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(),
                             kline->m_updateTimeEnd.data(),
                             kline->m_productID.data(), kline->m_open,
@@ -270,18 +269,20 @@ namespace Cosmos {
                 //   fprintf(stderr, "%s\n", saveK.sql.data());
                 if (period ==  Types::KPeriod::D1 && m_isDay == true) {
                     sprintf(saveK.sql.data(),
-                            "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
-                            kline->m_instrument.data(), kline->m_tradingday,Types::KPeroidToIntervalMap[period],
+                            "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f",
+                            kline->m_instrument.data(), series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice,
+                            kline->m_tradingday,series->m_insInfo.expireDate,  Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(),   kline->m_updateTimeEnd.data(), kline->m_productID.data(),
                             kline->m_open, kline->m_high, kline->m_low,
                             kline->m_close, kline->m_forwardPrice,  (double) kline->m_volume, kline->m_amount, kline->m_oi,
-                            kline->m_upperLimit, kline->m_lowerLimit, kline->m_settlement,series->m_insInfo.expireDate, kline->IV,
-                            kline->bidIV,  kline->askIV, kline->delta, kline->gamma, kline->vega, kline->theta);
+                             kline->m_settlement, kline->IV,
+                             kline->delta, kline->gamma, kline->vega, kline->theta);
                     m_optionDayQueue.emplace_back(saveK);
                 } else if (period ==  Types::KPeriod::Min1 and strcmp(saveK.instrument.data(), "") != 0) {
                     sprintf(saveK.sql.data(),
-                            "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
-                            kline->m_instrument.data(), kline->m_tradingday, Types::KPeroidToIntervalMap[period],
+                            "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
+                            kline->m_instrument.data(), series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice,
+                            kline->m_tradingday,series->m_insInfo.expireDate, Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(), kline->m_updateTimeEnd.data(), kline->m_productID.data(),
                             kline->m_open, kline->m_high, kline->m_low,
                             kline->m_close, kline->m_forwardPrice, (double) kline->m_volume, kline->m_amount, kline->m_oi,
@@ -291,9 +292,10 @@ namespace Cosmos {
                 } else if (period ==  Types::KPeriod::Min5 ||
                            period ==  Types::KPeriod::Min15) {
                     sprintf(saveK.sql.data(),
-                            "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
-                            kline->m_instrument.data(), kline->m_tradingday,
-                             Types::KPeroidToIntervalMap[period],
+                            "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
+                            kline->m_instrument.data(),series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice, kline->m_tradingday,
+                            series->m_insInfo.expireDate,
+                            Types::KPeroidToIntervalVec[static_cast<int>(period)],
                                  kline->m_updateTimeBegin.data(), kline->m_updateTimeEnd.data(), kline->m_productID.data(),
                             kline->m_open, kline->m_high, kline->m_low,
                             kline->m_close,  kline->m_forwardPrice,(double) kline->m_volume, kline->m_amount, kline->m_oi,

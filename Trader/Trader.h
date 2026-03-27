@@ -41,14 +41,6 @@ namespace Cosmos{
                     cancelOrder(std::forward<decltype(cancelOrderField) >(cancelOrderField), epoch_time );
                 }));
 
-                _realtimeDriver->register_sendAbtrgOrderFunction(_realtimeDriver->passn([this]( Types::ArbitrageOrderField const & orderField){
-                    sendAbtrgOrder(std::forward<decltype(orderField)>(orderField) );
-                }));
-
-                _realtimeDriver->register_cancelAbtrgOrderFunction(_realtimeDriver->passn([this]( Types::ArbitrageOrderField const & cancelOrderField, int64_t& epoch_time){
-                    cancelAbtrgOrder(std::forward<decltype(cancelOrderField) >(cancelOrderField), epoch_time );
-                }));
-
                 _realtimeDriver->template add_receiver< Types::QuerySymbol>(
                         _realtimeDriver->passn([this]( Types::QuerySymbol const & querySymbol) {
                             onQuerySymbol(std::forward<decltype(querySymbol)>(querySymbol));
@@ -64,14 +56,6 @@ namespace Cosmos{
 
             void cancelOrder( Types::OrderField const & cancelOrderField, int64_t& epoch_time){
                 _traderSpi->cancelOrder(cancelOrderField, epoch_time );
-            };
-
-            void sendAbtrgOrder( Types::ArbitrageOrderField const & OrderField){
-                _traderSpi->sendAbtrgOrder(OrderField );
-            };
-
-            void cancelAbtrgOrder( Types::ArbitrageOrderField const & cancelOrderField, int64_t& epoch_time){
-                _traderSpi->cancelAbtrgOrder(cancelOrderField, epoch_time );
             };
 
             template<typename ...Args>
@@ -91,8 +75,8 @@ namespace Cosmos{
                 return &_traderSpi->m_initMarketDataVector;
             };
 
-            decltype(_traderSpi->m_tradeInsinfoVec) * getInstrumentInfoVec() {
-                return &_traderSpi->m_tradeInsinfoVec;
+            decltype(_traderSpi->m_tradeInsInfoVec) * getInstrumentInfoVec() {
+                return &_traderSpi->m_tradeInsInfoVec;
             }
 
         };

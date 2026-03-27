@@ -106,7 +106,6 @@ int main(int argc, char* argv[]) {
     int tradingday = atoi(argv[1]);
     std::string productid = argv[2];
     std::string fileName = argv[3];
-    fileName += std::string("_") + productid;
     fprintf(stderr, "tradingday=%d, productid=%s, fileName=%s\n", tradingday, productid.c_str(),  fileName.c_str());
   //  std::string config_tradinghours = "tradinghour.xml";
     std::string config_path = "CosmosKBarRead.xml";

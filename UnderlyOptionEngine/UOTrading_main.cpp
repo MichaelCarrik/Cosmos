@@ -76,6 +76,8 @@ void InitMySql( Utils::CppMySQL3DB *mySql, std::string mysql_config) {
 }
 
 
+
+
 int main(int argc, char *argv[]) {
 
     std::string config_tradinghours = "tradinghour.xml";
@@ -131,7 +133,7 @@ int main(int argc, char *argv[]) {
         auto engineName = policy_pt.second.get<std::string>("<xmlattr>.name");
         spdlog::info("initial policy {}", engineName.c_str());
         auto underlyOptionEngine = new  UnderlyOptionEngine::UnderlyOptionEngine(&driver, engineName, mySql,
-                                                                                             is_day());  //TradeBots::Engine::IPolicyFactory::CreateIPolicy();
+                                                                                             is_day(), true);  //TradeBots::Engine::IPolicyFactory::CreateIPolicy();
         underlyOptionEngine->m_policyID = policyID++;
         underlyOptionEngine->m_tradingDay = tradingday;
         engines_vec.emplace_back(underlyOptionEngine);

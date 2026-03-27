@@ -63,7 +63,7 @@ namespace Cosmos{
             void initKTime( Utils::TradingSession& tradingSession, bool isDay){
                 m_ktime.clear();
                 index = 0;
-                auto seconds =  Types::KPeroidToSecondsMap[m_period];
+                auto seconds =  Types::KPeroidToSecondsVec[static_cast<int>(m_period)];
                 int beginTime =0;
                 int lastEndTime=0;
 

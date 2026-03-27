@@ -87,7 +87,7 @@ void InitMySql(Cosmos::Utils::CppMySQL3DB *mySql, std::string mysql_config) {
 
 int main() {
     std::string config_tradinghours = "tradinghour.xml";
-    std::string config_path = "OptionTrading.xml";
+    std::string config_path = "CosmosKBarSaver.xml";
     spdlog::init_thread_pool(1024 * 64, 1);
     //  auto daily_logger = spdlog::daily_logger_mt<spdlog::async_factory_nonblock>("daily_logger", "logs/system/daily.txt", 19, 30);
     auto daily_logger = spdlog::daily_logger_mt("daily_logger", "logs/system/daily.txt", 19, 30);
@@ -107,15 +107,14 @@ int main() {
     //initial md
     fprintf(stderr, "init market begin\n");
     spdlog::info("initial md");
-    auto md_config = pt.get_child("OptionTrading").get_child("md").get<std::string>("<xmlattr>.configfile");
+    auto md_config = pt.get_child("Cosmos").get_child("md").get<std::string>("<xmlattr>.configfile");
     //    Market::Market< Market::MockMarket> market(&driver, md_config);
     Cosmos::Market::Market<Cosmos::Market::CtpMarket, decltype(driver)> market(&driver, md_config);
 
-    auto trade_config = pt.get_child("OptionTrading").get_child("trade").get<std::string>("<xmlattr>.configfile");
+    auto trade_config = pt.get_child("Cosmos").get_child("trade").get<std::string>("<xmlattr>.configfile");
     //    TradeBots::Trader::Trader<TradeBots::Trader::RemTraderSpi> trader(&driver, trade_config, symbolConfigMap.size());
     Cosmos::Trader::Trader<Cosmos::Trader::CtpTrader, decltype(driver)> trader(&driver, trade_config);
     fprintf(stderr, "trade end\n");
-    std::array<bool, 2> isDayArray{true}; //{false, true};
 
     std::string store_config = "mysql.xml";
     Cosmos::Utils::CppMySQL3DB *mySql = new Cosmos::Utils::CppMySQL3DB();
@@ -129,7 +128,7 @@ int main() {
     };
     spdlog::info("trader login successfully");
 
-    std::vector< Cosmos::Types::InstrumentInfo>* tradeInsinfoVec{nullptr};
+    std::vector< Cosmos::Types::InstrumentInfo*>* tradeInsinfoVec{nullptr};
     tradeInsinfoVec = trader.getInstrumentInfoVec();
 
     spdlog::info("initial policies");
@@ -143,16 +142,16 @@ int main() {
         auto engineName = policy_pt.second.get<std::string>("<xmlattr>.name");
         if (engineName.find("kbarsaver") != std::string::npos) {
             spdlog::info("initial policy {}", engineName.c_str());
-            saveEngine = new Cosmos::KBarEngine::KBarSaverEngine(&driver, engineName, mySql, tradeInsinfoVec, tradingday);
+            saveEngine = new Cosmos::KBarEngine::KBarSaverEngine(&driver, engineName, mySql, tradeInsinfoVec, tradingday,  is_day());
             //TradeBots::Engine::IPolicyFactory::CreateIPolicy();
             saveEngine->m_policyID = policyID++;
             engines_vec.emplace_back(saveEngine);
-            for (auto param_pt: boost::make_iterator_range(policy_pt.second.get_child("params").equal_range("param"))) {
-                Cosmos::Types::Param param;
-                param.name = param_pt.second.get<std::string>("<xmlattr>.name");
-                param.value = param_pt.second.get<std::string>("<xmlattr>.value");
-                saveEngine->onParams(param);
-            }
+            // for (auto param_pt: boost::make_iterator_range(policy_pt.second.get_child("params").equal_range("param"))) {
+            //     Cosmos::Types::Param param;
+            //     param.name = param_pt.second.get<std::string>("<xmlattr>.name");
+            //     param.value = param_pt.second.get<std::string>("<xmlattr>.value");
+            //     saveEngine->onParams(param);
+            // }
         }
     }
 
@@ -166,7 +165,12 @@ int main() {
         logStruct->m_positionLog = initLogs(position, iengine->m_engineName, position);
 
     //    iengine->setInitLog(*logStruct);
+        // auto startTime = std::chrono::duration_cast<std::chrono::microseconds>(
+        //   std::chrono::high_resolution_clock::now().time_since_epoch()).count();
         iengine->onStart();
+        // auto timeConsume =  std::chrono::duration_cast<std::chrono::microseconds>(
+        //        std::chrono::high_resolution_clock::now().time_since_epoch()).count() - startTime;
+       // fprintf(stderr,"saveEngine start consume : timeConsume=%d\n", timeConsume);
     }
 
     auto initMarketVec = trader.getInitMarketVec();
@@ -178,7 +182,7 @@ int main() {
         sleep(1.2 * 60);
         std::chrono::system_clock::duration d = std::chrono::system_clock::now().time_since_epoch();
         std::chrono::minutes minute = std::chrono::duration_cast<std::chrono::minutes>(d);
-        auto today_minutes = (minute.count() + 8 * 60) % (60 * 24);
+        auto today_minutes = (minute.count() + 7 * 60) % (60 * 24);
         int time1 = 2 * 60 + 30; //02:30
         int time2 = 11 * 60 + 30; //11:30
         int time3 = 15 * 60; //15:00
@@ -187,16 +191,18 @@ int main() {
             (today_minutes - time2 > 1 and today_minutes - time2 < 30) ||
             (today_minutes - time3 > 1 and today_minutes - time3 < 30)) {
             spdlog::info("save kline in ks_main 1");
-            // for (auto &kv: kDataManager->m_allKLineSeries) {
-            //     for (auto &kse: *kv.second) {
-            //         fprintf(stderr, "crontab today_minutes=%d, instrumentid=%s, index=%d, peroid=%d\n", today_minutes,
-            //                 kse.second->m_instrument.data(), kse.second->m_seriesIndex,
-            //                 Cosmos::Types::KPeroidToIntervalMap[kse.first]);
-            //         if (kse.second->m_kseries.size() > kse.second->m_seriesIndex) {
-            //             saveEngine->saveKline(kse.second, kse.second->m_seriesIndex, kse.first);
-            //         }
-            //     }
-            // }
+          //  spdlog::info("save kline in ks_main 1");
+
+            for (auto &kv:   engines_vec[0]->m_kDataManager->m_allKLineSeries) {
+                for (auto &kse: *kv.second) {
+                    // fprintf(stderr, "crontab today_minutes=%d, instrumentid=%s, index=%d, peroid=%d\n", today_minutes,
+                    //         kse.second->m_insInfo.instrumentID.data(), kse.second->m_seriesIndex,
+                    //         Cosmos::Types::KPeroidToIntervalMap[kse.first]);
+                    if (kse.second->m_KDataVecs.size() > kse.second->m_seriesIndex) {
+                        saveEngine->_saveKline(kse.second, kse.second->m_seriesIndex, kse.first);
+                    }
+                }
+            }
         }
     }
     return 1;

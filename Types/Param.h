@@ -9,18 +9,26 @@
 
 namespace Cosmos{
     namespace Types{
-        class Param{
+        class InitParam{
         public:
-            std::string name;
-            std::string value;
+            std::string engineName;
             std::map<std::string, std::string> paramMap;
-            static std::string getValue(std::map<std::string, std::string> const& paramsMap, std::string&& key){
-                auto itr = paramsMap.find(key);
-                if (itr == paramsMap.end()){
-                    assert(false);
-                }
-                return itr->second;
-            };
+            std::vector <std::map<std::string, std::string>> subPolicyParamsVec;
+
+        };
+
+        struct EngineParam {
+            int affiThreadId{-1};
+            Types::Product_t productID{""};
+            int putResendTimeout{600};
+            bool futurePreCloseToday{false};
+            int futureMinVolume{1};
+            int optionMinVolume{1};
+            int futureMaxPosition{1};
+            int optionMaxPosition{1};
+            Types::HedgeType hedgeType{Types::HedgeType::spec};
+            bool isUseUnderlyPrice{true};
+
         };
     }
 }

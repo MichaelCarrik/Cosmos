@@ -6,63 +6,44 @@
 #define Cosmos_KPERIOD_H
 namespace Cosmos{
     namespace Types {
-        enum class KPeriod {
-            Min1,
-            Min5,
-            Min15,
-            Min30,
-            H1,
-            D1,
+        enum class KPeriod : int {
+            Min1 =0,
+            Min5 =1,
+            Min15 =2,
+            Min30 =3,
+            D1 =4,
+        };
+
+        static std::vector<int> KPeroidToSecondsVec{
+                60, 300, 900, 1800, 3600 * 24
         };
 
 
-
-        static std::unordered_map<KPeriod, int> KPeroidToSecondsMap{
-                {KPeriod::Min1,  60},
-                {KPeriod::Min5,  300},
-                {KPeriod::Min15, 900},
-                {KPeriod::Min30, 1800},
-                {KPeriod::H1,    3600},
-                {KPeriod::D1,    3600 * 24}
+        static std::vector<int> KPeroidToIntervalVec{
+                 1,5,15,30, 24
         };
 
-
-        static std::unordered_map<KPeriod, int> KPeroidToIntervalMap{
-
-                {KPeriod::Min1,  1},
-                {KPeriod::Min5,  5},
-                {KPeriod::Min15, 15},
-                {KPeriod::Min30, 30},
-                {KPeriod::H1,    60},
-                {KPeriod::D1,    24}
+        static std::vector<std::array<char, 26>> KPeroidToFutureTableVec{
+                std::array<char, 26>{"futureOneMinute_bars"},
+                std::array<char, 26>{"futureMinutes_bars"},
+                std::array<char, 26>{"futureMinutes_bars"},
+                std::array<char, 26>{"futureMinutes_bars"},
+                std::array<char, 26>{"futureDay_bars"}
         };
 
-        static std::unordered_map<KPeriod, std::array<char, 26>> KPeroidToFutureTableMap{
-
-                {KPeriod::Min1,   std::array<char, 26>{"oneMinute_bars"}},
-                {KPeriod::Min5,   std::array<char, 26>{"minutes_bars"}},
-                {KPeriod::Min15,  std::array<char, 26>{"minutes_bars"}},
-                {KPeriod::Min30,  std::array<char, 26>{"minutes_bars"}},
-                {KPeriod::H1,     std::array<char, 26>{"minutes_bars"}},
-                {KPeriod::D1,   std::array<char, 26>{"day_bars"}}
-        };
-
-        static std::unordered_map<KPeriod, std::array<char, 26>> KPeroidToOptionTableMap{
-
-                {KPeriod::Min1,   std::array<char, 26>{"optionOneMinute_bars"}},
-                {KPeriod::Min5,   std::array<char, 26>{"optionMinutes_bars"}},
-                {KPeriod::Min15,  std::array<char, 26>{"optionMinutes_bars"}},
-                {KPeriod::Min30,  std::array<char, 26>{"optionMinutes_bars"}},
-                {KPeriod::H1,     std::array<char, 26>{"optionMinutes_bars"}},
-                {KPeriod::D1,   std::array<char, 26>{"optionDay_bars"}}
+        static std::vector<std::array<char, 26>> KPeroidToOptionTableMap{
+            std::array<char, 26>{"optionOneMinute_bars"},
+            std::array<char, 26>{"optionMinutes_bars"},
+            std::array<char, 26>{"optionMinutes_bars"},
+            std::array<char, 26>{"optionMinutes_bars"},
+            std::array<char, 26>{"optionDay_bars"}
         };
 
 
         static std::vector< Types::KPeriod> m_kperoidVec{
               Types::KPeriod::Min1 , Types::KPeriod::Min5,
               Types::KPeriod::Min15 , Types::KPeriod::Min30,
-              Types::KPeriod::H1, Types::KPeriod::D1 ,
-
+              Types::KPeriod::D1 ,
         };
 
         static const std::unordered_map<std::string, KPeriod> configParamToKPeriodMap{
@@ -70,7 +51,6 @@ namespace Cosmos{
                 {"Min5", KPeriod::Min5},
                 {"Min15", KPeriod::Min15},
                 {"Min30", KPeriod::Min30},
-                {"H1", KPeriod::H1},
                 {"D1", KPeriod::D1}
         };
 

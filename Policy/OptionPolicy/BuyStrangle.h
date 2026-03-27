@@ -16,7 +16,7 @@ namespace Cosmos {
             int m_configIndex{0};
          //    Types::KPeriod m_kperiod;
             int m_tradeTime{0};
-            double m_mv{0.0};
+            double m_MV{0.0};
             double m_multi{1000.0};
             bool m_isCheck{false};
             int m_lastPsTime{0};
@@ -30,7 +30,7 @@ namespace Cosmos {
                         std::string const&engineName,Types::Instrument_t& instrument,int tradeTime,
                         double multi, int tradingday, int maxPosition,
                          int isRefreshDelta, double openAtDelta, double adjCoef) :
-                    m_mv(mv), m_tradeTime(tradeTime),
+                    m_MV(mv), m_tradeTime(tradeTime),
                     m_multi(multi), m_maxPosition(maxPosition), m_isRefreshDelta(isRefreshDelta),
                     m_openAtDelta(openAtDelta),  m_adjCoef(adjCoef) {
                 m_underlyInstrument = instrument;
@@ -43,7 +43,7 @@ namespace Cosmos {
                 m_tradingday = tradingday;
                 spdlog::info( "createPolicy engineName={}, policyName={}, kperiod={}  mv={}, tradingday={}, "
                               "underly={}, , maxPosition={}, isRefreshDelta={}, openAtDelta={}, adjCoef={}",
-                              engineName, policyName, (int) kperiod, m_mv, m_tradingday, m_underlyInstrument.data(),
+                              engineName, policyName, (int) kperiod, m_MV, m_tradingday, m_underlyInstrument.data(),
                               m_maxPosition, m_isRefreshDelta, m_openAtDelta, m_adjCoef);
 
                 _initPolicyLogger();
@@ -74,9 +74,9 @@ namespace Cosmos {
 
 
                 fprintf(stderr,
-                        "[%s_%s] start, m_kperiod=%dMins, m_mv=%.3f, m_multi=%.3f, m_tradeTime=%d, maxPosition=%d, isRefreshDelta=%d, "
+                        "[%s_%s] start, m_kperiod=%dMins, m_MV=%.3f, m_multi=%.3f, m_tradeTime=%d, maxPosition=%d, isRefreshDelta=%d, "
                         "openAtDelta=%.3f, expireday=%d, configIndex=%d\n",
-                        m_engineName.c_str(), m_policyName.c_str(), Types::KPeroidToIntervalMap[m_kperiod], m_mv, m_multi, m_tradeTime,
+                        m_engineName.c_str(), m_policyName.c_str(), Types::KPeroidToIntervalMap[m_kperiod], m_MV, m_multi, m_tradeTime,
                         m_maxPosition, m_isRefreshDelta, m_openAtDelta,
                         m_expireday, m_configIndex);
                 m_configIndex++;
@@ -101,11 +101,11 @@ namespace Cosmos {
                             double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
 
                             if(pMD->psSecond - m_tradeTime > 0 && pMD->psSecond - m_tradeTime <  5 * 60 && m_tradingday != m_expireday
-                               && (abs(allCallDelta + allPutDelta)  > m_adjCoef * m_mv/(lastUnderlyKB->m_close * m_multi)
+                               && (abs(allCallDelta + allPutDelta)  > m_adjCoef * m_MV/(lastUnderlyKB->m_close * m_multi)
                                    || (allCallDelta ==0 && allPutDelta == 0) || m_isRefreshDelta == 1)){
                                 //rebalance;
                                 _rebalanceDelta(m_callPolicySymbols, m_putPolicySymbols, allCallDelta, allPutDelta,
-                                                m_mv/(lastUnderlyKB->m_close * m_multi), m_openAtDelta, lastUnderlyKB->m_close);
+                                                m_MV/(lastUnderlyKB->m_close * m_multi), m_openAtDelta, lastUnderlyKB->m_close);
                                 m_isRefreshDelta = 0;
                             }
 
@@ -116,7 +116,7 @@ namespace Cosmos {
                                               "targetPosition={},  seriesIndex={}, "
                                               "allCallDelta={:.3f}, allPutDelta={:.3f}",
                                               m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
-                                              lastUnderlyKB->m_updateTime.data(), lastUnderlyKB->m_psTime, lastUnderlyKB->m_close,
+                                              lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime, lastUnderlyKB->m_close,
                                               0.0, 0, m_underlyKseries->m_seriesIndex-1, allCallDelta, allPutDelta);
                             _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
                             _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);

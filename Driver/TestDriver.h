@@ -6,7 +6,7 @@
 #define Cosmos_TESTDRIVER_H
 
 #include "../Types/Type.h"
-#include "../Types/VarientTypes.h"
+
 
 #include "../Driver/TheadPool.h"
 #include "../Types/SubScribeQuote.h"
@@ -93,13 +93,7 @@ namespace Cosmos {
 
             }
 
-            void sendAbtrgOrder(Types::ArbitrageOrderField const &order) {
-                _sendAbtrgOrderCallbacks(order);
-            }
 
-            void cancelAbtrgOrder(Types::ArbitrageOrderField const &order, int64_t& epoch_time) {
-                _cancelAbtrgOrderCallbacks(order, epoch_time);
-            }
 
             void subscribeQuote( Types::SubScribeQuote const &subScribeQuote) {
 
@@ -128,13 +122,6 @@ namespace Cosmos {
                 _cancelOrderCallbacks = cb;
             }
 
-            void register_sendAbtrgOrderFunction(std::function<void(Types::ArbitrageOrderField const &)> &&cb) {
-                _sendAbtrgOrderCallbacks = cb;
-            }
-
-            void register_cancelAbtrgOrderFunction(std::function<void(Types::ArbitrageOrderField const &, int64_t &)> &&cb) {
-                _cancelAbtrgOrderCallbacks = cb;
-            }
 
             void register_subscribeQuoteFunction(std::function<void( Types::SubScribeQuote const &)> &&cb) {
                 _subscribeQuoteCallbacks = cb;
@@ -161,9 +148,6 @@ namespace Cosmos {
             std::function<void( Types::OrderField const &)> _sendOrderCallbacks;
             std::function<void( Types::OrderField const &, int64_t&)> _cancelOrderCallbacks;
             std::function<void( Types::SubScribeQuote const &)> _subscribeQuoteCallbacks;
-
-            std::function<void(Types::ArbitrageOrderField const &)> _sendAbtrgOrderCallbacks;
-            std::function<void(Types::ArbitrageOrderField const &, int64_t&)> _cancelAbtrgOrderCallbacks;
 
             std::function<void( Types::EventData const &)> _onEventData;
 
