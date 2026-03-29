@@ -26,7 +26,10 @@ namespace Cosmos {
                     std::filesystem::create_directories(tradeSymbolPath.parent_path());
                 }
                 fprintf(stderr, "initLogs %s %s\n", logKey.data(), logSymbolPath);
-                g_spdLogPool[logKey] = spdlog::basic_logger_st(logKey.data(), logSymbolPath).get();
+                auto logPtr = spdlog::basic_logger_st(logKey.data(), logSymbolPath).get();
+                logPtr->set_pattern("[%Y%m%d %H:%M:%S.%e] [%l] %v");
+                g_spdLogPool[logKey] = logPtr;
+
             }
             return g_spdLogPool[logKey];
         }

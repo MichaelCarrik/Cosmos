@@ -1,2 +1,0 @@
-aux_source_directory(. DIR_UnderlyOptionEngine_SRCS)
-add_library(UnderlyOptionEngine UnderlyOptionEngine.h  UnderlyOptionEngine.cpp)

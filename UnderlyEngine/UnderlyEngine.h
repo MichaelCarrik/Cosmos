@@ -22,9 +22,9 @@
 
 
 namespace Cosmos {
-    namespace UnderlyOptionEngine {
+    namespace Engine {
 
-        class UnderlyOptionEngine {
+        class UnderlyEngine {
         private:
             Utils::CppMySQL3DB * m_mySql{nullptr};
             bool m_isReal{true};
@@ -50,7 +50,7 @@ namespace Cosmos {
             int m_tradingDay{0};
             bool m_isDay;
 
-            UnderlyOptionEngine(decltype(m_driver) driver, std::string const& engineName,   Utils::CppMySQL3DB * mySql , bool isDay, bool isReal) :
+            UnderlyEngine(decltype(m_driver) driver, std::string const& engineName,   Utils::CppMySQL3DB * mySql , bool isDay, bool isReal) :
                     m_engineName(engineName), m_mySql(mySql),  m_isDay(isDay), m_isReal(isReal){
                 m_driver = driver;
                 m_driver->template add_receiver< Types::OnQuerySymbol>(
@@ -69,7 +69,7 @@ namespace Cosmos {
                         }));
             }
 
-            virtual ~UnderlyOptionEngine() {}
+            virtual ~UnderlyEngine() {}
 
             void setInitLog();
 

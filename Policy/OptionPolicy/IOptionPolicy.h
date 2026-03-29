@@ -23,8 +23,7 @@ namespace Cosmos {
 
         struct PolicySymbolStruct{
             std::vector<const Types::Symbol *> optionSymbolVecs;
-            std::map<Types::Instrument_t, int> optionTargetPosMaps;
-            std::map<Types::Instrument_t, int> optionLastTargetPosMaps;
+            TargetSignal targetSignal;
         };
 
         class IOptionPolicy  :  public IPolicy{
@@ -58,8 +57,8 @@ namespace Cosmos {
                         policySymbols.optionSymbolVecs.emplace_back(symbolItr.second);
                         for(auto fileReadItr : fileReadVecs){
                             if(strcmp(fileReadItr.instrumentStr.c_str(), symbolItr.second->instrumentInfo.instrumentID.data())==0){
-                                policySymbols.optionTargetPosMaps[symbolItr.second->instrumentInfo.instrumentID] = std::stoi(fileReadItr.targetPositionStr.c_str());
-                                policySymbols.optionLastTargetPosMaps[symbolItr.second->instrumentInfo.instrumentID] = std::stoi(fileReadItr.targetPositionStr.c_str());
+                                policySymbols.targetSignal.targetPosMaps[symbolItr.second->instrumentInfo.instrumentID] = std::stoi(fileReadItr.targetPositionStr.c_str());
+                                policySymbols.targetSignal.lastTargetPosMaps[symbolItr.second->instrumentInfo.instrumentID] = std::stoi(fileReadItr.targetPositionStr.c_str());
                             }
                         }
                     }
@@ -82,7 +81,7 @@ namespace Cosmos {
 
             bool isHaveZeroDeltaPos(PolicySymbolStruct & policySymbols) {
                 for (auto & optionSymbol: policySymbols.optionSymbolVecs) {
-                    int  targetPosition =  getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.optionTargetPosMaps);
+                    int  targetPosition =  getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps);
                     if (targetPosition !=0) {
                         auto series = optionSymbol->m_kSeriesMap.at(m_kperiod);
                         auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
@@ -100,8 +99,8 @@ namespace Cosmos {
             void _writeOptionPolicyLog( PolicySymbolStruct & policySymbols,  int configIndex) {
                 auto optionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 for (auto & optionSymbol: policySymbols.optionSymbolVecs) {
-                    int  targetPosition =  getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.optionTargetPosMaps);
-                    int lastTargetPosition  = getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.optionLastTargetPosMaps);
+                    int  targetPosition =  getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps);
+                    int lastTargetPosition  = getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.lastTargetPosMaps);
                     if(targetPosition !=0 || (targetPosition ==0 && lastTargetPosition!=0)) {
 
 
@@ -113,22 +112,22 @@ namespace Cosmos {
 //                            assert(false);
 //                        }down
                         m_configLog->info(
-                                "configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
-                                "targetPosition={}, seriesIndex={}",
+                                "configIndex={}, instr={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
+                                "targetPos={}, seriesIndex={}",
                                 configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingday,
                                 lastOptionK->m_updateTimeBegin.data(), lastOptionK->m_endPsTime,
                                 lastOptionK->m_close, lastOptionK->delta, targetPosition,
                                 optionIndex);
                     }
                 }
-                policySymbols.optionLastTargetPosMaps.clear();
-                std::copy(policySymbols.optionTargetPosMaps.begin(), policySymbols.optionTargetPosMaps.end(),
-                          std::inserter(policySymbols.optionLastTargetPosMaps, policySymbols.optionLastTargetPosMaps.begin()));
+                policySymbols.targetSignal.lastTargetPosMaps.clear();
+                std::copy(policySymbols.targetSignal.targetPosMaps.begin(), policySymbols.targetSignal.targetPosMaps.end(),
+                          std::inserter(policySymbols.targetSignal.lastTargetPosMaps, policySymbols.targetSignal.lastTargetPosMaps.begin()));
             //    memcpy(&lastTargetPosMaps, &targetPosMaps, sizeof(targetPosMaps));
             }
 
             int getTargetPos(Types::Instrument_t const instrumentID,
-                             decltype(m_callPolicySymbols.optionTargetPosMaps) const& targetPosMaps) {
+                             decltype(m_callPolicySymbols.targetSignal.targetPosMaps) const& targetPosMaps) {
                 int targetPosition = 0;
                 auto itrTGPos = targetPosMaps.find(instrumentID);
                 if (itrTGPos != targetPosMaps.end()) {
@@ -180,7 +179,7 @@ namespace Cosmos {
             }
 
 
-            int addPositionByGreeks(Types::Instrument_t const& instrumentID, decltype(m_callPolicySymbols.optionTargetPosMaps) & targetPosMaps, double greeks, double diffGreeks){
+            int addPositionByGreeks(Types::Instrument_t const& instrumentID, decltype(m_callPolicySymbols.targetSignal.targetPosMaps) & targetPosMaps, double greeks, double diffGreeks){
                 auto itrTGPos = targetPosMaps.find(instrumentID);
                 if (itrTGPos == targetPosMaps.end()) {
                     targetPosMaps[instrumentID] = 0;
@@ -193,7 +192,7 @@ namespace Cosmos {
                 return 1;
             }
 
-            void _checkMaxPositionRisk(  decltype(m_callPolicySymbols.optionTargetPosMaps) & targetPosMaps, int type, int maxPosition){
+            void _checkMaxPositionRisk(  decltype(m_callPolicySymbols.targetSignal.targetPosMaps) & targetPosMaps, int type, int maxPosition){
                 for(auto itrCTGPos = targetPosMaps.begin(); itrCTGPos!=targetPosMaps.end(); itrCTGPos++){
 
                     if(type == -1){ // pos must be negtive and less than -maxPosition

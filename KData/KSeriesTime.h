@@ -130,11 +130,22 @@ namespace Cosmos{
 
 
             void setSecondsBias(){
+                int lastEndTime =    m_ktime[0].beginPstime +  m_secondsBias -1;
+                int allEndTime = m_ktime[m_ktime.size()-1].endPstime;
                 for(auto& ktime :  m_ktime){
-                        ktime.beginPstime +=  m_secondsBias ;
+                        ktime.beginPstime =  lastEndTime +1;
                         ktime.endPstime +=  m_secondsBias;
                          Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
                          Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
+                        lastEndTime = ktime.endPstime;
+                }
+                if (lastEndTime  < allEndTime) {   //virtual last for close real last  kbars
+                    KTime ktime;
+                    ktime.beginPstime = lastEndTime ;
+                    ktime.endPstime =  allEndTime;
+                    Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
+                    Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
+                    m_ktime.emplace_back(ktime);
                 }
             }
 

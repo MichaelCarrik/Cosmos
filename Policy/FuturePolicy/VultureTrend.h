@@ -11,11 +11,11 @@
 
 namespace Cosmos {
     namespace Policy {
-        class Vulture : public IFuturePolicy {
+        class VultureTrend : public IFuturePolicy {
         private:
-            int m_length;
-            double m_alpha;
-            double m_mark;
+            int m_length{1000};
+            double m_alpha{0.7};
+            double m_mark{2.0};
 
             int m_offset;
             const KData::KSeries *m_dayKSeries{nullptr};
@@ -26,24 +26,23 @@ namespace Cosmos {
             std::vector<double> m_dayLowestVec;
             std::vector<double> m_dayCloseVec;
             std::vector<double> m_fiveMinCloseVec;
-            double m_band;
-            double m_upBand;
-            double m_downBand;
-            double m_minsMA;
+            double m_band{9999.0};
+            double m_upBand{9999999.0};
+            double m_downBand{0.0};
+            double m_minsMA{0.0};
             int m_dayMinutesCount{0};
 
         public:
-            Vulture(std::string const &policyName, std::string const &engineName,
+            VultureTrend(std::string const &policyName, std::string const &engineName,
                     Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv,
                     double multi, Types::SignalIntension si, int tradingDay, int adjRiskTime,
-                    int length, double alpha, double mark) : IFuturePolicy(policyName, engineName, instrument, kperiod,
-                                                                           mv, multi, si,
-                                                                           tradingDay, adjRiskTime), m_length(length),
+                    double alpha, double mark) : IFuturePolicy(policyName, engineName, instrument, kperiod,
+                                                                           mv, multi, si,tradingDay, adjRiskTime),
                                                              m_alpha(alpha), m_mark(mark) {
                 _initPolicyLogger();
             }
 
-            ~Vulture() {
+            ~VultureTrend() {
             }
 
             virtual void start(
@@ -57,27 +56,21 @@ namespace Cosmos {
                 m_underlyKseries = getSeries(inputSymbolMap, m_kperiod, m_underlyInstrument);
                 m_dayKSeries = getSeries(inputSymbolMap, Types::KPeriod::D1, m_underlyInstrument);
                 initTrendSignal(m_trendSignal, m_engineName, m_policyName, m_underlyInstrument);
+                _initVulture();
 
-                fprintf(
-                    stderr,
-                    "createPolicy policyName=%s, engineName=%s, instrument=%s  kperiod=%s, mv=%.3f, multi=%.3f, si=%s, tradingDay=%d, "
+                fprintf(stderr, "createPolicy policyName=%s, engineName=%s, instrument=%s  kperiod=%d, mv=%.3f, multi=%.3f, si=%s, tradingDay=%d, "
                     "adjRiskTime=%d, alpha=%.3f, mark=%.3f, dayMinutesCount=%d length=%d, signalPrice=%.3f, marketPosition=%d, targetPosition=%d, "
-                    "preTargetPosition=%d", m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(),
-                    static_cast<int>(m_kperiod),
-                    m_MV, m_multi, Types::signalIntensionMap[m_SI].data(), m_tradingDay, m_adjRiskTime, m_alpha, m_mark,
-                    m_dayMinutesCount, m_length,
-                    m_trendSignal.signalPrice, m_trendSignal.marketPosition, m_trendSignal.targetPosition,
-                    m_trendSignal.preTargetPosition);
+                    "preTargetPosition=%d", m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(), static_cast<int>(m_kperiod),m_MV,
+                    m_multi, Types::signalIntensionMap[m_SI].data(), m_tradingDay, m_adjRiskTime, m_alpha, m_mark,m_dayMinutesCount, m_length,
+                    m_trendSignal.signalPrice, m_trendSignal.marketPosition, m_targetSignal.targetPosMaps[m_underlyInstrument],
+                    m_targetSignal.lastTargetPosMaps[m_underlyInstrument]);
 
-                spdlog::info(
-                    "createPolicy policyName={}, engineName={}, instrument={}  kperiod={}, mv={:.3f}, multi={:.3f}, si={}, tradingDay={}, adjRiskTime={}, "
-                    "alpha={:.3f}, mark={:.3f}, dayMinutesCount={}, length={}, signalPrice={:.3f}, marketPosition={}, targetPosition={}, "
-                    "preTargetPosition=%d", m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(),
-                    static_cast<int>(m_kperiod),
-                    m_MV, m_multi, Types::signalIntensionMap[m_SI].data(), m_tradingDay, m_adjRiskTime, m_alpha, m_mark,
-                    m_dayMinutesCount,
-                    m_length, m_trendSignal.signalPrice, m_trendSignal.marketPosition, m_trendSignal.targetPosition,
-                    m_trendSignal.preTargetPosition);
+                spdlog::info("createPolicy policyName={}, engineName={}, instrument={}  kperiod={}, mv={:.3f}, multi={:.3f}, si={}, tradingDay={}, "
+                             "adjRiskTime={}, alpha={:.3f}, mark={:.3f}, dayMinutesCount={}, length={}, signalPrice={:.3f}, marketPosition={}, "
+                             "targetPosition={}, preTargetPosition=%d", m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(),
+                    static_cast<int>(m_kperiod), m_MV, m_multi, Types::signalIntensionMap[m_SI].data(), m_tradingDay, m_adjRiskTime, m_alpha,
+                    m_mark, m_dayMinutesCount, m_length, m_trendSignal.signalPrice, m_trendSignal.marketPosition,
+                    m_targetSignal.targetPosMaps[m_underlyInstrument], m_targetSignal.lastTargetPosMaps[m_underlyInstrument]);
             };
 
             void _initVulture() {
@@ -170,14 +163,14 @@ namespace Cosmos {
                             //long close
                             ++m_tradeNum;
                             m_trendSignal.marketPosition = 0;
-                            m_trendSignal.targetPosition = 0;
+                            m_targetSignal.targetPosMaps[m_underlyInstrument] = 0;
                             m_trendSignal.signalPrice = lastBar->m_close;
                             m_onoff = 0;
                         } else if (m_trendSignal.marketPosition < 0 && lastBar->m_close >= m_upBand) {
                             //short close
                             ++m_tradeNum;
                             m_trendSignal.marketPosition = 0;
-                            m_trendSignal.targetPosition = 0;
+                            m_targetSignal.targetPosMaps[m_underlyInstrument] = 0;
                             m_trendSignal.signalPrice = lastBar->m_close;
                             m_onoff = 0;
                         }
@@ -188,7 +181,7 @@ namespace Cosmos {
                             {
                                 ++m_tradeNum;
                                 m_trendSignal.marketPosition = 1;
-                                m_trendSignal.targetPosition = m_lots;
+                                m_targetSignal.targetPosMaps[m_underlyInstrument] = m_lots;
                                 m_trendSignal.signalPrice = lastBar->m_close;
                                 m_onoff = 0;
                             } else if (lastBar->m_close <= m_downBand && lastBar->m_close < lastBar->m_open &&
@@ -196,26 +189,30 @@ namespace Cosmos {
                             {
                                 ++m_tradeNum;
                                 m_trendSignal.marketPosition = -1;
-                                m_trendSignal.targetPosition = -m_lots;
+                                m_targetSignal.targetPosMaps[m_underlyInstrument] = -m_lots;
                                 m_trendSignal.signalPrice = lastBar->m_close;
                                 m_onoff = 0;
                             }
                         }
 
 
-                        if (this->m_trendSignal.targetPosition == this->m_trendSignal.preTargetPosition && this->m_trendSignal.targetPosition == 0) {
+                        if ( m_targetSignal.targetPosMaps[m_underlyInstrument] == m_targetSignal.lastTargetPosMaps[m_underlyInstrument] &&
+                            m_targetSignal.targetPosMaps[m_underlyInstrument] == 0) {
                             m_trendSignal.signalPrice = 0.0;
                         }
 
                         if (m_adjRiskTime == Utils::ToPsSeconds(lastBar->m_updateTimeBegin, false)) {
-                            if (this->m_trendSignal.targetPosition > 0 && this->m_trendSignal.targetPosition != m_lots) {
+                            if (m_targetSignal.targetPosMaps[m_underlyInstrument] > 0 && m_targetSignal.targetPosMaps[m_underlyInstrument] != m_lots) {
                                 // for risk adjust
-                                this->m_trendSignal.targetPosition = m_lots;
-                            } else if (this->m_trendSignal.targetPosition < 0 && this->m_trendSignal.targetPosition != -m_lots) {
-                                this->m_trendSignal.targetPosition = -m_lots;
+                                m_targetSignal.targetPosMaps[m_underlyInstrument] = m_lots;
+                            } else if (m_targetSignal.targetPosMaps[m_underlyInstrument] < 0 && m_targetSignal.targetPosMaps[m_underlyInstrument] != -m_lots) {
+                                m_targetSignal.targetPosMaps[m_underlyInstrument] = -m_lots;
                             }
                         }
                         writePolicyLog(lastBar, pMD);
+                        m_targetSignal.lastTargetPosMaps.clear();
+                        std::copy(m_targetSignal.targetPosMaps.begin(), m_targetSignal.targetPosMaps.end(),
+                                  std::inserter(m_targetSignal.lastTargetPosMaps, m_targetSignal.lastTargetPosMaps.begin()));
                     }
                     m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
                 }
@@ -223,15 +220,15 @@ namespace Cosmos {
 
             virtual void writePolicyLog(const KData::KData *lastUnderlyKB , const Types::MarketData * pMD) override {
                 m_configLog->info(
-                               "{}, {}, {}, {}, {}, close={:.3f}({:.3f}, {:.3f}), open={:.3f}, m_band={:.3f}, "
-                               "m_upBand={:.3f}, m_downBand={:.3f}, m_ma={:.3f}, "
-                               "onoff={}, marketPosition={}, signalPrice={:.3f}, "
-                               "targetPosition={}, lots={}",
+                               "{}, {}, {}, {}, {:03d}, close={:.3f}({:.3f}, {:.3f}), open={:.3f}, band={:.3f}, "
+                               "upBand={:.3f}, downBand={:.3f}, minsMA={:.3f}, "
+                               "onoff={}, mktPos={}, sgnPrice={:.3f}, "
+                               "tgtPos={}, lots={}",
                                lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
                                lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds,
                                lastUnderlyKB->m_close, pMD->bidPrice[0], pMD->askPrice[0], lastUnderlyKB->m_open, m_band, m_upBand,
                                m_downBand, m_minsMA, m_onoff, m_trendSignal.marketPosition, m_trendSignal.signalPrice,
-                               m_trendSignal.targetPosition, m_lots
+                               m_targetSignal.targetPosMaps[m_underlyInstrument], m_lots
                            );
                 m_configLog->flush();
             };

@@ -15,7 +15,7 @@
 #include "../Market/Market.h"
 #include "../Trader/MockTrader.h"
 #include "../Trader/Trader.h"
-#include "UnderlyOptionEngine.h"
+#include "UnderlyEngine.h"
 #include <filesystem>
 #include <chrono>
 #include "../Types/Param.h"
@@ -86,7 +86,6 @@ void parseConfig(boost::property_tree::ptree const &pt, std::map<std::string, Co
 
 int main(int argc, char *argv[]) {
     int tradingday = atoi(argv[1]);
-
     std::string config_tradinghours = "tradinghour.xml";
     std::string config_path = "CosmosTrading_test.xml";
     spdlog::init_thread_pool(1024 * 64, 1);
@@ -120,18 +119,18 @@ int main(int argc, char *argv[]) {
         trader.start(tradingday);
         spdlog::info("initial policies");
         int policyID = 0;
-        std::map<std::string, Cosmos::UnderlyOptionEngine::UnderlyOptionEngine *> engines_map;
+        std::map<std::string, Cosmos::Engine::UnderlyEngine *> engines_map;
 
         std::map<std::string, Cosmos::Types::InitParam> configParamMap;
         parseConfig(pt, configParamMap);
         for (auto & params : configParamMap) {
-            Cosmos::UnderlyOptionEngine::UnderlyOptionEngine *underlyOptionEngine;
-            underlyOptionEngine = new Cosmos::UnderlyOptionEngine::UnderlyOptionEngine(&driver,
+
+           auto underlyngine = new Cosmos::Engine::UnderlyEngine(&driver,
                 params.first, mySql, isDay, false);
-            underlyOptionEngine->m_policyID = policyID++;
-            underlyOptionEngine->m_tradingDay = tradingday;
-            engines_map[params.first] = underlyOptionEngine;
-            underlyOptionEngine->onInitParams(params.second);
+            underlyngine->m_policyID = policyID++;
+            underlyngine->m_tradingDay = tradingday;
+            engines_map[params.first] = underlyngine;
+            underlyngine->onInitParams(params.second);
         }
 
 

@@ -11,6 +11,11 @@
 namespace Cosmos {
     namespace Policy {
 
+        struct TargetSignal {
+            std::map<Types::Instrument_t, int> targetPosMaps;
+            std::map<Types::Instrument_t, int> lastTargetPosMaps;
+        };
+
         class IPolicy {
         public:
             std::string m_policyName{""};

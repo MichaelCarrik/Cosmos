@@ -2,7 +2,7 @@
 // Created by Zhangyingwei on 2023/5/10.
 //
 
-#include "UnderlyOptionEngine.h"
+#include "UnderlyEngine.h"
 #include "../Types/QuerySymbol.h"
 // //#include "../Policy/SellStrangle.h"
 // #include "../Policy/BuyStrangle.h"
@@ -12,12 +12,12 @@
 // #include "../Policy/Calendar.h"
 // #include "../Policy/SellStrangleV2.h"
 
-#include "../Policy/FuturePolicy/Vulture.h"
+#include "../Policy/FuturePolicy/VultureTrend.h"
 
 
 namespace Cosmos {
-    namespace UnderlyOptionEngine {
-        void UnderlyOptionEngine::onStart() {
+    namespace Engine {
+        void UnderlyEngine::onStart() {
             if (m_isDay == false && (( m_engineParam.productID[0] == 'I' && m_engineParam.productID[1] == 'F')
                                      || (m_engineParam.productID[0] == 'I' && m_engineParam.productID[1]== 'H')
                                      || (m_engineParam.productID[0] == 'I' && m_engineParam.productID[1]== 'M'))) {
@@ -38,8 +38,8 @@ namespace Cosmos {
                 auto policyType = Utils::getParamMapValue(subPolicyParams, "policyType");
 
                 if (strcmp(policyType.c_str(), "future") ==0) {
-                    auto policy= this->createOptionPolicy(policyName, subPolicyParams);
-                    m_optionPolicyVec.emplace_back(policy);
+                    auto policy= this->createFuturePolicy(policyName, subPolicyParams);
+                    m_futurePolicyVec.emplace_back(policy);
                 }
                 if (strcmp(policyType.c_str(), "option") ==0 ) {
                     auto policy= this->createOptionPolicy(policyName, subPolicyParams);
@@ -64,7 +64,9 @@ namespace Cosmos {
             subscribeEngine.policyid = m_policyID;
             m_driver->subscribePolicy(subscribeEngine, this);
 
-
+            for (auto futurePolicy: m_futurePolicyVec) {
+                futurePolicy->start(m_symbolMap);
+            }
 
             for (auto optionPolicy: m_optionPolicyVec) {
                 optionPolicy->start(m_symbolMap);
@@ -72,7 +74,7 @@ namespace Cosmos {
         };
 
 
-        void UnderlyOptionEngine::_queryQuote(Types::Instrument_t const &queryInstrumentID) {
+        void UnderlyEngine::_queryQuote(Types::Instrument_t const &queryInstrumentID) {
         //    fprintf(stderr, "[%s] QueryQuote, queryInstrumentID=%s\n", m_engineName.c_str(), queryInstrumentID.data());
             Types::SubScribeQuote SubScribeQuote;
             strcpy(SubScribeQuote.instrumentID.data(), queryInstrumentID.data());
@@ -80,14 +82,14 @@ namespace Cosmos {
             m_driver->subscribeQuote(SubScribeQuote);
         }
 
-        void UnderlyOptionEngine::_querySymbol(Types::Instrument_t const &queryInstrumentID) {
+        void UnderlyEngine::_querySymbol(Types::Instrument_t const &queryInstrumentID) {
             Types::QuerySymbol queryUnderlySymbol;
             queryUnderlySymbol.id = m_policyID;
             strcpy(queryUnderlySymbol.instrumentID.data(), queryInstrumentID.data());
             m_driver->send(queryUnderlySymbol);
         }
 
-        void UnderlyOptionEngine::_initUnderly(Types::Instrument_t const &underlyID, std::string const& policyType) {
+        void UnderlyEngine::_initUnderly(Types::Instrument_t const &underlyID, std::string const& policyType) {
 
             bool isWithOption = false;
             if (strcmp(policyType.c_str(), "option") ==0 ) {
@@ -97,7 +99,7 @@ namespace Cosmos {
         }
 
 
-        void UnderlyOptionEngine::onInitParams(Types::InitParam const & initParamMap) {
+        void UnderlyEngine::onInitParams(Types::InitParam const & initParamMap) {
             if (strcmp(initParamMap.engineName.c_str(), m_engineName.c_str()) != 0) {
                 assert(false);
             }
@@ -133,23 +135,44 @@ namespace Cosmos {
                     strcpy(tempInstrument.data(), underlyBStr.c_str());
                     _initUnderly(tempInstrument, policyType);
                 }
-
-
-
             }
             m_subPolicyParamsVec = &initParamMap.subPolicyParamsVec;
         };
 
 
-        Policy::IFuturePolicy * UnderlyOptionEngine::createFuturePolicy(std::string const &policyName ,std::map<std::string, std::string> const &paramMap) {
+        Policy::IFuturePolicy * UnderlyEngine::createFuturePolicy(std::string const &policyName ,std::map<std::string, std::string> const &paramMap) {
             fprintf(stderr, "[%s] createFuturePolicy policyName = %s\n", m_engineName.c_str(),  policyName.c_str());
+            if (policyName.compare("VultureTrend") == 0) {
+                Types::Instrument_t underlyInstrument{""};
+                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+
+                auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
+                this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
+
+                std::string siStr = Utils::getParamMapValue(paramMap, "SI");
+                Types::SignalIntension si = Types::configParamToSIMap.at(siStr);
+                double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
+                auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
+                double alpha = 0.7;
+                double mark = 2.0;
+              //  double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "adjRiskTime").c_str());
+
+                Types::InstrumentInfo * futureInsInfo{nullptr};
+                getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
+                return new Policy::VultureTrend(policyName, m_engineName, underlyInstrument, kPeriod,
+                                                                           MV, futureInsInfo->multi, si,
+                                                                           m_tradingDay, adjRiskTime, alpha, mark);
+            }
 
             assert(false);
             return nullptr;
         }
 
         Policy::IOptionPolicy *
-        UnderlyOptionEngine::createOptionPolicy(std::string const &policyName ,std::map<std::string, std::string> const &paramMap){
+        UnderlyEngine::createOptionPolicy(std::string const &policyName ,std::map<std::string, std::string> const &paramMap){
             fprintf(stderr, "[%s] createOptionPolicy policyName = %s\n", m_engineName.c_str(),  policyName.c_str());
 
             //  if (policyName.compare("SellStrangleV2") == 0) {
@@ -251,7 +274,7 @@ namespace Cosmos {
             return nullptr;
         }
 
-        void UnderlyOptionEngine::setKPtoHisSeriesMap(Types::Instrument_t const& instrument, Types::KPeriod period, bool isHis) {
+        void UnderlyEngine::setKPtoHisSeriesMap(Types::Instrument_t const& instrument, Types::KPeriod period, bool isHis) {
             auto itr = m_KPtoHisSeriesMap.find(instrument);
             if (itr == m_KPtoHisSeriesMap.end()) {
                 std::map<Types::KPeriod ,bool> temp;
@@ -269,7 +292,7 @@ namespace Cosmos {
 
         }
 
-        void UnderlyOptionEngine::onRtnSubScribeQuote(Types::OnSubScribeQuote const &onSubScribeQuote) {
+        void UnderlyEngine::onRtnSubScribeQuote(Types::OnSubScribeQuote const &onSubScribeQuote) {
          //   fprintf(stderr,"onRtnSubScribeQuote : instrument=%s\n", onSubScribeQuote.instrumentID.data());
             if (onSubScribeQuote.policyID == m_policyID) {
                 auto symbolItr = m_symbolMap.find(onSubScribeQuote.instrumentID);
@@ -295,7 +318,7 @@ namespace Cosmos {
             }
         };
 
-        void UnderlyOptionEngine::onInstrumentInfo(Types::InstrumentInfo const &instrumentInfo) {
+        void UnderlyEngine::onInstrumentInfo(Types::InstrumentInfo const &instrumentInfo) {
 
             if (instrumentInfo.productIDClass == Types::ProductClass::future) {
                 auto itr = m_underlyInitMap.find(instrumentInfo.instrumentID);
@@ -318,7 +341,7 @@ namespace Cosmos {
 
         };
 
-        void UnderlyOptionEngine::onRtnQuerySymbolPosition(Types::OnQuerySymbol const &onQuerySymbol) {
+        void UnderlyEngine::onRtnQuerySymbolPosition(Types::OnQuerySymbol const &onQuerySymbol) {
             if (onQuerySymbol.id != m_policyID) {
                 return;
             }
@@ -333,13 +356,13 @@ namespace Cosmos {
             }
         }
 
-        void UnderlyOptionEngine::onEventData(Types::EventData const &eventData) {
+        void UnderlyEngine::onEventData(Types::EventData const &eventData) {
             if (eventData.type == 0) {
                 auto pMD = (const Types::MarketData *) eventData.point;
                 if (strcmp(pMD->instrumentID.data(), "i2405") ==0 ) {
-                    fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
-                     pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
-                     pMD->epoch_time);
+                    // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                    //  pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
+                    //  pMD->epoch_time);
                     if (strcmp(pMD->updateTime.data(), "22:59:50") == 0) {
                         int a =1;
                     }
@@ -371,7 +394,7 @@ namespace Cosmos {
             }
         };
 
-        void UnderlyOptionEngine::updateMMOrder(const Types::OrderField *inputOrder,
+        void UnderlyEngine::updateMMOrder(const Types::OrderField *inputOrder,
                                                 Types::Symbol *symbol) {
             if (inputOrder->policyID != m_policyID) {
                 assert(false && "OpenEngine::updateOrder policyID not match");
@@ -407,7 +430,7 @@ namespace Cosmos {
             }
         }
 
-        void UnderlyOptionEngine::getFutureInfoByInstrumentID(Types::Instrument_t const& instrument, Types::InstrumentInfo* & futureInsInfo) {
+        void UnderlyEngine::getFutureInfoByInstrumentID(Types::Instrument_t const& instrument, Types::InstrumentInfo* & futureInsInfo) {
             auto itr = m_symbolMap.find(instrument);
             if (itr == m_symbolMap.end()) {
                assert(false);
@@ -416,7 +439,7 @@ namespace Cosmos {
 
         }
 
-        void UnderlyOptionEngine::getOptionInfoByUnderly(Types::Instrument_t const& underlyID, Types::InstrumentInfo* & optionInsInfo) {
+        void UnderlyEngine::getOptionInfoByUnderly(Types::Instrument_t const& underlyID, Types::InstrumentInfo* & optionInsInfo) {
             for (auto & itr : m_symbolMap) {
                 if (strcmp(itr.second->instrumentInfo.underly.data(), underlyID.data()) == 0) {
                     optionInsInfo =  &itr.second->instrumentInfo;
@@ -431,23 +454,33 @@ namespace Cosmos {
         }
 
 
-        void UnderlyOptionEngine::runEvent(const Types::MarketData *pMD, const int64_t epoch_time) {
+        void UnderlyEngine::runEvent(const Types::MarketData *pMD, const int64_t epoch_time) {
             auto symbolItr = m_symbolMap.find(pMD->instrumentID);
             if (symbolItr == m_symbolMap.end()) {
                 assert(false);
             }
             symbolItr->second->lastMD = pMD;
 
+            for (auto i = 0; i < m_futurePolicyVec.size(); i++) {
+                m_futurePolicyVec[i]->runTick(pMD);
+            }
+
             for (auto i = 0; i < m_optionPolicyVec.size(); i++) {
                 m_optionPolicyVec[i]->runTick(pMD);
             }
 
             std::map<Types::Instrument_t, int> targetMap;
+
+
+            for (auto i = 0; i < m_futurePolicyVec.size(); i++) {
+                _syncTargetMap(m_futurePolicyVec[i]->m_targetSignal.targetPosMaps, targetMap);
+            }
+
             for (auto i = 0; i < m_optionPolicyVec.size(); i++) {
                 //call target
 
-                _syncTargetMap(m_optionPolicyVec[i]->m_callPolicySymbols.optionTargetPosMaps, targetMap);
-                _syncTargetMap(m_optionPolicyVec[i]->m_putPolicySymbols.optionTargetPosMaps, targetMap);
+                _syncTargetMap(m_optionPolicyVec[i]->m_callPolicySymbols.targetSignal.targetPosMaps, targetMap);
+                _syncTargetMap(m_optionPolicyVec[i]->m_putPolicySymbols.targetSignal.targetPosMaps, targetMap);
             }
 
 
@@ -471,7 +504,7 @@ namespace Cosmos {
             }
         }
 
-        int UnderlyOptionEngine::_syncTargetMap(std::map<Types::Instrument_t, int> const &optionTargetPosMaps,
+        int UnderlyEngine::_syncTargetMap(std::map<Types::Instrument_t, int> const &optionTargetPosMaps,
                                                 std::map<Types::Instrument_t, int> &targetMap) {
             for (auto itr = optionTargetPosMaps.begin(); itr != optionTargetPosMaps.end(); itr++) {
                 auto targetItr = targetMap.find(itr->first);
@@ -484,7 +517,7 @@ namespace Cosmos {
             return 1;
         }
 
-        int UnderlyOptionEngine::syncPosition(Types::Symbol *symbol, const int64_t epoch_time) {
+        int UnderlyEngine::syncPosition(Types::Symbol *symbol, const int64_t epoch_time) {
             if (symbol->order->isTerminal == false) {
                 //&& isPendingOrderTimeout(symbol, epoch_time) == false) {
                 if (isPendingOrderTimeout(symbol, epoch_time) == true) {
@@ -501,7 +534,6 @@ namespace Cosmos {
             int posDiff = symbol->targetPosition - pendingPosition - symbol->tradePosition.filledPosition;
 
             if (posDiff != 0) {
-
                 spdlog::info(
                     "syncPosition m_engineName={}, updateTime={}, symbolName={}, posDiff={}, targetPosition={}, "
                     "pendingPosition={}, filledPosition={}, orderIsTerminal={}, ",
@@ -527,7 +559,7 @@ namespace Cosmos {
         }
 
 
-        bool UnderlyOptionEngine::isPendingOrderTimeout(const Types::Symbol *symbol, int64_t epoch_time) {
+        bool UnderlyEngine::isPendingOrderTimeout(const Types::Symbol *symbol, int64_t epoch_time) {
             //            	fprintf(stderr, "isPendingOrderTimeout, symbolName=%s, psSecond=%d, lastOrderPsTime=%d, m_putResendTimeout=%d\n",
             //            			  symbol->instrumentInfo.instrumentID.data(), symbol->lastMD->psSecond,symbol->lastOrderPsTime, m_putResendTimeout);
             if (symbol->lastMD->psSecond - symbol->lastOrderPsTime > m_engineParam.putResendTimeout &&
@@ -545,7 +577,7 @@ namespace Cosmos {
             return false;
         }
 
-        void UnderlyOptionEngine::setInitLog() {
+        void UnderlyEngine::setInitLog() {
             std::string record = "record";
             m_orderLog = Utils::initLogs(record, this->m_engineName, record);
 
@@ -553,7 +585,7 @@ namespace Cosmos {
             m_positionLog =  Utils::initLogs(position, this->m_engineName, position);
         };
 
-        void UnderlyOptionEngine::processSignal(Types::Symbol *symbol, int posDiff, const int64_t epoch_time) {
+        void UnderlyEngine::processSignal(Types::Symbol *symbol, int posDiff, const int64_t epoch_time) {
             Types::Signal signal;
             signal.intension = getIntension(symbol);
 
@@ -593,7 +625,7 @@ namespace Cosmos {
             }
         }
 
-        void UnderlyOptionEngine::cancelOrder(const Types::OrderField *pOrder, Types::Symbol *symbol,
+        void UnderlyEngine::cancelOrder(const Types::OrderField *pOrder, Types::Symbol *symbol,
                                               const int64_t epoch_time) {
             if (pOrder != nullptr && !pOrder->isTerminal) {
                 int64_t sendTime = 0;
@@ -604,7 +636,7 @@ namespace Cosmos {
             }
         }
 
-        Types::SignalIntension UnderlyOptionEngine::getIntension(const Types::Symbol *symbol) {
+        Types::SignalIntension UnderlyEngine::getIntension(const Types::Symbol *symbol) {
             //  if (symbol->intension != Types::SignalIntension::put) {
             //      return symbol->intension;
             //    }
@@ -615,7 +647,7 @@ namespace Cosmos {
         }
 
         void
-        UnderlyOptionEngine::sendSignal(Types::Signal const &signal, Types::Symbol *symbol) {
+        UnderlyEngine::sendSignal(Types::Signal const &signal, Types::Symbol *symbol) {
             //            if(signal.price <0.0001){
             //                return;
             //            }
@@ -630,7 +662,7 @@ namespace Cosmos {
         }
 
         Types::PositionEffectType
-        UnderlyOptionEngine::getPet(int &tradeVolume, int T_hold, int Y_hold, int minPosition, bool prioCloseToday) {
+        UnderlyEngine::getPet(int &tradeVolume, int T_hold, int Y_hold, int minPosition, bool prioCloseToday) {
             if (prioCloseToday == 1 && T_hold >= tradeVolume && (T_hold + Y_hold - tradeVolume >= minPosition)) {
                 return Types::PositionEffectType::T_close;
             } else if (Y_hold >= tradeVolume && (T_hold + Y_hold - tradeVolume >= minPosition)) {

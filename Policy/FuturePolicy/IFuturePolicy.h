@@ -16,15 +16,13 @@ namespace Cosmos {
             double signalPrice{0.0};
             int marketPosition{0};
             int preMarketPosition{0};
-            double holdStrikePrice{0.0};
-            int targetPosition{0};
-            int preTargetPosition{0};
+
         };
 
         class IFuturePolicy : public IPolicy {
         public:
             TrendSignal m_trendSignal;
-
+            TargetSignal m_targetSignal;
             int m_adjRiskTime{-1};
             int m_lots{0};
 
@@ -56,10 +54,10 @@ namespace Cosmos {
                 Types::Instrument_t const& underlyInstrument) {
                 char configPath[256]{""};
                 sprintf(configPath, "./logs/policy/%s_%s_%s.txt", m_engineName.c_str(), m_policyName.c_str(), underlyInstrument.data());
-                m_trendSignal.signalPrice = atof(this->GetLastValueFromFile(configPath, "signalPrice").c_str());
-                m_trendSignal.marketPosition = atoi(this->GetLastValueFromFile(configPath, "marketPosition").c_str());
-                m_trendSignal.targetPosition = atoi(this->GetLastValueFromFile(configPath, "targetPosition").c_str());
-                m_trendSignal.preTargetPosition = m_trendSignal.targetPosition;
+                m_trendSignal.signalPrice = atof(this->GetLastValueFromFile(configPath, "sgnPrice").c_str());
+                m_trendSignal.marketPosition = atoi(this->GetLastValueFromFile(configPath, "mktPos").c_str());
+                m_targetSignal.targetPosMaps[m_underlyInstrument] = atoi(this->GetLastValueFromFile(configPath, "tgtPos").c_str());
+                m_targetSignal.lastTargetPosMaps[m_underlyInstrument] =  atoi(this->GetLastValueFromFile(configPath, "tgtPos").c_str());
 
             }
 

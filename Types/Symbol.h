@@ -91,7 +91,7 @@ namespace Cosmos {
             InstrumentInfo instrumentInfo{""};
             TradePosition tradePosition;
             int targetPosition{0};
-            int preTargetPosition{0};
+       //     int preTargetPosition{0};
 
             const  Types::MarketData * lastMD;
             const  Types::OrderField * order;

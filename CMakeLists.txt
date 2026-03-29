@@ -40,8 +40,8 @@ add_subdirectory(Market)
 #include_directories(./KBarEngine)
 #add_subdirectory(KBarEngine)
 
-include_directories(./UnderlyOptionEngine)
-add_subdirectory(UnderlyOptionEngine)
+include_directories(./UnderlyEngine)
+add_subdirectory(UnderlyEngine)
 
 
 include_directories(./Utils)
@@ -63,10 +63,10 @@ add_subdirectory(Utils)
 #		Threads::Threads stdc++fs)
 
 
-add_executable(CosmosHedge_Test UnderlyOptionEngine/UOTradingTest_main.cpp
-		Policy/FuturePolicy/Vulture.h)
+add_executable(CosmosHedge_Test UnderlyEngine/UOTradingTest_main.cpp
+		Policy/FuturePolicy/VultureTrend.h)
 
-target_link_libraries(CosmosHedge_Test Market Trader KData Utils UnderlyOptionEngine
+target_link_libraries(CosmosHedge_Test Market Trader KData Utils UnderlyEngine
 		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 		${LIB_MYSQL} Threads::Threads stdc++fs)
 

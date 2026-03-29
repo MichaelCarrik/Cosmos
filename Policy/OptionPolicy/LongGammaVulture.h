@@ -216,16 +216,13 @@ namespace Cosmos {
                 }
                 m_configIndex++;
                 initIndicator();
-
-
-                fprintf(stderr,
-                "[%s_%s] start, underlyInstrument=%s, m_kperiod=%d, m_MV=%.3f, m_multi=%.3f, si=%s, tradingDay=%d, expireDay=%d, "
-                        "openAtDelta=%.3f, m_length=%d, m_mark=%.3f, m_alpha=%.3f, maxOptionPosition=%d, m_underlyToBeginIndex=%d, "
-                        "marketPosition=%d, preMarketPostion=%d, signalPrice=%.3f, holdStrikePrice=%.3f, "
-                        "configIndex=%d\n", m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(),
-                        static_cast<int>(m_kperiod), m_MV, m_multi, Types::signalIntensionMap[m_SI].data(), m_tradingDay, m_expireDay,
-                        m_openAtDelta, m_length, m_mark, m_alpha, m_maxOptionPosition, m_underlyToBeginIndex,  m_marketPosition,
-                        m_preMarketPosition, m_signalPrice, m_holdStrikePrice ,m_configIndex);
+                fprintf(stderr, "[%s_%s] start, underlyInstrument=%s, kperiod=%d, MV=%.3f, multi=%.3f, si=%s, tradingDay=%d, expireDay=%d, "
+                                "openAtDelta=%.3f, length=%d, mark=%.3f, alpha=%.3f, minsMA=%.3f, upBand=%.3f, downBand=%.3f, maxOptionPosition=%d, "
+                                "underlyToBeginIndex=%d, marketPosition=%d, preMarketPostion=%d, signalPrice=%.3f, holdStrikePrice=%.3f, configIndex=%d\n",
+                                m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(), static_cast<int>(m_kperiod), m_MV, m_multi,
+                                Types::signalIntensionMap[m_SI].data(), m_tradingDay, m_expireDay,m_openAtDelta, m_length, m_mark, m_alpha, m_minsMA,
+                                m_upBand, m_downBand, m_maxOptionPosition, m_underlyToBeginIndex,  m_marketPosition, m_preMarketPosition, m_signalPrice,
+                                m_holdStrikePrice ,m_configIndex);
                 m_configIndex++;
             };
 
@@ -254,8 +251,8 @@ namespace Cosmos {
                             _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
                             m_preMarketPosition = m_marketPosition;
 
-                            _checkMaxPositionRisk(m_callPolicySymbols.optionTargetPosMaps, 1, m_maxOptionPosition);
-                            _checkMaxPositionRisk(m_putPolicySymbols.optionTargetPosMaps, 1, m_maxOptionPosition);
+                            _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, 1, m_maxOptionPosition);
+                            _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, 1, m_maxOptionPosition);
 
                         }
 
@@ -272,9 +269,8 @@ namespace Cosmos {
 
             void _writePolicyLog(const KData::KData *lastUnderlyKB, const Types::MarketData * pMD) {
 
-                m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, {}, close={:.3f}, "
-                                  "marketPosition={}, preMarketPosition={}, signalPrice={:.3f}, "
-                                  "holdStrikePrice={:.3f}, m_minsMA={:.3f}, m_upBand={:.3f}, m_downBand={:.3f}",
+                m_configLog->info("configIndex={}, instr={}, {}, {}, {}, {:03d}, close={:.3f}, mktPos={}, preMktPos={}, sgnPrice={:.3f}, "
+                                  "strikePrice={:.3f}, minsMA={:.3f}, upBand={:.3f}, downBand={:.3f}",
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
                                   lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice,
@@ -339,22 +335,22 @@ namespace Cosmos {
                     return;
                 } else if (marketPosition == 1 && preMarketPosition != marketPosition) {
 
-                    _setTargetAllTargetPosZero(m_callPolicySymbols.optionTargetPosMaps);
-                    _setTargetAllTargetPosZero(m_putPolicySymbols.optionTargetPosMaps);
+                    _setTargetAllTargetPosZero(m_callPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putPolicySymbols.targetSignal.targetPosMaps);
 
                     double targetDelta=  m_MV * 10000 / (lastUnderlyBar->m_close * m_multi);
                     _setOpenPostion(m_callPolicySymbols, targetDelta, 'C',lastUnderlyBar->m_close);
                 } else if (marketPosition == -1 && preMarketPosition != marketPosition) {
 
-                    _setTargetAllTargetPosZero(m_callPolicySymbols.optionTargetPosMaps);
-                    _setTargetAllTargetPosZero(m_putPolicySymbols.optionTargetPosMaps);
+                    _setTargetAllTargetPosZero(m_callPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putPolicySymbols.targetSignal.targetPosMaps);
 
                     double targetDelta=  -m_MV * 10000 / (lastUnderlyBar->m_close * m_multi);
                     _setOpenPostion(m_putPolicySymbols, targetDelta,  'P',lastUnderlyBar->m_close);
                 } else if (marketPosition == 0 && preMarketPosition != marketPosition) {// minus delta
 
-                    _setTargetAllTargetPosZero(m_callPolicySymbols.optionTargetPosMaps);
-                    _setTargetAllTargetPosZero(m_putPolicySymbols.optionTargetPosMaps);
+                    _setTargetAllTargetPosZero(m_callPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putPolicySymbols.targetSignal.targetPosMaps);
 
                 }
             }
@@ -367,7 +363,7 @@ namespace Cosmos {
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
                     auto symbolDelta = (openAtSeries->m_KDataVecs[optionKBarIndex])->delta;
 
-                    addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.optionTargetPosMaps,
+                    addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps,
                                         symbolDelta, targetDelta);
                     m_holdStrikePrice =  openAtSymbol->instrumentInfo.strikePrice;
 
@@ -380,7 +376,7 @@ namespace Cosmos {
                 }
             }
 
-            void _setTargetAllTargetPosZero(decltype(m_callPolicySymbols.optionTargetPosMaps) & optionTargetPosMaps){
+            void _setTargetAllTargetPosZero(decltype(m_callPolicySymbols.targetSignal.targetPosMaps) & optionTargetPosMaps){
                 for (auto itr = optionTargetPosMaps.begin(); itr != optionTargetPosMaps.end(); itr++) {
                     itr->second = 0;
                 }
