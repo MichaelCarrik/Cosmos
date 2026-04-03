@@ -25,7 +25,7 @@ namespace Cosmos {
             Types::KPeriod m_Period;
             Types::MarketData * m_lastPMD{nullptr};
             double m_lastDelta{0.0};
-
+            int m_biasSeconds{0};
             KSeries *m_underlySeries{nullptr};
             std::map<int, CallPutSeries *> * m_callPutSeriesMap{nullptr};
 
@@ -34,8 +34,8 @@ namespace Cosmos {
             KSeries( Types::InstrumentInfo const &insInfo,
                     int tradingday, double r,
                      Types::KPeriod period,
-                     Utils::TradingSession &tradingSession, bool isDay) :
-                    m_insInfo(insInfo), m_tradingday(tradingday), m_Period(period){
+                     Utils::TradingSession &tradingSession, bool isDay, int biasSeconds) :
+                    m_insInfo(insInfo), m_tradingday(tradingday), m_Period(period), m_biasSeconds(biasSeconds){
 
                 if (m_insInfo.productIDClass == Types::ProductClass::option) {
                     m_BSModelQuantLib = new BSModelQuantLib(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
@@ -43,12 +43,15 @@ namespace Cosmos {
                 }
 				
 				int secondsBias{0};
-                if (period ==  Types::KPeriod::Min1 || period ==  Types::KPeriod::Min5) {
-                    secondsBias = -10;
-                }else if(period ==  Types::KPeriod::Min15){
-                    secondsBias = -60;
+                if (period ==  Types::KPeriod::Min1 ) {
+                    secondsBias = -10 + m_biasSeconds;
+                }else if (period == Types::KPeriod::Min5) {
+                    secondsBias = -20 + m_biasSeconds;
+                }
+                else if(period ==  Types::KPeriod::Min15){
+                    secondsBias = -90 + m_biasSeconds;
                 }else if(period ==  Types::KPeriod::Min30 ) {
-                    secondsBias = -300;
+                    secondsBias = -220 + m_biasSeconds;
                 }
 				
 				m_kseriesTime = new KSeriesTime(tradingday, period, secondsBias);
@@ -173,9 +176,9 @@ namespace Cosmos {
 
             void addTick(const  Types::MarketData *pMD) {
 
-                 if (strcmp(pMD->updateTime.data(), "01:17:00") ==0) {
-                     int a = 1;
-                 }
+                 // if (strcmp(pMD->instrumentID.data(), "i2502P890") ==0 && pMD->settlementPrice > 0.0 && pMD->settlementPrice < 99999999.0 ) {
+                 //     int a = 1;
+                 // }
 
                 int psTime = pMD->psSecond;
                 if ( Utils::TradingHours::getProductTrait(pMD->instrumentID, pMD->psSecond) ==

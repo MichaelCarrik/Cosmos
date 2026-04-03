@@ -47,12 +47,12 @@ namespace Cosmos{
 
             OrderTimeType orderTimeType{OrderTimeType::COMMON};
             OrderStatus orderStatus;
-            SignalIntension intension;
+            OrderIntension OI;
+            int insertPSTimes{0};
             HedgeType hedgeType;
             std::array<char, 31> orderSysID{""};
             std::array<char, 31> orderRef{""};
-            std::string netRootContractNum{""};
-            ExchangeType exchangeId;
+         //   ExchangeType exchangeId;
 
 
             }__attribute__((__aligned__(64)));

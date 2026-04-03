@@ -18,7 +18,7 @@ namespace Cosmos{
        //     int symbolID;
             int policyID;
             Instrument_t instrumentID{""};
-            QuoteType quoteType;
+          //  QuoteType quoteType;
         };
 
         class OnSubScribeQuote{
@@ -33,7 +33,7 @@ namespace Cosmos{
              Utils::MemoryList<MarketData,  Types::SingeInstrumenBuffSize> marketDataList;
              Utils::MemoryList<EventData,  Types::SingeInstrumenBuffSize> eventDataList;
             std::vector<int> subscribePolicy;
-            QuoteType quoteType;
+         //   QuoteType quoteType;
         };
     }
 }

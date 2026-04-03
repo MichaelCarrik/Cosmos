@@ -48,7 +48,7 @@ namespace Cosmos {
                 orderField->pOrderID, orderField->tOrderID,
                 Types::positionEffectMap[orderField->pet].data(),
                 Types::orderSideMap[orderField->orderSide].data(),
-                Types::signalIntensionMap[orderField->intension].data(),
+                Types::OIMap[orderField->OI].data(),
                 Types::hedgeMap[orderField->hedgeType].data(),
                 orderField->orderPrice, orderField->orderVolume, orderField->lastFilledPrice,
                 orderField->lastFilledVolume, orderField->filledVolume, symbol->tradePosition.filledPosition,

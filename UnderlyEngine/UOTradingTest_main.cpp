@@ -19,43 +19,7 @@
 #include <filesystem>
 #include <chrono>
 #include "../Types/Param.h"
-
-void InitMySql(Cosmos::Utils::CppMySQL3DB *mySql, std::string mysql_config) {
-    boost::property_tree::ptree pt;
-    boost::property_tree::read_xml(mysql_config, pt);
-    auto host = pt.get_child("mysql.host").get_value<std::string>();
-    auto port = pt.get_child("mysql.port").get_value<int>();
-    auto dbname = pt.get_child("mysql.database").get_value<std::string>();
-    auto username = pt.get_child("mysql.user").get_value<std::string>();
-    auto password = pt.get_child("mysql.password").get_value<std::string>();
-
-    int nTried = 0;
-    int retCode = -1;
-    try {
-        do {
-            retCode = mySql->open(host.c_str(), username.c_str(), password.c_str(), dbname.c_str(), port);
-            if (retCode < 0) {
-                const char *errorMsg = mysql_error(mySql->getMysql());
-                int errorNo = mysql_errno(mySql->getMysql());
-                spdlog::error("failed to connect mysql db. please check settings,error no:{},error msg:{}",
-                              errorNo, errorMsg);
-                sleep(2);
-            }
-        } while (nTried++ < 2 && retCode < 0);
-        if (nTried > 2 and retCode != 0) {
-            assert(false && "connect mysql failed");
-        }
-    } catch (...) {
-        spdlog::error("got exception when opening the mysql db.");
-    }
-}
-
-bool is_day(void) {
-    auto current_time = std::time(nullptr);
-    auto ptm = std::localtime(&current_time);
-
-    return ptm->tm_hour >= 6 && ptm->tm_hour < 18;
-}
+#include <boost/asio.hpp>
 
 
 void parseConfig(boost::property_tree::ptree const &pt, std::map<std::string, Cosmos::Types::InitParam> &configParamMap) {
@@ -80,6 +44,97 @@ void parseConfig(boost::property_tree::ptree const &pt, std::map<std::string, Co
             param.subPolicyParamsVec.emplace_back(subPolicyParamMap);
         }
         configParamMap[ param.engineName] = param;
+    }
+}
+
+
+void parseNetParams(std::string & receiveData, Cosmos::Types::NetModifyParam * netModifyParam) {
+    std::string separator = ",";
+    unsigned int start = 0;
+    auto index = receiveData.find_first_of(separator, start);
+    std::vector<std::string> line_vector;
+    std::string substring = "";
+    do {
+
+        if (index != std::string::npos) {
+            substring = receiveData.substr(start, index - start);
+
+            line_vector.emplace_back(substring);
+            start = index + separator.size();
+            index = receiveData.find(separator, start);
+
+
+            if (start == std::string::npos) {
+                break;
+            }
+
+        }
+    } while (index != std::string::npos);
+
+    if (line_vector.size() == 4) {
+        netModifyParam->engineName = line_vector[0];
+        netModifyParam->subPolicyName = line_vector[1];
+        netModifyParam->paramName = line_vector[2];
+        netModifyParam->paramValue = line_vector[3];
+    }else if (line_vector.size() == 4) {
+        netModifyParam->engineName = line_vector[0];
+        netModifyParam->subPolicyName = line_vector[1];
+        netModifyParam->paramName = line_vector[2];
+        strcpy(netModifyParam->symbolName.data() , line_vector[3].c_str());
+        netModifyParam->paramValue = line_vector[4];
+    }
+}
+
+void updateParams(Cosmos::Types::NetModifyParam * netModifyParam, Cosmos::Types::EventData *eventData,
+    std::map<std::string, Cosmos::Engine::UnderlyEngine *> & engines_map) {
+    auto itr = engines_map.find(netModifyParam->engineName);
+    if (itr == engines_map.end()) {
+
+        return;
+    }
+    eventData->point = netModifyParam;
+    eventData->eventType = Cosmos::Types::EventType::paramsEvent;
+
+    itr->second->m_driver->callback_asyncEventData(eventData, itr->second->m_policyID);
+}
+
+void Session(boost::asio::ip::tcp::socket socket,  std::map<std::string, Cosmos::Engine::UnderlyEngine *> & engines_map)
+{
+
+    try {
+        Cosmos::Utils::MemoryList<Cosmos::Types::NetModifyParam,32> netModifyParamList(0);
+        Cosmos::Utils::MemoryList<Cosmos::Types::EventData,  32> eventDataList(0);
+        while (true) {
+
+            std::string receiveData{""};
+
+            boost::system::error_code ec;
+            std::size_t length = socket.read_some(boost::asio::buffer(receiveData), ec);
+            fprintf(stderr, "receiveData : %s\n", receiveData.c_str());
+
+
+            if (ec == boost::asio::error::eof)
+            {
+                std::cout << "connect is closed by client" << std::endl;
+                break;
+            }
+            else if (ec)
+            {
+
+                throw boost::system::system_error(ec);
+            }
+
+            auto netModifyParam = netModifyParamList.getNewMemory();
+            auto eventData = eventDataList.getNewMemory();
+            parseNetParams(receiveData, netModifyParam );
+
+
+            boost::asio::write(socket, boost::asio::buffer(receiveData, length));
+            std::cout<<"echo server send back!"<<std::endl;
+        }
+    }
+    catch (const std::exception& e) {
+        std::cerr << "Exception: " <<  e.what() << std::endl;
     }
 }
 
@@ -126,9 +181,8 @@ int main(int argc, char *argv[]) {
         for (auto & params : configParamMap) {
 
            auto underlyngine = new Cosmos::Engine::UnderlyEngine(&driver,
-                params.first, mySql, isDay, false);
-            underlyngine->m_policyID = policyID++;
-            underlyngine->m_tradingDay = tradingday;
+                params.first, policyID++, tradingday, mySql, isDay, false);
+
             engines_map[params.first] = underlyngine;
             underlyngine->onInitParams(params.second);
         }
@@ -141,6 +195,21 @@ int main(int argc, char *argv[]) {
         driver.setPolicySize(16);
         market.start(tradingday, isDay);
         driver.onStart();
+        while (true) {
+            unsigned short port =25000;
+            boost::asio::io_context ioc;
+
+            boost::asio::ip::tcp::acceptor acceptor(ioc, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
+            try {
+                // 一次处理一个连接
+                while (true) {
+                    Session(acceptor.accept(),  engines_map);
+                }
+            }
+            catch (const std::exception& e) {
+                std::cerr << "Exception: " <<  e.what() << std::endl;
+            }
+        }
     }
     printf("close");
     return 1;

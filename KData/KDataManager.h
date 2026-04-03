@@ -33,12 +33,13 @@ namespace Cosmos {
             bool m_isUseUnderlyPrice{true};
             bool m_isDay{true};
             bool m_isGetHistory{false};
+            int m_biasSeconds{0};
             UpdateGreeks *m_updateGreeks{nullptr};
 
             KDataManager(int tradingDay, bool isDay, bool isUseUnderlyPrice,
-                         Utils::CppMySQL3DB *mysql) : m_tradingday(tradingDay),
-                                                      m_isDay(isDay),
-                                                      m_isUseUnderlyPrice(isUseUnderlyPrice), m_mysql(mysql) {
+                         Utils::CppMySQL3DB *mysql, int biasSeconds) :
+            m_tradingday(tradingDay), m_isDay(isDay), m_isUseUnderlyPrice(isUseUnderlyPrice),
+            m_mysql(mysql), m_biasSeconds(biasSeconds){
                 m_updateGreeks = new UpdateGreeks();
             }
 
@@ -58,8 +59,9 @@ namespace Cosmos {
                     lastSeriesIndex = series->m_seriesIndex;
                     series->m_recordIndex = series->m_seriesIndex;
                 }
-                if (lastSeriesIndex < series->m_seriesIndex) {
-                    this->checkSeriesRecord(series, period, lastSeriesIndex);
+                if (lastSeriesIndex < series->m_seriesIndex or
+                    (series->m_Period == Types::KPeriod::D1 && pMD->settlementPrice > 0.0 && pMD->settlementPrice < 99999999.0)) {
+                    this->checkSeriesRecord(series, lastSeriesIndex);
                     return series;
                 }
                 return nullptr;
@@ -81,7 +83,7 @@ namespace Cosmos {
                         series->m_recordIndex = series->m_seriesIndex;
                     }
                     if (lastSeriesIndex < series->m_seriesIndex) {
-                        this->checkSeriesRecord(series, period, lastSeriesIndex);
+                        this->checkSeriesRecord(series, lastSeriesIndex);
                     }
                 }
             }
@@ -101,58 +103,56 @@ namespace Cosmos {
 
             void getHisKbars(Types::Instrument_t const &instrument, Types::ProductClass productClass,
                              Types::KPeriod period, std::vector<KData *> &hisKdata,
-                             int tradingday, bool isReal, bool isKbarSaver) {
+                             int tradingday, bool isReal, bool isDay) {
                 std::array<char, 400> sql{""};
                 int limitValue = 1350;
                 if (period == Types::KPeriod::Min1) {
                     limitValue = 1350;
                 }
 
-                std::string tradingdayComp = "<";
-
-                if (isReal == true) {
-                    tradingdayComp = "<=";
-                }
 
                 decltype( Types::KPeroidToFutureTableVec) *kptmp = &Types::KPeroidToFutureTableVec;
                 if (productClass == Types::ProductClass::option) {
                     //  kptmp = & Types::KPeroidToOptionTableMap;
                     return;
                 }
-                if (period == Types::KPeriod::D1 || period == Types::KPeriod::Min30) {
-                    if (isKbarSaver == true) {
+
+                if (isReal == true) {
+                    if (period == Types::KPeriod::D1 ) {
                         sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay = %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
-                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
-                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday,
-                                limitValue);
+                                "select * from %s where instrument='%s' and period=%d and tradingDay < %d  order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(), Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday, limitValue);
                     } else {
                         sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay %s %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
-                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
-                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingdayComp.c_str(),
-                                tradingday,
-                                limitValue);
-                    }
-                } else {
-                    if (isKbarSaver == true) {
-                        sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay = %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
-                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
-                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday,
-                                limitValue);
-                    } else {
-                        sprintf(sql.data(),
-                                "select * from %s where instrument='%s' and period=%d and tradingDay %s %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
-                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(),
-                                Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingdayComp.c_str(),
-                                tradingday,
-                                limitValue);
+                                "select * from %s where instrument='%s' and period=%d and tradingDay <= %d  order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(), Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday, limitValue);
                     }
 
-                    fprintf(stderr, "%s\n", sql.data());
+                }else if (isReal == false && isDay == false) {
+                    if (period == Types::KPeriod::D1 ) {
+                        sprintf(sql.data(),
+                                "select * from %s where instrument='%s' and period=%d and tradingDay < %d  order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(), Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday, limitValue);
+                    } else {
+                        sprintf(sql.data(),
+                                "select * from %s where instrument='%s' and period=%d and tradingDay < %d order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(), Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday, limitValue);
+                    }
                 }
-
+                else if (isReal == false && isDay == true) {
+                    if (period == Types::KPeriod::D1 ) {
+                        sprintf(sql.data(),
+                                "select * from %s where instrument='%s' and period=%d and tradingDay < %d  order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(), Types::KPeroidToIntervalVec[static_cast<int>(period)], tradingday, limitValue);
+                    } else {
+                        sprintf(sql.data(),
+                                "select * from %s where instrument='%s' and period=%d and ( (tradingDay < %d) or (tradingDay = %d  and  updateTimeBegin <= '08:45:00')) "
+                                "order by tradingDay DESC,updateTimeBegin DESC limit %d",
+                                (*kptmp)[static_cast<int>(period)].data(), instrument.data(), Types::KPeroidToIntervalVec[static_cast<int>(period)],
+                                tradingday, tradingday, limitValue);
+                    }
+                }
+                fprintf(stderr, "%s\n", sql.data());
 
                 Utils::CppMySQLQuery rs = m_mysql->querySQL(sql.data());
                 while (!rs.eof()) {
@@ -231,7 +231,7 @@ namespace Cosmos {
 
                 auto period_itr = itr->second->find(period);
                 if (period_itr == itr->second->end()) {
-                    KSeries *kSeries = new KSeries(insInfo, tradingday, riskFreeR, period, *tradingSession, isDay);
+                    KSeries *kSeries = new KSeries(insInfo, tradingday, riskFreeR, period, *tradingSession, isDay, m_biasSeconds);
 
                     kSeries->setHistoryKLine(historyKline);
                     itr->second->insert({period, kSeries});
@@ -317,11 +317,12 @@ namespace Cosmos {
                 }
             };
 
-            void checkSeriesRecord(KSeries *series, Types::KPeriod const &kperiod, int lastSeriesIndex) {
+            void checkSeriesRecord(KSeries *series,  int lastSeriesIndex) {
                 if (series->m_insInfo.productIDClass == Types::ProductClass::future && series->m_callPutSeriesMap !=
                     nullptr) {
                     auto underlySeries = series;
                     while (lastSeriesIndex < underlySeries->m_seriesIndex) {
+
                         double forwardPrice = _calForwardPrice(underlySeries, series->m_callPutSeriesMap);
                         m_updateGreeks->updateGreeks(underlySeries, forwardPrice, series->m_callPutSeriesMap,
                                                      lastSeriesIndex);

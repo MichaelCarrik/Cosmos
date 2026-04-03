@@ -43,7 +43,7 @@ namespace Cosmos {
                             initMarket->instrumentID, initMarket->psSecond) ||
                         Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
                              initMarket->instrumentID, initMarket->psSecond) ||
-                            initMarket->psSecond >= 15 * 3600) {
+                            (initMarket->psSecond >= 15 * 3600  &&  initMarket->psSecond <= 17 * 3600)) {
                         auto event = itr->second->eventDataList.getNewMemory();
                         event->point = initMarket;
                         event->type = 0;
@@ -129,7 +129,7 @@ namespace Cosmos {
                         marketData->instrumentID, marketData->psSecond) ||
                     Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
                         marketData->instrumentID, marketData->psSecond) ||
-                    marketData->psSecond >= 15 * 3600) {
+                    (marketData->psSecond >= 15 * 3600  &&  marketData->psSecond <= 17 * 3600)) {
                     event->point = marketData;
                     event->type = 0;
                     for (auto i: itr->second->subscribePolicy) {

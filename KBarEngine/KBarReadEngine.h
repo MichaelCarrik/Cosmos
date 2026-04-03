@@ -77,12 +77,12 @@ namespace Cosmos {
             void onInstrumentInfo( Types::InstrumentInfo const &instrumentInfo) {
             };
 
-            void onParams( Types::Param const &param) {
+            void onParams( Types::InitParam const &param) {
             };
 
             void onStart() {
 
-                m_kDataManager = new  KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice, nullptr);
+                m_kDataManager = new  KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice, nullptr, 0);
                 for (auto &ins: *m_futureInstruments) {
                   //  fprintf(stderr, "KBarReadEngine::onStart futureInstruments : instrument=%s\n", ins.instrumentID.data());
                     Types::SubScribeQuote subScribeQuote;
@@ -111,15 +111,11 @@ namespace Cosmos {
                     m_instrumentInfoMap[ins.instrumentID] = ins;
                     m_driver->subscribeQuote(subScribeQuote);
                 }
-
-
                 Types::SubscribeEngine subscribeEngine;
                 subscribeEngine.policyid = m_policyID;
                 m_driver->subscribePolicy(subscribeEngine, this);
-
             };
-
-
+            
             void onRtnSubScribeQuote( Types::OnSubScribeQuote const &onSubScribeQuote) {
              //   fprintf(stderr, "onRtnSubScribeQuote : instrument=%s\n", onSubScribeQuote.instrumentID.data());
                 if (strcmp(onSubScribeQuote.instrumentID.data(), "MA608")==0) {
@@ -145,16 +141,14 @@ namespace Cosmos {
                 }
             }
 
-
-
             void onEventData(Types::EventData const &eventData) {
-                if (eventData.type == 0) {
+                if (eventData.eventType == Type::EventType::marketEvent) {
                     auto pMD = (const Types::MarketData *) eventData.point;
-                    // if (pMD->instrumentID[4]!='5' ) {
-                    //     return;
-                    // // }
+                     // if (strcmp(pMD->instrumentID.data(), "i2502P890")==-0 ) {
                     // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, epoch_time=%ld \n",
-                    //     pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->epoch_time);
+                    //  pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->epoch_time);
+                     // }
+
                     for (auto period : Types::m_kperoidVec) {
                         m_kDataManager->KMAddTick(pMD, period);
                     }
@@ -165,16 +159,17 @@ namespace Cosmos {
                 }
             };
 
-
             void saveFutureKline(KData::KSeries *futureSeries, Types::KPeriod period) {
-
+                if (futureSeries->m_KDataVecs.size()  <1) {
+                    return;
+                }
                 if (period == Types::KPeriod::D1) {
                     if (futureSeries->m_KDataVecs.size() > futureSeries->m_seriesIndex) {
                         this->_saveFutureKline(futureSeries, futureSeries->m_seriesIndex, period);
                     }
                 } else {
                     int saveIndex = 0;
-                    while (saveIndex < futureSeries->m_KDataVecs.size()) {
+                    while (saveIndex < futureSeries->m_KDataVecs.size()-1) { //not save last
                         this->_saveFutureKline(futureSeries, saveIndex, period);
                         saveIndex++;
                     }
@@ -233,24 +228,26 @@ namespace Cosmos {
                 kline->isInsert = true;
             };
 
-
             void saveOptionKline(KData::KSeries *optionSeries, Types::KPeriod period) {
-               if (optionSeries->m_KDataVecs.size() > optionSeries->m_seriesIndex) {
-                   auto optionKData = optionSeries->m_KDataVecs[optionSeries->m_KDataVecs.size() - 1];
-                   if (optionKData->m_tradingday != 0 &&  optionSeries->m_underlySeries->m_lastPMD != nullptr) {
-                      optionSeries->calGreeks(optionSeries->m_KDataVecs.size() - 1,
-                                             optionSeries->m_KDataVecs.size() - 1,
-                                             optionSeries->m_underlySeries->m_lastPMD->lastPrice,
-                                              optionSeries->m_underlySeries->m_lastPMD->psSecond);
-                   }
-               }
+                if (optionSeries->m_KDataVecs.size()  <1) {
+                    return;
+                }
+               // if (optionSeries->m_KDataVecs.size() > optionSeries->m_seriesIndex) {
+               //     auto optionKData = optionSeries->m_KDataVecs[optionSeries->m_KDataVecs.size() - 1];
+               //     if (optionKData->m_tradingday != 0 &&  optionSeries->m_underlySeries->m_lastPMD != nullptr) {
+               //        optionSeries->calGreeks(optionSeries->m_KDataVecs.size() - 1,
+               //                               optionSeries->m_KDataVecs.size() - 1,
+               //                               optionSeries->m_underlySeries->m_lastPMD->lastPrice,
+               //                                optionSeries->m_underlySeries->m_lastPMD->psSecond);
+               //     }
+               // }
                if (period == Types::KPeriod::D1) {
                    if (optionSeries->m_KDataVecs.size() > optionSeries->m_seriesIndex) {
                        this->_saveOptionKline(optionSeries, optionSeries->m_seriesIndex, period);
                    }
                } else {
                    int saveIndex = 0;
-                   while (saveIndex < optionSeries->m_KDataVecs.size()) {
+                   while (saveIndex < optionSeries->m_KDataVecs.size() -1) {  //not save last
                        this->_saveOptionKline(optionSeries, saveIndex, period);
                        saveIndex++;
                    }
@@ -258,6 +255,7 @@ namespace Cosmos {
            }
 
             void _saveOptionKline(KData::KSeries *series, int saveIndex, Types::KPeriod period) {
+
                 auto kline = series->m_KDataVecs[saveIndex];
                 if (strcmp(kline->m_instrument.data(), "") == 0) {
                     return;
@@ -289,8 +287,9 @@ namespace Cosmos {
                             kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume,
                             kline->IV, kline->bidIV, kline->askIV, kline->delta, kline->gamma, kline->vega, kline->theta);
                     m_optionOneMinuteQueue.emplace_back(saveK);
-                } else if (period ==  Types::KPeriod::Min5 ||
-                           period ==  Types::KPeriod::Min15) {
+                } else if (period == Cosmos::Types::KPeriod::Min5 ||
+                           period == Cosmos::Types::KPeriod::Min15 ||
+                           period == Cosmos::Types::KPeriod::Min30) {
                     sprintf(saveK.sql.data(),
                             "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
                             kline->m_instrument.data(),series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice, kline->m_tradingday,
@@ -301,6 +300,7 @@ namespace Cosmos {
                             kline->m_close,  kline->m_forwardPrice,(double) kline->m_volume, kline->m_amount, kline->m_oi,
                             kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume,
                             kline->IV, kline->bidIV,  kline->askIV,  kline->delta, kline->gamma, kline->vega, kline->theta);
+           //         fprintf(stderr, "%s", saveK.sql.data());
                     m_optionMinutesQueue.emplace_back(saveK);
                 }
                 kline->isInsert = true;

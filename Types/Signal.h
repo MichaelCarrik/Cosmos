@@ -10,20 +10,13 @@
 namespace Cosmos{
     namespace Types {
         struct Signal {
-            double price;
-            int volume;
-            SignalIntension intension;
-             Types::OrderSide signalSide;
-             Types::OrderTimeType orderTimeType;
+            double price{0.0};
+            int volume{0};
+            OrderIntension OI{OrderIntension::OIPut};
+            Types::OrderSide signalSide;
+            Types::OrderTimeType orderTimeType;
             int64_t epoch_time{0L};
 
-
-            Signal() {
-                this->price = 0;
-                this->volume = 0;
-                this->intension = SignalIntension::put;
-                this->orderTimeType = OrderTimeType::COMMON;
-            }
         };
     }
 }

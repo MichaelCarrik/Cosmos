@@ -28,7 +28,7 @@ namespace Cosmos {
             std::vector<std::thread> pool;
             std::vector<folly::ProducerConsumerQueue<const  Types::EventData*>* > _marketDataQueueVector;
             std::vector<folly::ProducerConsumerQueue<const  Types::EventData*>* > _orderDataQueueVector;
-            std::vector<folly::ProducerConsumerQueue<const  Types::EventData*>* > _engineComStatQueueVector;
+            std::vector<folly::ProducerConsumerQueue<const  Types::EventData*>* > _paramDataQueueVector;
 
         public:
 
@@ -57,7 +57,7 @@ namespace Cosmos {
                 for (auto i = 0; i < engineSize; i++) {
                     _marketDataQueueVector.emplace_back(new folly::ProducerConsumerQueue<const  Types::EventData*>{ Types::MarketBuffSize});
                     _orderDataQueueVector.emplace_back(new folly::ProducerConsumerQueue<const  Types::EventData*>{ Types::ThreadQueueBuffSize});
-                    _engineComStatQueueVector.emplace_back(new folly::ProducerConsumerQueue<const  Types::EventData*>{ Types::ThreadQueueBuffSize});
+                    _paramDataQueueVector.emplace_back(new folly::ProducerConsumerQueue<const  Types::EventData*>{ Types::ThreadQueueBuffSize});
                 }
 
 
@@ -78,9 +78,9 @@ namespace Cosmos {
                         subscribeEngine.policyName.c_str(), subscribeEngine.policyid, subscribeEngine.m_affiThreadId);
                 auto marketQueue = _marketDataQueueVector[subscribeEngine.policyid];
                 auto orderQueue = _orderDataQueueVector[subscribeEngine.policyid];
-                auto engineStatQueue = _engineComStatQueueVector[subscribeEngine.policyid];
+                auto paramtQueue = _paramDataQueueVector[subscribeEngine.policyid];
                 int affiThreadId = subscribeEngine.m_affiThreadId;
-                pool.emplace_back(std::thread([policyEngine, marketQueue, orderQueue, engineStatQueue, affiThreadId] {
+                pool.emplace_back(std::thread([policyEngine, marketQueue, orderQueue, paramtQueue, affiThreadId] {
 
                     //   std::function<void()> task;
                     if (affiThreadId > 0) {
@@ -122,6 +122,12 @@ namespace Cosmos {
                         if (order != nullptr) {
                             policyEngine->onEventData(**order);
                             orderQueue->popFront();
+                        }
+
+                        auto param = paramtQueue->frontPtr();
+                        if (param != nullptr) {
+                            policyEngine->onEventData(**param);
+                            paramtQueue->popFront();
                         }
                     }
                 }));

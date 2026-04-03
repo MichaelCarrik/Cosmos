@@ -16,20 +16,16 @@
 namespace Cosmos{
     namespace Types {
 
-        enum class EngineState{pending, noTrading, hedging, FAK};
+      enum class EventType {
+          marketEvent, orderEvent, paramsEvent
+      };
 
-        struct EngineComState{
-            Instrument_t pendingInstrumentID{""};
-            EngineState eventState;
 
-        };
-
-    //    using EventData = std::variant<const MarketData*, const OrderField*, const EngineComState*>;
        struct EventData{
            const void* point;
-           int type;
+           EventType eventType;
        };
-   //    using EngineTypes = std::variant<TradeBots::MMEngine::MMEngine, TradeBots::TrendEngine::TrendEngine>;
+
 
     }
 

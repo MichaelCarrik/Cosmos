@@ -37,8 +37,8 @@ namespace Cosmos {
             int m_underlyToBeginIndex{0};
             IOptionPolicy(std::string const &policyName, std::string const &engineName,
                           Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
-                          Types::SignalIntension si, int tradingDay, int expireDay ) : IPolicy(policyName, engineName,
-                                                                     instrument, kperiod, mv, multi, si, tradingDay) , m_expireDay(expireDay)
+                          int tradingDay, int expireDay ) : IPolicy(policyName, engineName,
+                                                                     instrument, kperiod, mv, multi,  tradingDay) , m_expireDay(expireDay)
             {
 
             }

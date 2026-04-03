@@ -8,16 +8,12 @@
 #include "../Types/Type.h"
 #include "../Types/KPeriod.h"
 #include "../Utils/TradingHours.h"
+#include "KData.h"
 
 namespace Cosmos{
     namespace KData{
 
-        struct KTime{
-            int beginPstime{0};
-            int endPstime{0};
-             Types::UpdateTime_t updateTime_begin{""};
-             Types::UpdateTime_t updateTime_end{""};
-        };
+
         class KSeriesTime{
 
         private:
@@ -67,8 +63,7 @@ namespace Cosmos{
                 int beginTime =0;
                 int lastEndTime=0;
 
-                for(auto tradingDr : tradingSession.tradingVec){
-
+                for(auto tradingDr : tradingSession.tradingVec) {
                     if(m_period ==  Types::KPeriod::D1){
                         KTime ktime;
                         ktime.beginPstime = 0-5*60;
@@ -88,16 +83,16 @@ namespace Cosmos{
                         KTime ktime;
                         ktime.beginPstime = beginTime ;
                         ktime.endPstime =  ktime.beginPstime+seconds -1 ;
-                         Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
-                         Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
+                        Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
+                        Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
                         m_ktime.emplace_back(ktime);
                         beginTime =  ktime.beginPstime+seconds;
                     }else if(lastEndTime >beginTime){
                         KTime ktime;
                         ktime.beginPstime = beginTime ;
                         ktime.endPstime =  lastEndTime ;
-                         Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
-                         Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
+                        Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
+                        Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
                         m_ktime.emplace_back(ktime);
                         beginTime =  tradingDr.beginTime;
                     }else{
@@ -109,25 +104,18 @@ namespace Cosmos{
                         KTime ktime;
                         ktime.beginPstime = beginTime ;
                         ktime.endPstime =  ktime.beginPstime+seconds  < tradingDr.endTime?  ktime.beginPstime+seconds -1 : ktime.beginPstime+seconds;
-                         Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
-                         Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
+                        Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime_begin);
+                        Utils::ToUpdateTime(ktime.endPstime, ktime.updateTime_end);
                         m_ktime.emplace_back(ktime);
                         beginTime =  ktime.beginPstime+seconds;
                     }
-
                     lastEndTime = tradingDr.endTime;
-
-//                    if(beginTime <tradingSession.closeTodaySeconds and beginTime +seconds >= tradingSession.closeTodaySeconds ){
-//                        KTime ktime;
-//                        ktime.beginPstime = beginTime;
-//                        ktime.endPstime =   tradingSession.closeTodaySeconds;
-//                         Utils::ToUpdateTime(ktime.beginPstime, ktime.updateTime);
-//                        m_ktime.emplace_back(ktime);
-//                    }
                 }
-                setSecondsBias();
-            }
 
+                if (m_ktime.size() > 0) {
+                    setSecondsBias();
+                }
+            }
 
             void setSecondsBias(){
                 int lastEndTime =    m_ktime[0].beginPstime +  m_secondsBias -1;

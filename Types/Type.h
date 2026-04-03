@@ -26,6 +26,8 @@
 namespace Cosmos{
     namespace Types{
 
+        constexpr int g_epsilon = 0.00001;
+
         constexpr int SingeInstrumenBuffSize = 9;
 
         constexpr int MarketBuffSize = 90000;
@@ -42,19 +44,14 @@ namespace Cosmos{
 
         enum class PositionEffectType  {open, T_close, Y_close};
 
-        enum class OrderStatus{signal,cancel,accept,partTraded,allTraded,failed,canceled,unknown};
+        enum class OrderStatus{signal, cancel, accept, partTraded, allTraded,
+            failed, canceled,unknown};
 
-        enum class SignalIntension{put, hit, mid};
+        enum class ExecuteIntension{EIPut, EIHit, EIMid};
 
-        enum class ChangeStatus{symbolA, symbolB};
-
-        enum class ChangeContract: int{noChange =0,change=1, forceChange=2};
+        enum class OrderIntension{OIPut, OIHit, OIMid, OINoT};
 
         enum class ExchangeType{CFFEX, SHFE, ZCE, DCE, INE, GFE};
-
-        enum class EventType{hedge, trade, arbitrage, filled};
-
-        enum class QuoteType{MarketData, MonthMarket, CrossMarket};
 
         enum class ProductClass{future, option};
 
@@ -101,24 +98,32 @@ namespace Cosmos{
                 {ExchangeType::INE,  std::array<char,9>{"INE"}}
                 };
 
-        static std::unordered_map<EventType, std::array<char,9>>  eventTypeMap{
-                {EventType::hedge,  std::array<char,9>{"hedge"}},
-                {EventType::trade,  std::array<char,9>{"trade"}},
-                {EventType::arbitrage,  std::array<char,9>{"abtrg"}},
-                {EventType::filled,  std::array<char,9>{"filled"}}
-        };
 
+        static std::unordered_map<ExecuteIntension, std::array<char,9>>  EIMap{
+                    {ExecuteIntension::EIPut,  std::array<char,9>{"EIPut"}},
+                    {ExecuteIntension::EIHit,  std::array<char,9>{"EIHit"}},
+                    {ExecuteIntension::EIMid,  std::array<char,9>{"Mid"}}};
 
-        static std::unordered_map<SignalIntension, std::array<char,9>>  signalIntensionMap{
-                    {SignalIntension::put,  std::array<char,9>{"put"}},
-                    {SignalIntension::hit,  std::array<char,9>{"hit"}},
-                    {SignalIntension::mid,  std::array<char,9>{"mid"}}};
-
-        static const std::unordered_map<std::string, SignalIntension> configParamToSIMap{
-                    {"put", SignalIntension::put},
-                    {"hit", SignalIntension::hit},
-                    {"mid", SignalIntension::mid}
+        static const std::unordered_map<std::string, ExecuteIntension> configParamToEIMap{
+                    {"EIPut", ExecuteIntension::EIPut},
+                    {"EIHit", ExecuteIntension::EIHit},
+                    {"EIMid", ExecuteIntension::EIMid}
             };
+
+
+        static std::unordered_map<OrderIntension, std::array<char,9>>  OIMap{
+                        {OrderIntension::OIPut,  std::array<char,9>{"OIPut"}},
+                        {OrderIntension::OIHit,  std::array<char,9>{"OIHit"}},
+                        {OrderIntension::OIMid,  std::array<char,9>{"OIMid"}}};
+
+        // static const std::unordered_map<std::string, ExecuteIntension> configParamToOIMap{
+        //                 {"EIPut", ExecuteIntension::EIPut},
+        //                 {"EIHit", ExecuteIntension::EIHit},
+        //                 {"EIMid", ExecuteIntension::EIMid}
+        // };
+
+
+
 
 
 

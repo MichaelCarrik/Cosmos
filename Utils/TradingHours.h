@@ -45,6 +45,10 @@ namespace Cosmos {
           private:
               static std::map< Types::Product_t, TradingSession> m_productTradingSession;
               static std::map< Types::Instrument_t , TradingSession> m_instrumentTradingSession;
+              static std::map<Types::Product_t, std::unordered_map<int, int> *> m_productPsTimeToSession;
+              // static std::map<Types::Product_t , Types::Instrument_t> m_productToTradingHoursMap;
+              // static std::map<  std::tuple<Types::Product_t, Types::KPeriod>, std::vector<KData::KTime>> m_tradingHoursToKTimeMap;
+
         public:
               static void loadConfig(std::string & );
 
@@ -67,6 +71,9 @@ namespace Cosmos {
               static  FTTrait getProductTrait( Types::Instrument_t const & instrument, int psTime);
 
               static int getDayMinutesCount( Types::Product_t const &);
+
+              static void calTradeSection(TradingSession const& tradingSession, std::unordered_map<int, int> * resultMap);
+              static int  getPsTimeToNumb(Types::Product_t product, int psTime,  int&);
 
           };
 

@@ -200,14 +200,14 @@ namespace Cosmos {
         }
 
 
-        void KBarSaverEngine::onParams(Types::Param const &param) {
-            fprintf(stderr, "[%s] OnSetParam, %s=%s\n", m_engineName.c_str(), param.name.c_str(), param.value.c_str());
-            if (strcmp(param.name.c_str(), "isUseUnderlyPrice") == 0) {
-                m_isUseUnderlyPrice = atof(param.value.c_str());
-            } else if (strcmp(param.name.c_str(), "isUseUnderlyPrice") == 0) {
-                //  m_ctpTradeConfig = param.value;
-                m_isUseUnderlyPrice = atof(param.value.c_str());
-            }
+        void KBarSaverEngine::onInitParams(Types::InitParam const &param) {
+            // fprintf(stderr, "[%s] OnSetParam, %s=%s\n", m_engineName.c_str(), param.name.c_str(), param.value.c_str());
+            // if (strcmp(param.name.c_str(), "isUseUnderlyPrice") == 0) {
+            //     m_isUseUnderlyPrice = atof(param.value.c_str());
+            // } else if (strcmp(param.name.c_str(), "isUseUnderlyPrice") == 0) {
+            //     //  m_ctpTradeConfig = param.value;
+            //     m_isUseUnderlyPrice = atof(param.value.c_str());
+            // }
         }
 
         void KBarSaverEngine::onEventData(Types::EventData const &eventData) {
@@ -216,9 +216,9 @@ namespace Cosmos {
                 // if (strcmp(pMD->instrumentID.data(), "lc2605") !=0 ) {
                 //     return;
                 // }
-                // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
-                //         pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
-                //         pMD->epoch_time);
+                fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                        pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
+                        pMD->epoch_time);
                 auto startTime = std::chrono::duration_cast<std::chrono::microseconds>(
                std::chrono::high_resolution_clock::now().time_since_epoch()).count();
                 for (auto period: Types::m_kperoidVec) {

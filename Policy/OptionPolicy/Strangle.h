@@ -16,7 +16,12 @@ namespace Cosmos {
 
 
         public:
-            Strangle() {}
+            Strangle(std::string const &policyName, std::string const &engineName, Types::Instrument_t &instrument,
+                        Types::KPeriod kperiod, double mv, double multi, int tradingDay, int expireDay) :
+                                IOptionPolicy(policyName, engineName, instrument,
+                                                kperiod, mv, multi, tradingDay, expireDay) {
+
+            }
 
             ~Strangle() {
 
@@ -29,7 +34,7 @@ namespace Cosmos {
             double getAllHoldDelta(PolicySymbolStruct const& policySymbolStruct){
                 double allHoldDelta = 0.0;
                 for(auto  symbolItr : policySymbolStruct.optionSymbolVecs){
-                    auto targetPosition = getTargetPos(symbolItr->instrumentInfo.instrumentID,  policySymbolStruct.optionTargetPosMaps);
+                    auto targetPosition = getTargetPos(symbolItr->instrumentInfo.instrumentID,  policySymbolStruct.targetSignal.targetPosMaps);
                  //   fprintf(stderr," getAllHoldDelta instrument=%s %x %d\n", symbolItr->instrumentInfo.instrumentID.data(), symbolItr, Types::KPeroidToIntervalMap[m_kperiod]);
                     auto itr = symbolItr->m_kSeriesMap.find(m_kperiod);
                     if(itr == symbolItr->m_kSeriesMap.end()){
@@ -48,7 +53,7 @@ namespace Cosmos {
             double getAllHoldVega(PolicySymbolStruct const& policySymbolStruct) {
                 double allHoldVega = 0.0;
                 for (auto symbolItr: policySymbolStruct.optionSymbolVecs) {
-                    auto targetPosition = getTargetPos(symbolItr->instrumentInfo.instrumentID, policySymbolStruct.optionTargetPosMaps);
+                    auto targetPosition = getTargetPos(symbolItr->instrumentInfo.instrumentID, policySymbolStruct.targetSignal.targetPosMaps);
                     auto series = symbolItr->m_kSeriesMap.at(m_kperiod);
                     auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
                     auto lastOptionK = series->m_KDataVecs[lastIndex];
@@ -90,13 +95,14 @@ namespace Cosmos {
             void _adjustHoldDelta(PolicySymbolStruct & policySymbolStruct,
                                   double targetDelta, double holdDelta, double openAtDelta, char optionType, double underlyClose){
                 double diffDelta = targetDelta - holdDelta;
+                auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 if(diffDelta * holdDelta >=0){  //same direction add
-                    auto openAtmItr = getApproxiDeltaSymbol(policySymbolStruct.optionSymbolVecs , openAtDelta, optionType,  underlyClose);
+                    auto openAtmItr = getApproxiDeltaSymbol(policySymbolStruct.optionSymbolVecs , openAtDelta, optionType,  underlyClose, optionKBarIndex);
                     if(openAtmItr != nullptr ){
                         auto openAtmKSeries = openAtmItr->m_kSeriesMap.at(m_kperiod);
                         auto openAtDelta =   openAtmKSeries->m_KDataVecs[openAtmKSeries->m_seriesIndex - 1]->delta;
 
-                        addPositionByGreeks(openAtmItr->instrumentInfo.instrumentID, policySymbolStruct.optionTargetPosMaps,
+                        addPositionByGreeks(openAtmItr->instrumentInfo.instrumentID, policySymbolStruct.targetSignal.targetPosMaps,
                                             openAtDelta, diffDelta);
                     }
                 }
@@ -106,8 +112,8 @@ namespace Cosmos {
                             continue;
                         }
                         auto targetPosition = 0;
-                        auto itrTGPos = policySymbolStruct.optionTargetPosMaps.find(symbolItr->instrumentInfo.instrumentID);
-                        if (itrTGPos != policySymbolStruct.optionTargetPosMaps.end()) {
+                        auto itrTGPos = policySymbolStruct.targetSignal.targetPosMaps.find(symbolItr->instrumentInfo.instrumentID);
+                        if (itrTGPos != policySymbolStruct.targetSignal.targetPosMaps.end()) {
                             targetPosition = itrTGPos->second;
                         }
 
@@ -132,9 +138,10 @@ namespace Cosmos {
             void _adjustHoldVega(PolicySymbolStruct & callPolicySymbols, PolicySymbolStruct & putPolicySymbols,
                                  double targetVega, double holdVega, double openAtDelta,  double underlyClose) {
                 double diffVega = targetVega - holdVega;
+                auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 if (diffVega * targetVega >= 0) {  //same direction add
-                    auto callAtmItr = getApproxiDeltaSymbol(callPolicySymbols.optionSymbolVecs , openAtDelta, 'C',  underlyClose);
-                    auto putAtmItr = getApproxiDeltaSymbol(putPolicySymbols.optionSymbolVecs , openAtDelta, 'P',  underlyClose);
+                    auto callAtmItr = getApproxiDeltaSymbol(callPolicySymbols.optionSymbolVecs , openAtDelta, 'C',  underlyClose, optionKBarIndex);
+                    auto putAtmItr = getApproxiDeltaSymbol(putPolicySymbols.optionSymbolVecs , openAtDelta, 'P',  underlyClose, optionKBarIndex);
 
                     if(callAtmItr != nullptr && putAtmItr != nullptr){
 
@@ -146,11 +153,11 @@ namespace Cosmos {
                         auto putDiffVega = diffVega * std::abs(putDelta)/ (std::abs(callDelta) + std::abs(putDelta));
 
                         auto ckSeries = callAtmItr->m_kSeriesMap.at(m_kperiod);
-                        addPositionByGreeks(callAtmItr->instrumentInfo.instrumentID, callPolicySymbols.optionTargetPosMaps,
+                        addPositionByGreeks(callAtmItr->instrumentInfo.instrumentID, callPolicySymbols.targetSignal.targetPosMaps,
                                             ckSeries->m_KDataVecs[ckSeries->m_seriesIndex - 1]->vega, callDiffVega);
 
                         auto pkSeries = putAtmItr->m_kSeriesMap.at(m_kperiod);
-                        addPositionByGreeks(putAtmItr->instrumentInfo.instrumentID, putPolicySymbols.optionTargetPosMaps,
+                        addPositionByGreeks(putAtmItr->instrumentInfo.instrumentID, putPolicySymbols.targetSignal.targetPosMaps,
                                             pkSeries->m_KDataVecs[pkSeries->m_seriesIndex - 1]->vega, putDiffVega);
                     }
                 } else if (diffVega * targetVega < 0) {

@@ -10,7 +10,7 @@
 // #include "../Policy/LongGammaGod.h"
 #include "../Policy/OptionPolicy/LongGammaVulture.h"
 // #include "../Policy/Calendar.h"
-// #include "../Policy/SellStrangleV2.h"
+#include "../Policy/OptionPolicy/SellStrangleV2.h"
 
 #include "../Policy/FuturePolicy/VultureTrend.h"
 
@@ -23,8 +23,9 @@ namespace Cosmos {
                                      || (m_engineParam.productID[0] == 'I' && m_engineParam.productID[1]== 'M'))) {
                 return;
                                      }
-            m_kDataManager = new KData::KDataManager(m_tradingDay, m_isDay, m_engineParam.isUseUnderlyPrice, m_mySql);
-            setInitLog();
+
+            m_kDataManager = new KData::KDataManager(m_tradingDay, m_isDay, m_engineParam.isUseUnderlyPrice, m_mySql, m_engineParam.m_kbarBiasSeconds);
+            m_executor = new Executor(m_driver, m_engineName, m_policyID, m_tradingDay, m_engineParam);
 
             for (auto &itr: m_underlyInitMap) {
                 Types::UnderlyInfo queryUnderInfo;
@@ -45,7 +46,6 @@ namespace Cosmos {
                     auto policy= this->createOptionPolicy(policyName, subPolicyParams);
                     m_optionPolicyVec.emplace_back(policy);
                 }
-
             }
 
             for (auto &itr: m_underlyInitMap) { //  get underly first , prepared for option
@@ -54,8 +54,8 @@ namespace Cosmos {
             }
 
             for (auto &ins: m_symbolMap) {
-                ins.second->m_positionLog = m_positionLog;
-                ins.second->order = m_orderList.getNewMemory();
+                ins.second->m_positionLog = m_executor->getPositionLog();
+                ins.second->order = m_executor->getNewOrderField();
                 _querySymbol(ins.first);
                 _queryQuote(ins.first);
             }
@@ -99,6 +99,19 @@ namespace Cosmos {
         }
 
 
+        void UnderlyEngine::initKSeries(int tradingday, Types::KPeriod kPeriod,  bool isDay, Types::InstrumentInfo const &insInfo, bool isNeedHis, bool isReal) {
+            Utils::TradingHours::initInstrumentTradingHours(insInfo.instrumentID);
+            std::unordered_map< Types::KPeriod,  KData::KSeries *> *KSeries_map;
+            std::vector< KData::KData *> hisKline;
+            if(isNeedHis==true && insInfo.productIDClass == Types::ProductClass::future){
+                m_kDataManager->getHisKbars(insInfo.instrumentID, insInfo.productIDClass, kPeriod, hisKline, tradingday,
+                                           isReal, m_isDay);
+            }
+            m_kDataManager->initKSeries(insInfo, kPeriod, tradingday, m_riskFreeR,
+                                       hisKline, isDay);
+        }
+
+
         void UnderlyEngine::onInitParams(Types::InitParam const & initParamMap) {
             if (strcmp(initParamMap.engineName.c_str(), m_engineName.c_str()) != 0) {
                 assert(false);
@@ -112,6 +125,11 @@ namespace Cosmos {
             m_engineParam.optionMinVolume = stoi(Utils::getParamMapValue(initParamMap.paramMap, "optionMinVolume"));
             m_engineParam.futureMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "futureMaxPosition"));
             m_engineParam.optionMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "optionMaxPosition"));
+
+            m_engineParam.futureEI = Types::configParamToEIMap.at(Utils::getParamMapValue(initParamMap.paramMap, "futureEI"));
+            m_engineParam.optionEI = Types::configParamToEIMap.at(Utils::getParamMapValue(initParamMap.paramMap, "optionEI"));
+
+            m_engineParam.m_kbarBiasSeconds = stoi(Utils::getParamMapValue(initParamMap.paramMap, "kbarBiasSeconds"));
 
             m_engineParam.hedgeType = Types::HedgeType::spec;
             int hedgeType =stoi(Utils::getParamMapValue(initParamMap.paramMap, "hedgeType"));
@@ -151,8 +169,7 @@ namespace Cosmos {
                 this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
                 this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
 
-                std::string siStr = Utils::getParamMapValue(paramMap, "SI");
-                Types::SignalIntension si = Types::configParamToSIMap.at(siStr);
+
                 double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
                 auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
                 auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
@@ -163,7 +180,7 @@ namespace Cosmos {
                 Types::InstrumentInfo * futureInsInfo{nullptr};
                 getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
                 return new Policy::VultureTrend(policyName, m_engineName, underlyInstrument, kPeriod,
-                                                                           MV, futureInsInfo->multi, si,
+                                                                           MV, futureInsInfo->multi,
                                                                            m_tradingDay, adjRiskTime, alpha, mark);
             }
 
@@ -175,20 +192,28 @@ namespace Cosmos {
         UnderlyEngine::createOptionPolicy(std::string const &policyName ,std::map<std::string, std::string> const &paramMap){
             fprintf(stderr, "[%s] createOptionPolicy policyName = %s\n", m_engineName.c_str(),  policyName.c_str());
 
-            //  if (policyName.compare("SellStrangleV2") == 0) {
-            //     auto kpstr = Types::Param::getValue(paramMap, "period");
-            //     Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
-            //     int isRefreshDelta = std::stoi(Types::Param::getValue(paramMap, "isRefreshDelta"));
-            //     double MV = std::stof(Types::Param::getValue(paramMap, "MV").c_str());
-            //     double openAtDelta = std::stof(Types::Param::getValue(paramMap, "openAtDelta").c_str());
-            //     double baseRation = std::stof(Types::Param::getValue(paramMap, "biasRation").c_str());
-            //     if(m_policyKPMap.find(kPeriod) == m_policyKPMap.end()){
-            //         m_policyKPMap[kPeriod] = false;
-            //     }
-            //     return new  Policy::SellStrangleV2(kPeriod, MV * 10000, policyName,
-            //                                                  m_engineName, m_underlyInsMap.nearInstrument,  m_multi,
-            //                                                  m_tradingDay, m_maxPosition, isRefreshDelta, openAtDelta,baseRation);
-            // }else if (policyName.compare("BuyStrangle") == 0) {
+             if (policyName.compare("SellStrangleV2") == 0) {
+
+                 Types::Instrument_t underlyInstrument{""};
+                 strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+                 auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                 Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                 this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, false);
+
+                int isRefreshDelta = std::stoi(Utils::getParamMapValue(paramMap, "isRefreshDelta"));
+                double MV = std::stof(Utils::getParamMapValue(paramMap,"MV"));
+                double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "openAtDelta"));
+                double baseRation = std::stof(Utils::getParamMapValue(paramMap, "biasRation"));
+                 
+                 Types::InstrumentInfo * optionInsInfo{nullptr};
+                 getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
+                 return new  Policy::SellStrangleV2( policyName, m_engineName,
+                           underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
+                            m_tradingDay, optionInsInfo->expireDate,
+                           m_engineParam. optionMaxPosition,
+                           isRefreshDelta, openAtDelta,baseRation);
+            }
+            //else if (policyName.compare("BuyStrangle") == 0) {
             //     auto kpstr = Types::Param::getValue(paramMap, "period");
             //     Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
             //     std::string tt_str = Types::Param::getValue(paramMap, "tradeTime");
@@ -231,8 +256,8 @@ namespace Cosmos {
             //     return new  Policy::LongGammaSAR(kPeriod, MV * 10000, policyName,
             //                                                 m_engineName, m_underlyInsMap.nearInstrument,  m_multi,m_tradingDay, m_maxPosition,
             //                                                 openAtDelta);
-            // }else
-            if (policyName.compare("LongGammaVulture") == 0) {
+            // }
+            else if (policyName.compare("LongGammaVulture") == 0) {
 
                 Types::Instrument_t underlyInstrument{""};
                 strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
@@ -242,8 +267,6 @@ namespace Cosmos {
                 this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
                 this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
 
-                std::string siStr = Utils::getParamMapValue(paramMap, "SI");
-                Types::SignalIntension si = Types::configParamToSIMap.at(siStr);
                 double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
                 double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "openAtDelta").c_str());
 
@@ -254,7 +277,7 @@ namespace Cosmos {
 
                 return new Policy::LongGammaVulture( policyName, m_engineName,
                           underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
-                          si,  m_tradingDay,optionInsInfo->expireDate,  m_engineParam.optionMaxPosition, openAtDelta,
+                           m_tradingDay,optionInsInfo->expireDate,  m_engineParam.optionMaxPosition, openAtDelta,
                           [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
                              return  this->m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(instrument, period);
                           });
@@ -288,8 +311,6 @@ namespace Cosmos {
             }else if (isHis == true) {
                 m_KPtoHisSeriesMap[instrument][period] = isHis;
             }
-
-
         }
 
         void UnderlyEngine::onRtnSubScribeQuote(Types::OnSubScribeQuote const &onSubScribeQuote) {
@@ -323,10 +344,11 @@ namespace Cosmos {
             if (instrumentInfo.productIDClass == Types::ProductClass::future) {
                 auto itr = m_underlyInitMap.find(instrumentInfo.instrumentID);
                 if (itr != m_underlyInitMap.end()) {
-                    auto optionSymbol = new Types::Symbol();
-                    optionSymbol->policyID = m_policyID;
-                    memcpy(&optionSymbol->instrumentInfo, &instrumentInfo, sizeof(Types::InstrumentInfo));
-                    m_symbolMap[optionSymbol->instrumentInfo.instrumentID] = optionSymbol;
+                    auto futureSymbol = new Types::Symbol();
+                    futureSymbol->policyID = m_policyID;
+                    memcpy(&futureSymbol->instrumentInfo, &instrumentInfo, sizeof(Types::InstrumentInfo));
+                    futureSymbol->underlySymbol = futureSymbol;
+                    m_symbolMap[futureSymbol->instrumentInfo.instrumentID] = futureSymbol;
                 }
             }else if (instrumentInfo.productIDClass == Types::ProductClass::option) {
                 auto itr = m_underlyInitMap.find(instrumentInfo.underly);
@@ -334,11 +356,14 @@ namespace Cosmos {
                     auto optionSymbol = new Types::Symbol();
                     optionSymbol->policyID = m_policyID;
                     memcpy(&optionSymbol->instrumentInfo, &instrumentInfo, sizeof(Types::InstrumentInfo));
+                    auto underlyItr = m_symbolMap.find(optionSymbol->instrumentInfo.underly);
+                    if (underlyItr == m_symbolMap.end()) {
+                        assert(false);
+                    }
+                    optionSymbol->underlySymbol = underlyItr->second;
                     m_symbolMap[optionSymbol->instrumentInfo.instrumentID] = optionSymbol;
                 }
             }
-
-
         };
 
         void UnderlyEngine::onRtnQuerySymbolPosition(Types::OnQuerySymbol const &onQuerySymbol) {
@@ -357,7 +382,7 @@ namespace Cosmos {
         }
 
         void UnderlyEngine::onEventData(Types::EventData const &eventData) {
-            if (eventData.type == 0) {
+            if (eventData.eventType == Types::EventType::marketEvent) {
                 auto pMD = (const Types::MarketData *) eventData.point;
                 if (strcmp(pMD->instrumentID.data(), "i2405") ==0 ) {
                     // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
@@ -368,8 +393,6 @@ namespace Cosmos {
                     }
                 }
 
-
-
                 if (strcmp(pMD->updateTime.data(), "09:04:50") == 0) {
                     int a =1;
                 }
@@ -377,7 +400,7 @@ namespace Cosmos {
                 if (pMD->isInit == 0) {
                     this->runEvent(pMD, pMD->epoch_time);
                 }
-            } else if (eventData.type == 1) {
+            } else if (eventData.eventType == Types::EventType::orderEvent) {
                 auto inputOrder = (const Types::OrderField *) eventData.point;
                 fprintf(stderr, "onEventData instrument=%s, pOrderID=%d, requestID=%d, orderRef=%s, orderStatus=%s\n",
                         inputOrder->instrumentID.data(),
@@ -388,47 +411,35 @@ namespace Cosmos {
                     assert(false && "inputOrder not in m_symbolMap");
                 }
                 auto symbol = itr->second;
-                updateMMOrder(inputOrder, symbol);
-                Utils::logOrder(inputOrder, m_orderLog, symbol, inputOrder->orderStatus,
-                                m_tradingDay, inputOrder->epoch_time);
+                m_executor->updateSymbol(inputOrder, symbol);
+            }else if (eventData.eventType == Types::EventType::paramsEvent) {
+                auto netModifyParam = (const Types::NetModifyParam *) eventData.point;
+                if (strcmp(netModifyParam->engineName.data(), m_engineName.c_str()) == 0) {
+                    bool isFindPolicy = false;
+                    for (auto & futurePolicy :    m_futurePolicyVec) {
+                        if (strcmp(netModifyParam->subPolicyName.c_str(), futurePolicy->m_policyName.c_str()) ==0 &&
+                            strcmp(netModifyParam->symbolName.data(), futurePolicy->m_underlyInstrument.data()) ==0) {
+                            isFindPolicy = true;
+                            futurePolicy->updateParam(netModifyParam);
+                            break;
+                        }
+                    }
+                    if (isFindPolicy == true) {
+                        for (auto & optionPolicy :    m_optionPolicyVec) {
+                            if (strcmp(netModifyParam->subPolicyName.c_str(), optionPolicy->m_policyName.c_str()) ==0 &&
+                                strcmp(netModifyParam->symbolName.data(), optionPolicy->m_underlyInstrument.data()) ==0) {
+                                isFindPolicy = true;
+                                optionPolicy->updateParam(netModifyParam);
+                                break;
+                                }
+                        }
+                    }
+                    assert(false);
+                }
             }
         };
 
-        void UnderlyEngine::updateMMOrder(const Types::OrderField *inputOrder,
-                                                Types::Symbol *symbol) {
-            if (inputOrder->policyID != m_policyID) {
-                assert(false && "OpenEngine::updateOrder policyID not match");
-            }
-            auto order = m_orderList.getMemoryById(inputOrder->pOrderID);
-            Utils::updateOrder(order, inputOrder);
 
-            if (inputOrder->orderStatus == Types::OrderStatus::failed) {
-            } else if (order->orderStatus == Types::OrderStatus::partTraded ||
-                       order->orderStatus == Types::OrderStatus::allTraded) {
-                symbol->tradePosition.update_filled_position(order->orderSide, order->pet,
-                                                             order->orderPrice, order->lastFilledVolume);
-                symbol->symbolLastFilledPrice = order->lastFilledPrice;
-                symbol->lastOrderPsTime = symbol->lastMD->psSecond;
-                symbol->posWrite(true, m_tradingDay, symbol->lastMD->updateTime,
-                                 symbol->lastMD->milliSeconds, order->tOrderID);
-            }
-
-            if (order->isTerminal == true) {
-                // auto itr = m_underlyInsMap.underlyInsMap.find(symbol->instrumentInfo.underly);
-                // if (itr == m_underlyInsMap.underlyInsMap.end()) {
-                //     assert(false);
-                // }
-                // if (symbol->instrumentInfo.optionType == 'C' && order->orderSide == Types::OrderSide::buy) {
-                //     itr->second.callBuy = false;
-                // } else if (symbol->instrumentInfo.optionType == 'C' && order->orderSide == Types::OrderSide::sell) {
-                //     itr->second.callSell = false;
-                // } else if (symbol->instrumentInfo.optionType == 'P' && order->orderSide == Types::OrderSide::buy) {
-                //     itr->second.putBuy = false;
-                // } else if (symbol->instrumentInfo.optionType == 'P' && order->orderSide == Types::OrderSide::sell) {
-                //     itr->second.putSell = false;
-                // }
-            }
-        }
 
         void UnderlyEngine::getFutureInfoByInstrumentID(Types::Instrument_t const& instrument, Types::InstrumentInfo* & futureInsInfo) {
             auto itr = m_symbolMap.find(instrument);
@@ -450,7 +461,6 @@ namespace Cosmos {
             if (optionInsInfo == nullptr) {
                 assert(false);
             }
-
         }
 
 
@@ -498,7 +508,7 @@ namespace Cosmos {
                             symbolItr.second->targetPosition = targetItr->second;
                         }
 
-                        syncPosition(symbolItr.second, epoch_time);
+                        m_executor->syncPosition(symbolItr.second, epoch_time);
                     }
                 }
             }
@@ -517,164 +527,6 @@ namespace Cosmos {
             return 1;
         }
 
-        int UnderlyEngine::syncPosition(Types::Symbol *symbol, const int64_t epoch_time) {
-            if (symbol->order->isTerminal == false) {
-                //&& isPendingOrderTimeout(symbol, epoch_time) == false) {
-                if (isPendingOrderTimeout(symbol, epoch_time) == true) {
-                    cancelOrder(symbol->order, symbol, epoch_time);
-                }
-                return 0;
-            }
-            if (symbol->lastMD->psSecond - symbol->lastOrderPsTime < 2 &&
-                symbol->order->isTerminal == true) {
-                return 0;
-            }
 
-            int pendingPosition = symbol->getPendingPosition();
-            int posDiff = symbol->targetPosition - pendingPosition - symbol->tradePosition.filledPosition;
-
-            if (posDiff != 0) {
-                spdlog::info(
-                    "syncPosition m_engineName={}, updateTime={}, symbolName={}, posDiff={}, targetPosition={}, "
-                    "pendingPosition={}, filledPosition={}, orderIsTerminal={}, ",
-                    m_engineName, symbol->lastMD->psSecond, symbol->instrumentInfo.instrumentID.data(), posDiff,
-                    symbol->targetPosition, pendingPosition, symbol->tradePosition.filledPosition,
-                    symbol->order->isTerminal);
-
-                if (symbol->order->isTerminal == true) {
-
-                    processSignal(symbol, posDiff, epoch_time);
-                } else if (symbol->lastMD->psSecond - symbol->lastOrderPsTime > 2) {
-                    cancelOrder(symbol->order, symbol, epoch_time);
-                } else if (posDiff * pendingPosition < 0) {
-                    cancelOrder(symbol->order, symbol, epoch_time);
-                }
-            } else if (posDiff == 0 && symbol->getPendingPosition() == 0) {
-                symbol->sendCount = 0;
-            }
-
-            // reset PutHitFlag
-            symbol->intension = Types::SignalIntension::put;
-            return 1;
-        }
-
-
-        bool UnderlyEngine::isPendingOrderTimeout(const Types::Symbol *symbol, int64_t epoch_time) {
-            //            	fprintf(stderr, "isPendingOrderTimeout, symbolName=%s, psSecond=%d, lastOrderPsTime=%d, m_putResendTimeout=%d\n",
-            //            			  symbol->instrumentInfo.instrumentID.data(), symbol->lastMD->psSecond,symbol->lastOrderPsTime, m_putResendTimeout);
-            if (symbol->lastMD->psSecond - symbol->lastOrderPsTime > m_engineParam.putResendTimeout &&
-                symbol->order->isTerminal == false) {
-                if (symbol->order->orderSide == Types::OrderSide::buy &&
-                    symbol->lastMD->bidPrice[0] > symbol->order->orderPrice + 0.0001) {
-                    return true;
-                    // cancelOrder(symbol->order, symbol, epoch_time);
-                } else if (symbol->order->orderSide == Types::OrderSide::sell &&
-                           symbol->lastMD->askPrice[0] < symbol->order->orderPrice - 0.0001) {
-                    return true;
-                    //cancelOrder(symbol->order, symbol, epoch_time);
-                }
-            }
-            return false;
-        }
-
-        void UnderlyEngine::setInitLog() {
-            std::string record = "record";
-            m_orderLog = Utils::initLogs(record, this->m_engineName, record);
-
-            std::string position = "position";
-            m_positionLog =  Utils::initLogs(position, this->m_engineName, position);
-        };
-
-        void UnderlyEngine::processSignal(Types::Symbol *symbol, int posDiff, const int64_t epoch_time) {
-            Types::Signal signal;
-            signal.intension = getIntension(symbol);
-
-            if (posDiff > 0) {
-                if (signal.intension == Types::SignalIntension::put) {
-                    signal.price = symbol->lastMD->bidPrice[0] - symbol->instrumentInfo.tickSize;
-                    signal.orderTimeType = Types::OrderTimeType::COMMON;
-                } else if (signal.intension == Types::SignalIntension::hit) {
-                    signal.price = symbol->lastMD->askPrice[0];
-                    signal.orderTimeType = Types::OrderTimeType::COMMON;
-                } else {
-                    assert(false);
-                }
-                signal.volume = std::min(std::min(m_engineParam.futureMinVolume, 90), abs(posDiff)); // abs(posDiff);
-                signal.signalSide = Types::OrderSide::buy;
-                signal.epoch_time = epoch_time;
-                sendSignal(signal, symbol);
-                symbol->sendCount += 1;
-                symbol->lastOrderPsTime = symbol->lastMD->psSecond;
-            } else if (posDiff < 0) {
-                if (signal.intension == Types::SignalIntension::put) {
-                    signal.price = symbol->lastMD->askPrice[0] + symbol->instrumentInfo.tickSize;
-                    //    m_signal.price = symbol->lastMD->upperLimitPrice;
-                    signal.orderTimeType = Types::OrderTimeType::COMMON;
-                } else if (signal.intension == Types::SignalIntension::hit) {
-                    signal.price = symbol->lastMD->bidPrice[0];
-                    signal.orderTimeType = Types::OrderTimeType::COMMON;
-                } else {
-                    assert(false);
-                }
-                signal.volume = std::min(std::min(m_engineParam.futureMinVolume, 90), abs(posDiff)); //abs(posDiff);
-                signal.signalSide = Types::OrderSide::sell;
-                signal.epoch_time = epoch_time;
-                sendSignal(signal, symbol);
-                symbol->sendCount += 1;
-                symbol->lastOrderPsTime = symbol->lastMD->psSecond;
-            }
-        }
-
-        void UnderlyEngine::cancelOrder(const Types::OrderField *pOrder, Types::Symbol *symbol,
-                                              const int64_t epoch_time) {
-            if (pOrder != nullptr && !pOrder->isTerminal) {
-                int64_t sendTime = 0;
-                Utils::logOrder(pOrder, m_orderLog, symbol, Types::OrderStatus::cancel, m_tradingDay,
-                                epoch_time);
-                m_driver->cancelOrder(*pOrder, sendTime);
-                symbol->lastOrderPsTime = symbol->lastMD->psSecond;
-            }
-        }
-
-        Types::SignalIntension UnderlyEngine::getIntension(const Types::Symbol *symbol) {
-            //  if (symbol->intension != Types::SignalIntension::put) {
-            //      return symbol->intension;
-            //    }
-            // else if (symbol->sendCount >= m_resendCount) {
-            //   return Types::SignalIntension::hit;
-            //  }
-            return Types::SignalIntension::put;
-        }
-
-        void
-        UnderlyEngine::sendSignal(Types::Signal const &signal, Types::Symbol *symbol) {
-            //            if(signal.price <0.0001){
-            //                return;
-            //            }
-            int assignid = 0;
-            auto order = m_orderList.getNewMemory(assignid);
-            order->pOrderID = assignid;
-            symbol->order = order;
-            setOrder(signal, order, symbol);
-            Utils::logOrder(order, m_orderLog, symbol, Types::OrderStatus::signal,
-                            m_tradingDay, signal.epoch_time);
-            m_driver->sendOrder(*order);
-        }
-
-        Types::PositionEffectType
-        UnderlyEngine::getPet(int &tradeVolume, int T_hold, int Y_hold, int minPosition, bool prioCloseToday) {
-            if (prioCloseToday == 1 && T_hold >= tradeVolume && (T_hold + Y_hold - tradeVolume >= minPosition)) {
-                return Types::PositionEffectType::T_close;
-            } else if (Y_hold >= tradeVolume && (T_hold + Y_hold - tradeVolume >= minPosition)) {
-                return Types::PositionEffectType::Y_close;
-            } else if (T_hold > 0 && T_hold < tradeVolume) {
-                tradeVolume = T_hold;
-                return Types::PositionEffectType::T_close;
-            } else if (Y_hold > 0 && Y_hold < tradeVolume) {
-                tradeVolume = Y_hold;
-                return Types::PositionEffectType::Y_close;
-            }
-            return Types::PositionEffectType::open;
-        }
     }
 }

@@ -52,24 +52,29 @@ namespace Cosmos {
         };
 
         void MockMarket::onRtnQuote(const Types::MarketData *marketData) {
-            if( Utils::FTTrait::FT_NOT_TRADING ==  Utils::TradingHours::getProductTrait(marketData->instrumentID, marketData->psSecond)){
-                return;
+            if (Utils::FTTrait::FT_TRADING == Utils::TradingHours::getProductTrait(
+                   marketData->instrumentID, marketData->psSecond) ||
+               Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
+                    marketData->instrumentID, marketData->psSecond) ||
+                  ( marketData->psSecond >= 15 * 3600 && marketData->psSecond <= 17 * 3600)) {
+                auto itr = m_subScribeInstruments.find(marketData->instrumentID);
+                if (itr != m_subScribeInstruments.end()) {
+
+                    auto event = itr->second->eventDataList.getNewMemory();
+                    event->point = marketData;
+                    event->eventType = Types::EventType::marketEvent;
+                    for (auto i : itr->second->subscribePolicy) {
+                        if (marketData == nullptr) {
+                            assert(false && "market is nullptr");
+                        }
+                        m_driver->callback_asyncEventData(event, i);
+                        //            m_driver->send(*marketData);
+                    }
+                }
+
             }
         //    fprintf(stderr,"MockMarket instrument=%s, updateTime=%s\n", marketData->instrumentID.data(), marketData->updateTime.data());
-            auto itr = m_subScribeInstruments.find(marketData->instrumentID);
-            if (itr != m_subScribeInstruments.end()) {
 
-                auto event = itr->second->eventDataList.getNewMemory();
-                event->point = marketData;
-                event->type = 0;
-                for (auto i : itr->second->subscribePolicy) {
-                    if (marketData == nullptr) {
-                        assert(false && "market is nullptr");
-                    }
-                    m_driver->callback_asyncEventData(event, i);
-        //            m_driver->send(*marketData);
-                }
-            }
         }
 
         int MockMarket::start(int tradingday, bool isDay) {
@@ -196,7 +201,12 @@ namespace Cosmos {
       //             fprintf(stderr, "updateTime=%s\n", marketData.updateTime.data());
 
                     marketData.psSecond = Utils::ToPsSeconds(marketData.updateTime);
-                    marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
+                    if (marketData.bidVolume[0]>0 && marketData.askVolume[0]) {
+                         marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
+                    }else {
+                        marketData.midPrice = marketData.lastPrice ;
+                    }
+
 //                    if((marketData.settlementPrice > 0  &&    marketData.settlementPrice< 9999) ||   (marketData.psSecond > 54000 && marketData.psSecond < 58000 ) ){
 //                        int a =1;
 //                    }
@@ -207,6 +217,12 @@ namespace Cosmos {
                     }
 
                     marketData.epoch_time = atol(line_vector[45].c_str());
+
+                    // if (strcmp(marketData.instrumentID.data(),"i2502P890")==0) {
+                    //     fprintf(stderr, "readTick instrumentid=%s, updateTime=%s.%d, volume=%d, epoch_time=%ld \n",
+                    //         marketData.instrumentID.data(), marketData.updateTime.data(), marketData.milliSeconds,
+                    //         marketData.volume, marketData.epoch_time);
+                    // }
 
                     allSymbolMarket.emplace_back(marketData);
                 }

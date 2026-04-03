@@ -36,44 +36,7 @@ initLogs(std::string &typeName, std::string &engineName, std::string &policyName
     return spdlog::basic_logger_st(logKey, logSymbolPath);
 }
 
-bool is_day(void) {
-    auto current_time = std::time(nullptr);
-    auto ptm = std::localtime(&current_time);
 
-    return ptm->tm_hour >= 6 && ptm->tm_hour < 18;
-}
-
-
-void InitMySql( Utils::CppMySQL3DB *mySql, std::string mysql_config) {
-    boost::property_tree::ptree pt;
-    boost::property_tree::read_xml(mysql_config, pt);
-    auto host = pt.get_child("mysql.host").get_value<std::string>();
-    auto port = pt.get_child("mysql.port").get_value<int>();
-    auto dbname = pt.get_child("mysql.database").get_value<std::string>();
-    auto username = pt.get_child("mysql.user").get_value<std::string>();
-    auto password = pt.get_child("mysql.password").get_value<std::string>();
-
-    int nTried = 0;
-    int retCode = -1;
-    try {
-        do {
-            retCode = mySql->open(host.c_str(), username.c_str(), password.c_str(), dbname.c_str(), port);
-            if (retCode < 0) {
-                const char *errorMsg = mysql_error(mySql->getMysql());
-                int errorNo = mysql_errno(mySql->getMysql());
-                spdlog::error("failed to connect mysql db. please check settings,error no:{},error msg:{}",
-                              errorNo, errorMsg);
-                sleep(2);
-            }
-        } while (nTried++ < 2 && retCode < 0);
-        if (nTried > 2 and retCode != 0) {
-            assert(false && "connect mysql failed");
-        }
-    }
-    catch (...) {
-        spdlog::error("got exception when opening the mysql db.");
-    }
-}
 
 
 
@@ -109,7 +72,7 @@ int main(int argc, char *argv[]) {
 //    TradeBots::Trader::Trader<TradeBots::Trader::RemTraderSpi> trader(&driver, trade_config, symbolConfigMap.size());
      Trader::Trader< Trader::CtpTrader, decltype(driver)> trader(&driver, trade_config);
     fprintf(stderr, "trade end\n");
-    std::array<bool, 2> isDayArray{true}; //{false, true};
+
 
     std::string store_config = "mysql.xml";
      Utils::CppMySQL3DB *mySql = new  Utils::CppMySQL3DB();

@@ -20,28 +20,8 @@
 #include "../Types/InstrumentInfo.h"
 #include "../Types/LogStruct.h"
 
-static std::shared_ptr<spdlog::logger>
-initLogs(std::string &typeName, std::string &engineName, std::string &policyName) {
-    char logSymbolPath[128];
-    memset(logSymbolPath, 0, sizeof(128));
-    sprintf(logSymbolPath, "./logs/%s/%s_%s.txt", typeName.c_str(), engineName.c_str(), policyName.c_str());
 
-    std::filesystem::path tradeSymbolPath(logSymbolPath);
-    if (!std::filesystem::exists(tradeSymbolPath.parent_path())) {
-        std::filesystem::create_directories(tradeSymbolPath.parent_path());
-    }
-    char logKey[128]{""};
-    sprintf(logKey, ".%s_%s_%s", typeName.c_str(), engineName.c_str(), policyName.c_str());
-    fprintf(stderr, "initLogs %s %s\n", logKey, logSymbolPath);
 
-    return spdlog::basic_logger_st(logKey, logSymbolPath);
-}
-
-bool is_day(void) {
-    auto current_time = std::time(nullptr);
-    auto ptm = std::localtime(&current_time);
-    return ptm->tm_hour >= 6 && ptm->tm_hour < 18;
-}
 
 bool is_so_loaded(const std::string &so_name) {
     const std::string proc_path = "/proc/self/maps";
@@ -54,36 +34,24 @@ bool is_so_loaded(const std::string &so_name) {
 }
 
 
-void InitMySql(Cosmos::Utils::CppMySQL3DB *mySql, std::string mysql_config) {
-    boost::property_tree::ptree pt;
-    boost::property_tree::read_xml(mysql_config, pt);
-    auto host = pt.get_child("mysql.host").get_value<std::string>();
-    auto port = pt.get_child("mysql.port").get_value<int>();
-    auto dbname = pt.get_child("mysql.database").get_value<std::string>();
-    auto username = pt.get_child("mysql.user").get_value<std::string>();
-    auto password = pt.get_child("mysql.password").get_value<std::string>();
 
-    int nTried = 0;
-    int retCode = -1;
-    try {
-        do {
-            retCode = mySql->open(host.c_str(), username.c_str(), password.c_str(), dbname.c_str(), port);
-            if (retCode < 0) {
-                const char *errorMsg = mysql_error(mySql->getMysql());
-                int errorNo = mysql_errno(mySql->getMysql());
-                spdlog::error("failed to connect mysql db. please check settings,error no:{},error msg:{}",
-                              errorNo, errorMsg);
-                sleep(2);
-            }
-        } while (nTried++ < 2 && retCode < 0);
-        if (nTried > 2 and retCode != 0) {
-            assert(false && "connect mysql failed");
-        }
-    } catch (...) {
-        spdlog::error("got exception when opening the mysql db.");
-    }
+
+
+void parseConfig(boost::property_tree::ptree const &pt, std::map<std::string, Cosmos::Types::InitParam> &configParamMap) {
+    for (auto policy_pt:
+         boost::make_iterator_range(pt.get_child("Cosmos").get_child("Engines").equal_range("Engine"))) {
+        Cosmos::Types::InitParam param;
+        param.engineName = policy_pt.second.get<std::string>("<xmlattr>.name");
+        spdlog::info("parseConfig {}", param.engineName.c_str());
+        // for (auto param_pt: boost::make_iterator_range(policy_pt.second.get_child("params").equal_range("param"))) {
+        //     auto name = param_pt.second.get<std::string>("<xmlattr>.name");
+        //     auto value = param_pt.second.get<std::string>("<xmlattr>.value");
+        //     param.paramMap[name] = value;
+        // }
+
+        configParamMap[ param.engineName] = param;
+         }
 }
-
 
 int main() {
     std::string config_tradinghours = "tradinghour.xml";
@@ -132,46 +100,31 @@ int main() {
     tradeInsinfoVec = trader.getInstrumentInfoVec();
 
     spdlog::info("initial policies");
+    std::map<std::string, Cosmos::Types::InitParam> configParamMap;
+    parseConfig(pt, configParamMap);
     int policyID = 0;
-    //initial policies
-    spdlog::info("initial policies");
-    std::vector<Cosmos::KBarEngine::KBarSaverEngine *> engines_vec;
+    std::map<std::string, Cosmos::KBarEngine::KBarSaverEngine *> engines_map;
+
     Cosmos::KBarEngine::KBarSaverEngine *saveEngine = nullptr;
-    for (auto policy_pt: boost::make_iterator_range(
-             pt.get_child("Cosmos").get_child("Engines").equal_range("Engine"))) {
-        auto engineName = policy_pt.second.get<std::string>("<xmlattr>.name");
-        if (engineName.find("kbarsaver") != std::string::npos) {
-            spdlog::info("initial policy {}", engineName.c_str());
-            saveEngine = new Cosmos::KBarEngine::KBarSaverEngine(&driver, engineName, mySql, tradeInsinfoVec, tradingday,  is_day());
-            //TradeBots::Engine::IPolicyFactory::CreateIPolicy();
-            saveEngine->m_policyID = policyID++;
-            engines_vec.emplace_back(saveEngine);
-            // for (auto param_pt: boost::make_iterator_range(policy_pt.second.get_child("params").equal_range("param"))) {
-            //     Cosmos::Types::Param param;
-            //     param.name = param_pt.second.get<std::string>("<xmlattr>.name");
-            //     param.value = param_pt.second.get<std::string>("<xmlattr>.value");
-            //     saveEngine->onParams(param);
-            // }
-        }
+
+    for (auto & params : configParamMap) {
+
+        auto saveEngine = new Cosmos::KBarEngine::KBarSaverEngine(&driver, params.first ,   mySql,
+                             tradeInsinfoVec,  tradingday , Cosmos::Utils::is_day());
+        saveEngine->m_policyID = policyID++;
+    //    underlyngine->m_tradingDay = tradingday;
+        engines_map[params.first] = saveEngine;
+        saveEngine->onInitParams(params.second);
     }
 
 
-    for (auto iengine: engines_vec) {
-        auto logStruct = new Cosmos::Types::LogStruct();
-        std::string record = "record";
-        logStruct->recordLog = initLogs(record, iengine->m_engineName, record);
 
-        std::string position = "position";
-        logStruct->m_positionLog = initLogs(position, iengine->m_engineName, position);
 
-    //    iengine->setInitLog(*logStruct);
-        // auto startTime = std::chrono::duration_cast<std::chrono::microseconds>(
-        //   std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-        iengine->onStart();
-        // auto timeConsume =  std::chrono::duration_cast<std::chrono::microseconds>(
-        //        std::chrono::high_resolution_clock::now().time_since_epoch()).count() - startTime;
-       // fprintf(stderr,"saveEngine start consume : timeConsume=%d\n", timeConsume);
+
+    for (auto & iengineItr: engines_map) {
+        iengineItr.second->onStart();
     }
+
 
     auto initMarketVec = trader.getInitMarketVec();
     market.start(*initMarketVec);
@@ -179,31 +132,31 @@ int main() {
 
 
     while (true) {
-        sleep(1.2 * 60);
-        std::chrono::system_clock::duration d = std::chrono::system_clock::now().time_since_epoch();
-        std::chrono::minutes minute = std::chrono::duration_cast<std::chrono::minutes>(d);
-        auto today_minutes = (minute.count() + 7 * 60) % (60 * 24);
-        int time1 = 2 * 60 + 30; //02:30
-        int time2 = 11 * 60 + 30; //11:30
-        int time3 = 15 * 60; //15:00
-        // int time3 = 17*60 + 35;
-        if ((today_minutes - time1 > 1 and today_minutes - time1 < 30) ||
-            (today_minutes - time2 > 1 and today_minutes - time2 < 30) ||
-            (today_minutes - time3 > 1 and today_minutes - time3 < 30)) {
-            spdlog::info("save kline in ks_main 1");
-          //  spdlog::info("save kline in ks_main 1");
-
-            for (auto &kv:   engines_vec[0]->m_kDataManager->m_allKLineSeries) {
-                for (auto &kse: *kv.second) {
-                    // fprintf(stderr, "crontab today_minutes=%d, instrumentid=%s, index=%d, peroid=%d\n", today_minutes,
-                    //         kse.second->m_insInfo.instrumentID.data(), kse.second->m_seriesIndex,
-                    //         Cosmos::Types::KPeroidToIntervalMap[kse.first]);
-                    if (kse.second->m_KDataVecs.size() > kse.second->m_seriesIndex) {
-                        saveEngine->_saveKline(kse.second, kse.second->m_seriesIndex, kse.first);
-                    }
-                }
-            }
-        }
+        sleep( 3600);
+        // std::chrono::system_clock::duration d = std::chrono::system_clock::now().time_since_epoch();
+        // std::chrono::minutes minute = std::chrono::duration_cast<std::chrono::minutes>(d);
+        // auto today_minutes = (minute.count() + 7 * 60) % (60 * 24);
+        // int time1 = 2 * 60 + 30; //02:30
+        // int time2 = 11 * 60 + 30; //11:30
+        // int time3 = 15 * 60; //15:00
+        // // int time3 = 17*60 + 35;
+        // if ((today_minutes - time1 > 1 and today_minutes - time1 < 30) ||
+        //     (today_minutes - time2 > 1 and today_minutes - time2 < 30) ||
+        //     (today_minutes - time3 > 1 and today_minutes - time3 < 30)) {
+        //     spdlog::info("save kline in ks_main 1");
+        //   //  spdlog::info("save kline in ks_main 1");
+        //
+        //     for (auto &kv:   engines_vec[0]->m_kDataManager->m_allKLineSeries) {
+        //         for (auto &kse: *kv.second) {
+        //             // fprintf(stderr, "crontab today_minutes=%d, instrumentid=%s, index=%d, peroid=%d\n", today_minutes,
+        //             //         kse.second->m_insInfo.instrumentID.data(), kse.second->m_seriesIndex,
+        //             //         Cosmos::Types::KPeroidToIntervalMap[kse.first]);
+        //             if (kse.second->m_KDataVecs.size() > kse.second->m_seriesIndex) {
+        //                 saveEngine->_saveKline(kse.second, kse.second->m_seriesIndex, kse.first);
+        //             }
+        //         }
+        //     }
+        // }
     }
     return 1;
 }

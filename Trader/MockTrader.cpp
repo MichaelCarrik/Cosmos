@@ -109,7 +109,7 @@ namespace Cosmos {
             memcpy(receiveOrder, inputOrderField, sizeof(Types::OrderField));
             auto eventData = m_eventOrderLists.getNewMemory();
             eventData->point = receiveOrder;
-            eventData->type = 1;
+            eventData->eventType = Types::EventType::orderEvent;
             m_driver->callback_asyncEventData(eventData, receiveOrder->policyID);
         };
     }

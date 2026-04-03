@@ -27,14 +27,14 @@ namespace Cosmos {
             double m_MV;
             double  m_multi{0.0};
             int m_tradingDay{0};
-            Types::SignalIntension m_SI{Types::SignalIntension::put};
+
             spdlog::logger *m_configLog{nullptr};
 
             IPolicy(
-                  std::string const&policyName, std::string const&engineName,
-                  Types::Instrument_t& instrument,  Types::KPeriod kperiod, double mv, double multi,
-                  Types::SignalIntension si, int tradingDay) :  m_policyName(policyName) , m_engineName(engineName), m_underlyInstrument(instrument),
-                        m_kperiod(kperiod), m_MV(mv), m_multi(multi), m_SI(si), m_tradingDay(tradingDay){
+                  std::string const&policyName, std::string const&engineName, Types::Instrument_t& instrument,
+                  Types::KPeriod kperiod, double mv, double multi, int tradingDay) :  m_policyName(policyName),
+                    m_engineName(engineName), m_underlyInstrument(instrument), m_kperiod(kperiod), m_MV(mv),
+                    m_multi(multi),  m_tradingDay(tradingDay){
                   }
 
 
@@ -42,6 +42,8 @@ namespace Cosmos {
             start(std::unordered_map<Types::Instrument_t, Types::Symbol *, Types::InstrumentHash> &) = 0;
 
             virtual void runTick(const Types::MarketData *pMD) = 0;
+
+            virtual void updateParam(const Types::NetModifyParam*) = 0;
 
             void _getValueInLine(char *buf, char *valueName, std::string &value) {
                 char *field = strstr(buf, valueName);

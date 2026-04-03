@@ -10,6 +10,12 @@
 
 namespace Cosmos {
     namespace KData {
+        struct KTime{
+            int beginPstime{0};
+            int endPstime{0};
+            Types::UpdateTime_t updateTime_begin{""};
+            Types::UpdateTime_t updateTime_end{""};
+        };
         class KData {
         public:
             Types::Instrument_t m_instrument{""};

@@ -1,2 +1,4 @@
 aux_source_directory(. DIR_UnderlyEngine_SRCS)
-add_library(UnderlyEngine UnderlyEngine.h UnderlyEngine.cpp)
+add_library(UnderlyEngine UnderlyEngine.h UnderlyEngine.cpp Executor.h Executor.cpp
+        RiskMonitor.cpp
+        RiskMonitor.h)

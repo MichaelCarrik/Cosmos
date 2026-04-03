@@ -61,9 +61,9 @@ namespace Cosmos{
             bool m_isUseUnderlyPrice{true};
             KData::KDataManager * m_kDataManager{nullptr};
 
-            KBarSaverEngine( Driver::RealtimeDriver *driver, std::string &_policyName ,   Utils::CppMySQL3DB * mysql,
+            KBarSaverEngine( Driver::RealtimeDriver *driver, std::string const&  engineName ,   Utils::CppMySQL3DB * mysql,
                              std::vector< Cosmos::Types::InstrumentInfo*>* tradeInsInfoVec, int tradingday , bool  isDay) :
-                    m_engineName(_policyName), m_mysql(mysql), m_tradingDay(tradingday), m_tradeInsInfoVec{tradeInsInfoVec}, m_isDay(isDay) {
+                    m_engineName(engineName), m_mysql(mysql), m_tradingDay(tradingday), m_tradeInsInfoVec{tradeInsInfoVec}, m_isDay(isDay) {
                 m_driver = driver;
                 m_driver->add_receiver< Types::OnSubScribeQuote>(
                     m_driver->passn([this]( Types::OnSubScribeQuote const &onSubScribeQuote) {
@@ -73,7 +73,7 @@ namespace Cosmos{
 
             virtual ~KBarSaverEngine() {}
 
-            void onParams( Types::Param const &param);
+            void onInitParams( Types::InitParam const &param);
 
             void onStart();
 

@@ -49,9 +49,9 @@ namespace Cosmos {
         public:
             LongGammaVulture( std::string const &policyName, std::string const &engineName,
                           Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
-                          Types::SignalIntension si, int tradingDay, int expireDay, int maxOptionPosition,
+                          int tradingDay, int expireDay, int maxOptionPosition,
                          double openAtDelta, decltype(m_getUnderlyToBeginIndexFunc) getUnderlyToBeginIndexFunc) :  IOptionPolicy(policyName, engineName, instrument,
-                                                kperiod, mv, multi, si, tradingDay, expireDay), m_maxOptionPosition(maxOptionPosition),
+                                                kperiod, mv, multi,  tradingDay, expireDay), m_maxOptionPosition(maxOptionPosition),
                                                 m_openAtDelta(openAtDelta), m_getUnderlyToBeginIndexFunc(getUnderlyToBeginIndexFunc){
 
 
@@ -179,6 +179,39 @@ namespace Cosmos {
                     m_minsMA = Indicator::MA(m_fiveMinCloseVec, beginI, endI);
             }
 
+                  virtual void updateParam(const Types::NetModifyParam *netModifyParam) override {
+                if (strcmp(netModifyParam->paramName.c_str(), "targetPos") == 0) {
+                    bool isFind =false;
+                    auto callItr = m_callPolicySymbols.targetSignal.targetPosMaps.find(netModifyParam->symbolName);
+                    if (callItr != m_callPolicySymbols.targetSignal.targetPosMaps.end()) {
+                        fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
+                                m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                                netModifyParam->paramValue.c_str());
+                        m_callPolicySymbols.targetSignal.targetPosMaps[netModifyParam->symbolName] = stoi(netModifyParam->paramValue);
+                        isFind = true;
+
+                    }else {
+                        auto putItr = m_putPolicySymbols.targetSignal.targetPosMaps.find(netModifyParam->symbolName);
+                        if (putItr != m_putPolicySymbols.targetSignal.targetPosMaps.end()) {
+                            fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
+                                    m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                                    netModifyParam->paramValue.c_str());
+                            m_putPolicySymbols.targetSignal.targetPosMaps[netModifyParam->symbolName] = stoi(netModifyParam->paramValue);
+                            isFind = true;
+                        }
+
+                        if (isFind==true) {
+                            auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex - 1];
+
+                            _writePolicyLog(lastUnderlyKB, m_underlyKseries->m_lastPMD);
+                            m_configLog->flush();
+                            m_configIndex++;
+
+                        }
+                    }
+                }
+            };
+
             virtual void start(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &inputSymbolMap) override {
 
                 m_underlyToBeginIndex =  m_getUnderlyToBeginIndexFunc(m_underlyInstrument, m_kperiod);
@@ -216,19 +249,24 @@ namespace Cosmos {
                 }
                 m_configIndex++;
                 initIndicator();
-                fprintf(stderr, "[%s_%s] start, underlyInstrument=%s, kperiod=%d, MV=%.3f, multi=%.3f, si=%s, tradingDay=%d, expireDay=%d, "
+                fprintf(stderr, "[%s_%s] start, underlyInstrument=%s, kperiod=%d, MV=%.3f, multi=%.3f, tradingDay=%d, expireDay=%d, "
                                 "openAtDelta=%.3f, length=%d, mark=%.3f, alpha=%.3f, minsMA=%.3f, upBand=%.3f, downBand=%.3f, maxOptionPosition=%d, "
                                 "underlyToBeginIndex=%d, marketPosition=%d, preMarketPostion=%d, signalPrice=%.3f, holdStrikePrice=%.3f, configIndex=%d\n",
                                 m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(), static_cast<int>(m_kperiod), m_MV, m_multi,
-                                Types::signalIntensionMap[m_SI].data(), m_tradingDay, m_expireDay,m_openAtDelta, m_length, m_mark, m_alpha, m_minsMA,
+                                m_tradingDay, m_expireDay,m_openAtDelta, m_length, m_mark, m_alpha, m_minsMA,
                                 m_upBand, m_downBand, m_maxOptionPosition, m_underlyToBeginIndex,  m_marketPosition, m_preMarketPosition, m_signalPrice,
                                 m_holdStrikePrice ,m_configIndex);
+                spdlog::info( "[{}_{}] start, underlyInstrument={}, kperiod={}, MV={:.3f}, multi={:.3f}, tradingDay={}, expireDay={}, "
+                "openAtDelta={:.3f}, length={}, mark={:.3f}, alpha={:.3f}, minsMA={:.3f}, upBand={:.3f}, downBand={:.3f}, maxOptionPosition={}, "
+                "underlyToBeginIndex={}, marketPosition={}, preMarketPostion={}, signalPrice={:.3f}, holdStrikePrice={:.3f}, configIndex={}\n",
+                m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(), static_cast<int>(m_kperiod), m_MV, m_multi,
+               m_tradingDay, m_expireDay,m_openAtDelta, m_length, m_mark, m_alpha, m_minsMA,
+                m_upBand, m_downBand, m_maxOptionPosition, m_underlyToBeginIndex,  m_marketPosition, m_preMarketPosition, m_signalPrice,
+                m_holdStrikePrice ,m_configIndex);
                 m_configIndex++;
             };
 
             virtual void runTick(const  Types::MarketData *pMD) override {
-
-
 
                 if (strcmp(pMD->instrumentID.data(), m_underlyInstrument.data()) == 0) {
                     if (m_lastUnderlyBarIndex==0 && m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {
@@ -237,7 +275,7 @@ namespace Cosmos {
                     //    _writePolicyLog(lastUnderlyBar, pMD);
                         m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
                     }
-                    if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {  //waiting all instrtuments finish KData
+                    else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {  //waiting all instrtuments finish KData
                         auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
                         _updateVultureSignal(lastUnderlyBar);
 

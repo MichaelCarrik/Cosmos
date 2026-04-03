@@ -26,12 +26,10 @@ namespace Cosmos {
             int m_adjRiskTime{-1};
             int m_lots{0};
 
-            IFuturePolicy(std::string const &policyName, std::string const &engineName,
-                          Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
-                          Types::SignalIntension si,
-                          int tradingDay, int adjRiskTime) : IPolicy(policyName, engineName,
-                                                                     instrument, kperiod, mv, multi, si, tradingDay),
-                                                             m_adjRiskTime(adjRiskTime) {
+            IFuturePolicy(std::string const &policyName, std::string const &engineName, Types::Instrument_t &instrument,
+                Types::KPeriod kperiod, double mv, double multi, int tradingDay, int adjRiskTime) :
+                            IPolicy(policyName, engineName,instrument, kperiod, mv, multi, tradingDay),
+                            m_adjRiskTime(adjRiskTime) {
             }
 
             virtual void writePolicyLog(const KData::KData *lastUnderlyKB , const Types::MarketData * pMD) =0;
