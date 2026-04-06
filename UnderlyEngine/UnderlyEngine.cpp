@@ -11,7 +11,7 @@
 #include "../Policy/OptionPolicy/LongGammaVulture.h"
 // #include "../Policy/Calendar.h"
 #include "../Policy/OptionPolicy/SellStrangleV2.h"
-
+#include "../Policy/FuturePolicy/TestTrend.h"
 #include "../Policy/FuturePolicy/VultureTrend.h"
 
 
@@ -116,6 +116,8 @@ namespace Cosmos {
             if (strcmp(initParamMap.engineName.c_str(), m_engineName.c_str()) != 0) {
                 assert(false);
             }
+            auto underlyAStr = Utils::getParamMapValue(initParamMap.paramMap, "mainFutureInstr");
+            strcpy(m_mainFutureInstr.data(), underlyAStr.c_str());
 
             m_engineParam.affiThreadId = stoi(Utils::getParamMapValue(initParamMap.paramMap, "affiThreadId"));
             strcpy(m_engineParam.productID.data(), Utils::getParamMapValue(initParamMap.paramMap, "productId").c_str());
@@ -126,11 +128,10 @@ namespace Cosmos {
             m_engineParam.futureMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "futureMaxPosition"));
             m_engineParam.optionMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "optionMaxPosition"));
 
-            m_engineParam.futureEI = Types::configParamToEIMap.at(Utils::getParamMapValue(initParamMap.paramMap, "futureEI"));
+            m_engineParam.futureEI =  Types::configParamToEIMap.at(Utils::getParamMapValue(initParamMap.paramMap, "futureEI"));
             m_engineParam.optionEI = Types::configParamToEIMap.at(Utils::getParamMapValue(initParamMap.paramMap, "optionEI"));
 
             m_engineParam.m_kbarBiasSeconds = stoi(Utils::getParamMapValue(initParamMap.paramMap, "kbarBiasSeconds"));
-
             m_engineParam.hedgeType = Types::HedgeType::spec;
             int hedgeType =stoi(Utils::getParamMapValue(initParamMap.paramMap, "hedgeType"));
             if (hedgeType == 1) {
@@ -180,6 +181,28 @@ namespace Cosmos {
                 Types::InstrumentInfo * futureInsInfo{nullptr};
                 getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
                 return new Policy::VultureTrend(policyName, m_engineName, underlyInstrument, kPeriod,
+                                                                           MV, futureInsInfo->multi,
+                                                                           m_tradingDay, adjRiskTime, alpha, mark);
+            }else if(policyName.compare("TestTrend") == 0) {
+                Types::Instrument_t underlyInstrument{""};
+                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+
+                auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
+                this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
+
+
+                double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
+                auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
+                double alpha = 0.7;
+                double mark = 2.0;
+                //  double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "adjRiskTime").c_str());
+
+                Types::InstrumentInfo * futureInsInfo{nullptr};
+                getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
+                return new Policy::TestTrend(policyName, m_engineName, underlyInstrument, kPeriod,
                                                                            MV, futureInsInfo->multi,
                                                                            m_tradingDay, adjRiskTime, alpha, mark);
             }
@@ -384,20 +407,21 @@ namespace Cosmos {
         void UnderlyEngine::onEventData(Types::EventData const &eventData) {
             if (eventData.eventType == Types::EventType::marketEvent) {
                 auto pMD = (const Types::MarketData *) eventData.point;
-                if (strcmp(pMD->instrumentID.data(), "i2405") ==0 ) {
-                    // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
-                    //  pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
-                    //  pMD->epoch_time);
-                    if (strcmp(pMD->updateTime.data(), "22:59:50") == 0) {
-                        int a =1;
-                    }
-                }
+                // if (strcmp(pMD->instrumentID.data(), "i2405") ==0 ) {
+                //      fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                //      pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
+                //      pMD->epoch_time);
+                //
+                // }
 
-                if (strcmp(pMD->updateTime.data(), "09:04:50") == 0) {
-                    int a =1;
-                }
                 m_kDataManager->KMAddTick(pMD);
-                if (pMD->isInit == 0) {
+                auto symbolItr = m_symbolMap.find(pMD->instrumentID);
+                if (symbolItr == m_symbolMap.end()) {
+                    assert(false);
+                }
+                symbolItr->second->lastMD = pMD;
+
+                if (pMD->isInit == 0 && strcmp(m_mainFutureInstr.data(), pMD->instrumentID.data()) ==0 ) {
                     this->runEvent(pMD, pMD->epoch_time);
                 }
             } else if (eventData.eventType == Types::EventType::orderEvent) {
@@ -465,11 +489,6 @@ namespace Cosmos {
 
 
         void UnderlyEngine::runEvent(const Types::MarketData *pMD, const int64_t epoch_time) {
-            auto symbolItr = m_symbolMap.find(pMD->instrumentID);
-            if (symbolItr == m_symbolMap.end()) {
-                assert(false);
-            }
-            symbolItr->second->lastMD = pMD;
 
             for (auto i = 0; i < m_futurePolicyVec.size(); i++) {
                 m_futurePolicyVec[i]->runTick(pMD);
@@ -494,22 +513,24 @@ namespace Cosmos {
             }
 
 
-            if (strcmp(pMD->instrumentID.data(), pMD->instrumentID.data()) == 0) {
-                for (auto &symbolItr: m_symbolMap) {
-                    if (true == Utils::TradingHours::isNoTradeBeforeTime(symbolItr.second->instrumentInfo.instrumentID,
-                                                                         pMD->psSecond, 5)) {
-                        //    cancelOrder(symbolItr.second->order, symbolItr.second, epoch_time);
-                    } else if (((pMD->psSecond > 30 && pMD->psSecond < 19900) || (pMD->psSecond > 32430))
-                               && symbolItr.second->lastMD != nullptr // && strcmp(m_underlyInsMap.nearInstrument.data(), symbolItr.first.data()) != 0
-                               ) {
-                        auto targetItr = targetMap.find(symbolItr.first);
-                        symbolItr.second->targetPosition = 0;
-                        if (targetItr != targetMap.end()) {
-                            symbolItr.second->targetPosition = targetItr->second;
-                        }
 
-                        m_executor->syncPosition(symbolItr.second, epoch_time);
+            if (strcmp(pMD->updateTime.data(),"22:59:31") ==0) {
+                int a = 1;
+            }
+            for (auto &symbolItr: m_symbolMap) {
+                if (true == Utils::TradingHours::isNoTradeBeforeTime(symbolItr.second->instrumentInfo.instrumentID,
+                                                                     pMD->psSecond, 5)) {
+                    //    cancelOrder(symbolItr.second->order, symbolItr.second, epoch_time);
+                } else if (((pMD->psSecond > 30 && pMD->psSecond < 19900) || (pMD->psSecond > 32430))
+                           && symbolItr.second->lastMD != nullptr // && strcmp(m_underlyInsMap.nearInstrument.data(), symbolItr.first.data()) != 0
+                           ) {
+
+                    auto targetItr = targetMap.find(symbolItr.first);
+                    symbolItr.second->targetPosition = 0;
+                    if (targetItr != targetMap.end()) {
+                        symbolItr.second->targetPosition = targetItr->second;
                     }
+                    m_executor->syncPosition(symbolItr.second, epoch_time);
                 }
             }
         }

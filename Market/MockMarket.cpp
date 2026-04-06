@@ -68,7 +68,7 @@ namespace Cosmos {
                             assert(false && "market is nullptr");
                         }
                         m_driver->callback_asyncEventData(event, i);
-                        //            m_driver->send(*marketData);
+                        m_driver->send(*marketData);
                     }
                 }
 

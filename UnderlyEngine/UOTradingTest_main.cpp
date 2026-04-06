@@ -140,7 +140,8 @@ void Session(boost::asio::ip::tcp::socket socket,  std::map<std::string, Cosmos:
 
 
 int main(int argc, char *argv[]) {
-    int tradingday = atoi(argv[1]);
+    int tradingdayBegin = atoi(argv[1]);
+    int tradingdayEnd = atoi(argv[2]);
     std::string config_tradinghours = "tradinghour.xml";
     std::string config_path = "CosmosTrading_test.xml";
     spdlog::init_thread_pool(1024 * 64, 1);
@@ -159,58 +160,69 @@ int main(int argc, char *argv[]) {
     boost::property_tree::read_xml(config_path, pt);
     std::string rawTickPath = pt.get_child("Cosmos").get_child("rawTickPath").get<std::string>("<xmlattr>.value");
 
+
+
     std::string store_config = "mysql.xml";
     Cosmos::Utils::CppMySQL3DB *mySql = new Cosmos::Utils::CppMySQL3DB();
     InitMySql(mySql, store_config);
 
     std::array<bool, 2> isDayArray{false, true};
 
-    for (auto isDay: isDayArray) {
-        Cosmos::Driver::TestDriver driver;
-        std::vector<Cosmos::Types::InstrumentInfo> queryInstruments;
-        Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath);
-        Cosmos::Trader::Trader<Cosmos::Trader::MockTrader, decltype(driver)> trader(
-            &driver, rawTickPath, tradingday, isDay);
-        trader.start(tradingday);
-        spdlog::info("initial policies");
-        int policyID = 0;
-        std::map<std::string, Cosmos::Engine::UnderlyEngine *> engines_map;
+    for (int tradingDay = tradingdayBegin; tradingDay <= tradingdayEnd; tradingDay++) {
 
-        std::map<std::string, Cosmos::Types::InitParam> configParamMap;
-        parseConfig(pt, configParamMap);
-        for (auto & params : configParamMap) {
-
-           auto underlyngine = new Cosmos::Engine::UnderlyEngine(&driver,
-                params.first, policyID++, tradingday, mySql, isDay, false);
-
-            engines_map[params.first] = underlyngine;
-            underlyngine->onInitParams(params.second);
+        char read_path[256]{""};
+        sprintf(read_path, "%s/%d_day", rawTickPath.c_str(), tradingDay);
+        std::filesystem::path filePath(read_path);
+        if( std::filesystem::exists(filePath) == false) {
+           continue;
         }
+        fprintf(stderr, "tradingDay=%d\n", tradingDay);
 
-
-        for (auto & iengineItr: engines_map) {
-            iengineItr.second->onStart();
-        }
-
-        driver.setPolicySize(16);
-        market.start(tradingday, isDay);
-        driver.onStart();
-        while (true) {
-            unsigned short port =25000;
-            boost::asio::io_context ioc;
-
-            boost::asio::ip::tcp::acceptor acceptor(ioc, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
-            try {
-                // 一次处理一个连接
-                while (true) {
-                    Session(acceptor.accept(),  engines_map);
-                }
+        for (auto isDay: isDayArray) {
+            Cosmos::Driver::TestDriver driver;
+            std::vector<Cosmos::Types::InstrumentInfo> queryInstruments;
+            Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath);
+            Cosmos::Trader::Trader<Cosmos::Trader::MockTrader, decltype(driver)> trader(
+                &driver, rawTickPath, tradingDay, isDay);
+            trader.start(tradingDay);
+            spdlog::info("initial policies");
+            int policyID = 0;
+            std::map<std::string, Cosmos::Engine::UnderlyEngine *> engines_map;
+            std::map<std::string, Cosmos::Types::InitParam> configParamMap;
+            parseConfig(pt, configParamMap);
+            for (auto & params : configParamMap) {
+                auto underlyngine = new Cosmos::Engine::UnderlyEngine(&driver,
+                     params.first, policyID++, tradingDay, mySql, isDay, false);
+                engines_map[params.first] = underlyngine;
+                underlyngine->onInitParams(params.second);
             }
-            catch (const std::exception& e) {
-                std::cerr << "Exception: " <<  e.what() << std::endl;
+
+            for (auto & iengineItr: engines_map) {
+                iengineItr.second->onStart();
             }
+
+            driver.setPolicySize(16);
+            market.start(tradingDay, isDay);
+            driver.onStart();
+            // while (true) {
+            //     unsigned short port =25000;
+            //     boost::asio::io_context ioc;
+            //
+            //     boost::asio::ip::tcp::acceptor acceptor(ioc, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
+            //     try {
+            //         // 一次处理一个连接
+            //         while (true) {
+            //             Session(acceptor.accept(),  engines_map);
+            //         }
+            //     }
+            //     catch (const std::exception& e) {
+            //         std::cerr << "Exception: " <<  e.what() << std::endl;
+            //     }
+            // }
         }
     }
+
+
     printf("close");
     return 1;
 }

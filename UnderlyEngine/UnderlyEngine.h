@@ -18,8 +18,9 @@
 #include "../Types/QuerySymbol.h"
 #include "../Policy/OptionPolicy/IOptionPolicy.h"
 #include "../Policy/FuturePolicy/IFuturePolicy.h"
+#include "../Policy/OptionPolicy/CoveredVulture.h"
 #include "../Utils/Utils.h"
-#include "../Utils/LogUtils.h"
+
 
 
 namespace Cosmos {
@@ -34,6 +35,7 @@ namespace Cosmos {
             double m_riskFreeR{0.023};
             std::unordered_map< Types::Instrument_t,   Types::Symbol * ,  Types::InstrumentHash> m_symbolMap;
             std::map<Types::Instrument_t, bool>  m_underlyInitMap;
+            Types::Instrument_t m_mainFutureInstr{""};
             KData::KDataManager * m_kDataManager{nullptr};
        //     Utils::MemoryList<  Types::OrderField ,  Types::OrderBuffSize> m_orderList{0};
         //    spdlog::logger* m_orderLog{nullptr};

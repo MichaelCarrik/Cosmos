@@ -54,9 +54,9 @@ namespace Cosmos {
                         _getValueInLine(buf, ciname, configIndexStr);
                         if (std::stoi(configIndexStr.c_str()) == inputConfigIndex) {
                             FileRead fileRead;
-                            char insname[56]{"instrument"};
+                            char insname[56]{"instr"};
                             _getValueInLine(buf, insname, fileRead.instrumentStr);
-                            char tagname[56]{"targetPosition"};
+                            char tagname[56]{"targetPos"};
                             _getValueInLine(buf, tagname, fileRead.targetPositionStr);
 
                             if (strcmp(fileRead.instrumentStr.c_str(), underlyInstrument.data()) == 0) {
@@ -225,12 +225,12 @@ namespace Cosmos {
                         _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, -1, m_maxOptionPos);
                         _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, -1, m_maxOptionPos);
 
-                        m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
-                                          "targetPosition={}, basePrice={:.3f}, seriesIndex={}, "
-                                          "allCallDelta={:.3f}, allPutDelta={:.3f}",
+                        m_configLog->info("configIndex={}, instr={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
+                                          "targetPos={}, basePrice={:.3f}, seriesIndex={}, "
+                                          "callDelta={:.3f}, putDelta={:.3f}",
                                           m_configIndex, lastUnderlyKB->m_instrument.data(),
                                           lastUnderlyKB->m_tradingday,
-                                          lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime,
+                                          lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(),
                                           lastUnderlyKB->m_close,
                                           0.0, 0, m_basePrice, m_underlyKseries->m_seriesIndex - 1, allCallDelta,
                                           allPutDelta);

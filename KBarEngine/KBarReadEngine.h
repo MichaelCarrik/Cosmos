@@ -142,7 +142,7 @@ namespace Cosmos {
             }
 
             void onEventData(Types::EventData const &eventData) {
-                if (eventData.eventType == Type::EventType::marketEvent) {
+                if (eventData.eventType == Types::EventType::marketEvent) {
                     auto pMD = (const Types::MarketData *) eventData.point;
                      // if (strcmp(pMD->instrumentID.data(), "i2502P890")==-0 ) {
                     // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, epoch_time=%ld \n",
