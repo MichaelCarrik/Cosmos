@@ -8,42 +8,91 @@
 namespace Cosmos {
     namespace Engine {
 
+
+        void RiskMonitor::onOrderField(const Types::OrderField *inputOrder, Types::Symbol *symbol) {
+            if (inputOrder->policyID != m_policyID) {
+                assert(false && "RiskMonitor::onOrderField policyID not match");
+            }
+
+            fprintf(stderr, "RiskMonitor::onEventData instrument=%s, updateTime=%s, %03d, pOrderID=%d, requestID=%d, orderRef=%s, orderSide=%s, "
+                                  "orderPrice=%.3f, orderVolume=%d, orderStatus=%s\n",
+                          inputOrder->instrumentID.data(), symbol->lastMD->updateTime.data(), symbol->lastMD->milliSeconds, inputOrder->pOrderID, inputOrder->tOrderID,
+                          inputOrder->orderRef.data(), Types::orderSideMap[inputOrder->orderSide].data(),  inputOrder->orderPrice, inputOrder->orderVolume,
+                          Types::orderStatusMap[inputOrder->orderStatus].data());
+
+
+            symbol->underlySymbol->riskIndicator.updateRiskIndicator(inputOrder, symbol->instrumentInfo.productIDClass == Types::ProductClass::option);
+        }
+
             bool RiskMonitor::isRiskForNoTrade(const Types::Symbol * underlySymbol, bool isOption) {
                 if (underlySymbol->lastMD == nullptr or underlySymbol->lastMD->bidVolume[0] ==0 or underlySymbol->lastMD->askVolume[0] ==0 ) {
+                    if (underlySymbol->lastMD != nullptr ) {
+                           spdlog::info("[{}_{}], RiskMonitor::isRiskForNoTrade instrumentID={}, bidVolume[0]={}, askVolume[0]={}",
+                               m_engineName, underlySymbol->lastMD->updateTime.data(),
+                             underlySymbol->instrumentInfo.instrumentID.data(),
+                            underlySymbol->lastMD->bidVolume[0], underlySymbol->lastMD->askVolume[0]);
+                    }
+
                     return true;
                 }
 
                 auto riskInd = &underlySymbol->riskIndicator;
 
 
-                int OTR = (riskInd->sendOrderNumb + riskInd->cancelOrderNumb) / std::max(riskInd->filledOrderNumb, 1);
+                int informVolume = (riskInd->sendOrderNumb + riskInd->cancelOrderNumb);
                 if (isOption == true)
                 {
-                    OTR = (riskInd->optionSendOrderNumb + riskInd->optionQuoteOrderNumb +
-                             riskInd->optionCancelOrderNumb) / std::max(riskInd->optionFilledOrderNumb, 1);
+
+                    informVolume = (riskInd->optionSendOrderNumb + riskInd->optionQuoteOrderNumb +
+                             riskInd->optionCancelOrderNumb) ;
                 }
 
-                if (OTR > m_engineParam.riskOTR)
+                if (informVolume > m_engineParam.riskInformVolume)
                 {
+                    spdlog::info("[{}_{}], RiskMonitor::isRiskForNoTrade instrumentID={}, isOption={}, informVolume={}, riskInformVolume={}, ",
+                     m_engineName, underlySymbol->lastMD->updateTime.data(),
+                     underlySymbol->instrumentInfo.instrumentID.data(), isOption,
+                    informVolume,  m_engineParam.riskInformVolume);
                     return true;
                 }
                 return false;
             }
 
-            bool RiskMonitor::isRiskForOrder(const Types::Symbol * underlySymbol, const Types::OrderField * orderField)
+            bool RiskMonitor::isRiskForOrder(const Types::Symbol * underlySymbol, const Types::OrderField * orderField, bool isOption)
             {
                 if (orderField->orderStatus == Types::OrderStatus::signal)
                 {
                     int sectorSize=1;
                     auto sectorNumb = Utils::TradingHours::getPsTimeToNumb(underlySymbol->instrumentInfo.productID, orderField->insertPSTimes, sectorSize);
-                    auto riskMaxOrderNumber =  m_engineParam.riskMaxOrderNumb * sectorNumb /std::min(sectorNumb, 1);
+                    if (sectorNumb ==0) {
+                        spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder sectorNumb is zero, instrumentID={}, insertPSTimes={}, sectorSize={}", m_engineName,
+                            underlySymbol->lastMD->updateTime.data(), underlySymbol->instrumentInfo.instrumentID.data(), orderField->insertPSTimes, sectorSize
+                            );
+                        return true;
+                    }
+                    auto riskMaxOrderNumber =  m_engineParam.riskMaxOrderRatio * sectorNumb /std::min(sectorNumb, 1);
                     if (underlySymbol->riskIndicator.sendOrderNumb > riskMaxOrderNumber) {
+                        spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder sendOrderNumb risk, instrumentID={}, sendOrderNumb={}, "
+                        "riskMaxOrderNumber={}",m_engineName, underlySymbol->lastMD->updateTime.data(), underlySymbol->instrumentInfo.instrumentID.data(),
+                        riskMaxOrderNumber, underlySymbol->riskIndicator.sendOrderNumb);
                        return true;
                     }
 
                     if (orderField->orderSide == Types::OrderSide::buy && orderField->orderVolume + underlySymbol->riskIndicator.openBuyVolume > m_engineParam.riskOpenVolume) {
+                        spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder openBuyVolume risk, instrumentID={}, openBuyVolume={}, "
+                        "riskOpenVolume={}",m_engineName, underlySymbol->lastMD->updateTime.data(),
+                          underlySymbol->instrumentInfo.instrumentID.data(),  underlySymbol->riskIndicator.openBuyVolume, m_engineParam.riskOpenVolume);
                         return true;
                     }else if (orderField->orderSide == Types::OrderSide::sell && orderField->orderVolume + underlySymbol->riskIndicator.openSellVolume > m_engineParam.riskOpenVolume) {
+                        spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder openBuyVolume risk, instrumentID={}, openSellVolume={}, "
+                        "riskOpenVolume={}",m_engineName, underlySymbol->lastMD->updateTime.data(), underlySymbol->instrumentInfo.instrumentID.data(),
+                        underlySymbol->riskIndicator.openSellVolume, m_engineParam.riskOpenVolume);
+                        return true;
+                    }
+
+                    if (isOption && orderField->OI == Types::OrderIntension::OIHit) {
+                        spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder option order not permit hit , instrumentID={}",
+                            m_engineName, underlySymbol->lastMD->updateTime.data(), underlySymbol->instrumentInfo.instrumentID.data());
                         return true;
                     }
                 }

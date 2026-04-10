@@ -19,32 +19,38 @@
 #include <filesystem>
 #include <chrono>
 
-static std::shared_ptr<spdlog::logger>
-initLogs(std::string &typeName, std::string &engineName, std::string &policyName) {
-    char logSymbolPath[128];
-    memset(logSymbolPath, 0, sizeof(128));
-    sprintf(logSymbolPath, "./logs/%s/%s_%s.txt", typeName.c_str(), engineName.c_str(), policyName.c_str());
 
-    std::filesystem::path tradeSymbolPath(logSymbolPath);
-    if (!std::filesystem::exists(tradeSymbolPath.parent_path())) {
-        std::filesystem::create_directories(tradeSymbolPath.parent_path());
-    }
-    char logKey[128]{""};
-    sprintf(logKey, ".%s_%s_%s", typeName.c_str(), engineName.c_str(), policyName.c_str());
-    fprintf(stderr, "initLogs %s %s\n", logKey, logSymbolPath);
+void parseConfig(boost::property_tree::ptree const &pt, std::map<std::string, Cosmos::Types::InitParam> &configParamMap) {
+    for (auto policy_pt:
+         boost::make_iterator_range(pt.get_child("Cosmos").get_child("Engines").equal_range("Engine"))) {
+        Cosmos::Types::InitParam param;
+        param.engineName = policy_pt.second.get<std::string>("<xmlattr>.name");
+        spdlog::info("parseConfig {}", param.engineName.c_str());
+        for (auto param_pt: boost::make_iterator_range(policy_pt.second.get_child("params").equal_range("param"))) {
+            auto name = param_pt.second.get<std::string>("<xmlattr>.name");
+            auto value = param_pt.second.get<std::string>("<xmlattr>.value");
+            param.paramMap[name] = value;
+        }
+        for (auto subPolicy_pt: boost::make_iterator_range(
+                 policy_pt.second.get_child("params").equal_range("subPolicy"))) {
+            std::map<std::string, std::string> subPolicyParamMap;
 
-    return spdlog::basic_logger_st(logKey, logSymbolPath);
+            for (auto subParam_pt: boost::make_iterator_range(subPolicy_pt.second.equal_range("subParam"))) {
+                auto subPolicyParamName = subParam_pt.second.get<std::string>("<xmlattr>.name");
+                subPolicyParamMap[subPolicyParamName] = subParam_pt.second.get<std::string>("<xmlattr>.value");
+            }
+            param.subPolicyParamsVec.emplace_back(subPolicyParamMap);
+                 }
+        configParamMap[ param.engineName] = param;
+         }
 }
-
-
-
 
 
 
 int main(int argc, char *argv[]) {
 
-    std::string config_tradinghours = "tradinghour.xml";
-    std::string config_path = "OptionTrading.xml";
+
+    std::string config_path = "CosmosTrading.xml";
     spdlog::init_thread_pool(1024 * 64, 1);
     //  auto daily_logger = spdlog::daily_logger_mt<spdlog::async_factory_nonblock>("daily_logger", "logs/system/daily.txt", 19, 30);
     auto daily_logger = spdlog::daily_logger_mt("daily_logger", "logs/system/daily.txt", 19, 30);
@@ -55,31 +61,35 @@ int main(int argc, char *argv[]) {
     spdlog::set_pattern("[%Y-%m-%d %H:%M:%S.%f] [%l] %v");
     spdlog::flush_every(std::chrono::seconds(5));
 
-     Utils::TradingHours::loadConfig(config_tradinghours);
 
     boost::property_tree::ptree pt;
     boost::property_tree::read_xml(config_path, pt);
-     Driver::RealtimeDriver driver;
+
+    auto config_tradinghours = pt.get_child("Cosmos").get_child("tradinghours").get<
+       std::string>("<xmlattr>.configfile");
+    Cosmos::Utils::TradingHours::loadConfig(config_tradinghours);
+
+     Cosmos::Driver::RealtimeDriver driver;
     driver.setPolicySize(22);
     //initial md
     fprintf(stderr, "init market begin\n");
     spdlog::info("initial md");
-    auto md_config = pt.get_child("OptionTrading").get_child("md").get<std::string>("<xmlattr>.configfile");
+    auto md_config = pt.get_child("Cosmos").get_child("md").get<std::string>("<xmlattr>.configfile");
     //    Market::Market< Market::MockMarket> market(&driver, md_config);
-     Market::Market< Market::CtpMarket, decltype(driver)> market(&driver, md_config);
+     Cosmos::Market::Market< Cosmos::Market::CtpMarket, decltype(driver)> market(&driver, md_config);
 
-    auto trade_config = pt.get_child("OptionTrading").get_child("trade").get<std::string>("<xmlattr>.configfile");
+    auto trade_config = pt.get_child("Cosmos").get_child("trade").get<std::string>("<xmlattr>.configfile");
 //    TradeBots::Trader::Trader<TradeBots::Trader::RemTraderSpi> trader(&driver, trade_config, symbolConfigMap.size());
-     Trader::Trader< Trader::CtpTrader, decltype(driver)> trader(&driver, trade_config);
+     Cosmos::Trader::Trader< Cosmos::Trader::CtpTrader, decltype(driver)> trader(&driver, trade_config);
     fprintf(stderr, "trade end\n");
 
 
     std::string store_config = "mysql.xml";
-     Utils::CppMySQL3DB *mySql = new  Utils::CppMySQL3DB();
+     Cosmos::Utils::CppMySQL3DB *mySql = new  Cosmos::Utils::CppMySQL3DB();
     InitMySql(mySql, store_config);
-
-    int tradingday = 0;
-    if (trader.start(tradingday) != 0) {
+    bool isDay = Cosmos::Utils::is_day();
+    int tradingDay = 0;
+    if (trader.start(tradingDay, isDay) != 0) {
         fprintf(stderr, "trade error\n");
         spdlog::error("trader start error, program terminal");
         return -1;
@@ -89,53 +99,26 @@ int main(int argc, char *argv[]) {
 
     spdlog::info("initial policies");
     int policyID = 0;
-    std::vector< UnderlyOptionEngine::UnderlyOptionEngine *> engines_vec;
+    std::map<std::string, Cosmos::Engine::UnderlyEngine *> engines_map;
+    std::map<std::string, Cosmos::Types::InitParam> configParamMap;
+    parseConfig(pt, configParamMap);
 
-    for (auto policy_pt: boost::make_iterator_range(
-            pt.get_child("OptionTrading").get_child("Engines").equal_range("Engine"))) {
-        auto engineName = policy_pt.second.get<std::string>("<xmlattr>.name");
-        spdlog::info("initial policy {}", engineName.c_str());
-        auto underlyOptionEngine = new  UnderlyOptionEngine::UnderlyOptionEngine(&driver, engineName, mySql,
-                                                                                             is_day(), true);  //TradeBots::Engine::IPolicyFactory::CreateIPolicy();
-        underlyOptionEngine->m_policyID = policyID++;
-        underlyOptionEngine->m_tradingDay = tradingday;
-        engines_vec.emplace_back(underlyOptionEngine);
-        for (auto param_pt: boost::make_iterator_range(policy_pt.second.get_child("params").equal_range("param"))) {
-             Types::Param param;
-            param.name = param_pt.second.get<std::string>("<xmlattr>.name");
-            param.value = param_pt.second.get<std::string>("<xmlattr>.value");
-            underlyOptionEngine->onParams(param);
-        }
-        for (auto subPolicy_pt: boost::make_iterator_range(
-                policy_pt.second.get_child("params").equal_range("subPolicy"))) {
-             Types::Param param;
-            param.name = "subPolicy";
-            for (auto subParam_pt: boost::make_iterator_range(subPolicy_pt.second.equal_range("subParam"))) {
-                auto subPolicyParamName = subParam_pt.second.get<std::string>("<xmlattr>.name");
-                if (strcmp(subPolicyParamName.c_str(), "policyName") == 0) {
-                    param.value = subParam_pt.second.get<std::string>("<xmlattr>.value");
-                }
-                param.paramMap[subPolicyParamName] = subParam_pt.second.get<std::string>("<xmlattr>.value");
-            }
-            underlyOptionEngine->onParams(param);
-        }
+
+    for (auto & params : configParamMap) {
+        auto underlyngine = new Cosmos::Engine::UnderlyEngine(&driver,
+             params.first, policyID++, tradingDay, mySql, isDay, false);
+        engines_map[params.first] = underlyngine;
+        underlyngine->onInitParams(params.second);
     }
 
 
-    for (auto iengine: engines_vec) {
-         Types::LogStruct *logStruct = new  Types::LogStruct();
-        std::string record = "record";
-        logStruct->recordLog = initLogs(record, iengine->m_engineName, record);
 
-        std::string position = "position";
-        logStruct->m_positionLog = initLogs(position, iengine->m_engineName, position);
-
-        iengine->setInitLog(*logStruct);
-        iengine->onStart();
+    for (auto & iengineItr: engines_map) {
+        iengineItr.second->onStart();
     }
 
     auto initMarketVec = trader.getInitMarketVec();
-    market.start(*initMarketVec);
+    market.start(*initMarketVec, isDay);
     driver.onStart();
 
 

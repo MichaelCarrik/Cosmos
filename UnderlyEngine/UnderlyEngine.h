@@ -39,7 +39,7 @@ namespace Cosmos {
             KData::KDataManager * m_kDataManager{nullptr};
        //     Utils::MemoryList<  Types::OrderField ,  Types::OrderBuffSize> m_orderList{0};
         //    spdlog::logger* m_orderLog{nullptr};
-            std::string m_engineName;
+
             int m_tradingDay{0};
             bool m_isDay;
 
@@ -50,7 +50,8 @@ namespace Cosmos {
             Executor *  m_executor{nullptr};
 
         public:
-            //  Driver::RealtimeDriver *m_driver;
+            std::string m_engineName;
+          //    Driver::RealtimeDriver *m_driver;
             Driver::TestDriver *m_driver;
             int m_policyID{-1};
 

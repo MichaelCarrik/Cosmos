@@ -11,7 +11,7 @@
 namespace Cosmos {
     namespace KBarEngine {
         void KBarSaverEngine::onStart() {
-            m_kDataManager = new KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice, m_mysql);
+            m_kDataManager = new KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice, m_mysql,0);
 
             for (auto &insInfo: *m_tradeInsInfoVec) {
                 m_instrumentInfoMap[insInfo->instrumentID] = insInfo;
@@ -190,7 +190,7 @@ namespace Cosmos {
         };
 
         void KBarSaverEngine::initKSeries(int tradingday, bool isDay, Types::InstrumentInfo const &insInfo) {
-            Utils::TradingHours::initInstrumentTradingHours(insInfo.instrumentID);
+          //  Utils::TradingHours::initInstrumentTradingHours(insInfo.instrumentID);
 
             std::vector<KData::KData *> hisKline;
             for (auto period: Types::m_kperoidVec) {
@@ -211,7 +211,7 @@ namespace Cosmos {
         }
 
         void KBarSaverEngine::onEventData(Types::EventData const &eventData) {
-            if (eventData.type == 0) {
+            if (eventData.eventType == Types::EventType::marketEvent) {
                 auto pMD = (const Types::MarketData *) eventData.point;
                 // if (strcmp(pMD->instrumentID.data(), "lc2605") !=0 ) {
                 //     return;

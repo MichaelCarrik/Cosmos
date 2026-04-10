@@ -54,7 +54,7 @@ namespace Cosmos {
 
                 auto series = this->getSeries(pMD->instrumentID, period);
                 int lastSeriesIndex = series->m_seriesIndex;
-                series->addTick(pMD);
+                series->addTick(pMD, m_isDay);
                 if (pMD->isInit == 1) {
                     lastSeriesIndex = series->m_seriesIndex;
                     series->m_recordIndex = series->m_seriesIndex;
@@ -77,7 +77,7 @@ namespace Cosmos {
                     auto period = itrIns.first;
                     auto series = itrIns.second;
                     int lastSeriesIndex = series->m_seriesIndex;
-                    series->addTick(pMD);
+                    series->addTick(pMD, m_isDay);
                     if (pMD->isInit == 1) {
                         lastSeriesIndex = series->m_seriesIndex;
                         series->m_recordIndex = series->m_seriesIndex;
@@ -105,9 +105,9 @@ namespace Cosmos {
                              Types::KPeriod period, std::vector<KData *> &hisKdata,
                              int tradingday, bool isReal, bool isDay) {
                 std::array<char, 400> sql{""};
-                int limitValue = 1350;
-                if (period == Types::KPeriod::Min1) {
-                    limitValue = 1350;
+                int limitValue = 350;
+                if (period == Types::KPeriod::Min1 || period == Types::KPeriod::Min5) {
+                    limitValue = 1950;
                 }
 
 
@@ -219,7 +219,7 @@ namespace Cosmos {
                 }
 
                 m_tradingday = tradingday;
-                auto tradingSession = Utils::TradingHours::getTradingSession(insInfo.instrumentID);
+                auto tradingSession = Utils::TradingHours::getTradingSession(insInfo.productID);
 
                 auto itr = m_allKLineSeries.find(insInfo.instrumentID);
                 if (itr == m_allKLineSeries.end()) {
@@ -332,14 +332,14 @@ namespace Cosmos {
                 }
             }
 
-            void refreshSeries(int tradingday, bool isDay) {
-                for (auto itrSeries = m_allKLineSeries.begin(); itrSeries != m_allKLineSeries.end(); itrSeries++) {
-                    for (auto itrSerie = itrSeries->second->begin(); itrSerie != itrSeries->second->end(); itrSerie++) {
-                        auto tradingSession = Utils::TradingHours::getTradingSession(itrSeries->first);
-                        itrSerie->second->refreshSeries(tradingday, *tradingSession, isDay);
-                    }
-                }
-            }
+            // void refreshSeries(int tradingday, bool isDay) {
+            //     for (auto itrSeries = m_allKLineSeries.begin(); itrSeries != m_allKLineSeries.end(); itrSeries++) {
+            //         for (auto itrSerie = itrSeries->second->begin(); itrSerie != itrSeries->second->end(); itrSerie++) {
+            //             auto tradingSession = Utils::TradingHours::getTradingSession(itrSeries->first);
+            //             itrSerie->second->refreshSeries(tradingday, *tradingSession, isDay);
+            //         }
+            //     }
+            // }
         };
     }
 }

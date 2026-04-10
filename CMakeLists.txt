@@ -65,14 +65,12 @@ add_subdirectory(Utils)
 
 #
 add_executable(CosmosHedge_Test UnderlyEngine/UOTradingTest_main.cpp)
-
 target_link_libraries(CosmosHedge_Test Market Trader KData Utils UnderlyEngine
 		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 		${LIB_MYSQL} Threads::Threads stdc++fs)
 
-#add_executable(Underly_Option UnderlyOptionEngine/UOTrading_main.cpp)
-#
-#target_link_libraries(Underly_Option Market Trader KData Utils UnderlyOptionEngine
+#add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp)
+#target_link_libraries(CosmosHedge Market Trader KData Utils UnderlyEngine
 #		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 #		${LIB_MYSQL} Threads::Threads stdc++fs)
 

@@ -25,10 +25,10 @@ namespace Cosmos {
              Utils::MemoryList< Types::OrderField, 99999> m_receiveOrderLists{0};
              Utils::MemoryList< Types::EventData, 99999> m_eventOrderLists{0};
             std::map< Types::Instrument_t,  Types::Symbol*> m_tradeSymbols;
-            std::vector< Types::InstrumentInfo> * m_queryInstruments{nullptr};
+            std::unordered_map<Types::Instrument_t, Types::OnQuerySymbol*, Types::InstrumentHash> m_onQuerySymbolMap;
 
         public:
-            std::vector< Types::InstrumentInfo*> m_tradeInsInfoVec;
+            std::map<Types::Instrument_t , Types::InstrumentInfo*> m_instrumentInfoMap;
             std::vector<Types::MarketData *> m_initMarketDataVector;
             MockTrader( Driver::TestDriver *driver,std::string& rawTickPath, int tradingDay, int isDay):
             m_driver(driver), m_rawTickPath(rawTickPath),m_tradingDay(tradingDay), m_isDay(isDay){
@@ -59,7 +59,7 @@ namespace Cosmos {
 
             void onRtnOrder(const  Types::OrderField * );
 
-
+            Types::OnQuerySymbol * getOnQuerySymbol(Types::Instrument_t const& instrumentID);
         };
     }
 }

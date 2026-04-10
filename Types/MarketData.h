@@ -33,6 +33,7 @@ namespace Cosmos{
             double oi;
             int volume;
             Instrument_t instrumentID{""};
+            Product_t productID{""};
             UpdateTime_t  updateTime;
             int isInit{0};
             MarketData() { memset(this, 0, sizeof(MarketData)); };

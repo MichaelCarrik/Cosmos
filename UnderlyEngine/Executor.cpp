@@ -13,7 +13,8 @@ namespace Cosmos {
 
 
             if (true == m_riskMonitor->isRiskForNoTrade(symbol->underlySymbol, symbol->instrumentInfo.productIDClass == Types::ProductClass::option)) {
-
+                fprintf(stderr, "[%s]_[%s], updateTime=%s, isRiskForNoTrade is true\n", m_engineName.c_str(), symbol->instrumentInfo.instrumentID.data(),
+                         symbol->lastMD->updateTime.data());
                 if (symbol->order->isTerminal == false) {
                      _cancelOrder(symbol->order, symbol, epoch_time);
                     return 0;
@@ -23,26 +24,29 @@ namespace Cosmos {
             if (symbol->order->isTerminal == false) {
                 //&& isPendingOrderTimeout(symbol, epoch_time) == false) {
                 if (_isCancelPendingOrder(symbol, posDiff, epoch_time) == true) {
-
+                    _cancelOrder(symbol->order, symbol, epoch_time);
+                    return 0;
                 }
-                return 0;
             }
 
-            if (posDiff != 0 && symbol->order->isTerminal == true) {
+            if (posDiff != 0 && symbol->order->isTerminal == true && symbol->lastMD!=nullptr) {
                 spdlog::info(
                     "syncPosition m_engineName={}, updateTime={}, symbolName={}, posDiff={}, targetPosition={}, "
                     "pendingPosition={}, filledPosition={}, orderIsTerminal={}, ",
                     m_engineName, symbol->lastMD->psSecond, symbol->instrumentInfo.instrumentID.data(), posDiff,
                     symbol->targetPosition, pendingPosition, symbol->tradePosition.filledPosition,
                     symbol->order->isTerminal);
-
-                _processFutureSignal(symbol, posDiff, epoch_time);
+                if (symbol->instrumentInfo.productIDClass == Types::ProductClass::future) {
+                    _processFutureSignal(symbol, posDiff, epoch_time);
+                }else if (symbol->instrumentInfo.productIDClass == Types::ProductClass::option) {
+                    _processOptionSignal(symbol, posDiff, epoch_time);
+                }
             }
 
             return 1;
         }
 
-        void Executor::updateSymbol(const Types::OrderField *inputOrder,
+        void Executor::onOrderField(const Types::OrderField *inputOrder,
                                     Types::Symbol *symbol) {
             if (inputOrder->policyID != m_policyID) {
                 assert(false && "OpenEngine::updateOrder policyID not match");
@@ -52,12 +56,15 @@ namespace Cosmos {
 
             if (inputOrder->orderStatus == Types::OrderStatus::failed) {
             } else if (order->orderStatus == Types::OrderStatus::partTraded ||
-                       order->orderStatus == Types::OrderStatus::allTraded) {
+                       order->orderStatus == Types::OrderStatus::allTraded ||
+                       order->orderStatus == Types::OrderStatus::canceled) {
                 symbol->tradePosition.update_filled_position(order->orderSide, order->pet,
                                                              order->orderPrice, order->lastFilledVolume);
                 symbol->posWrite(true, m_tradingDay, symbol->lastMD->updateTime,
                                  symbol->lastMD->milliSeconds, order->tOrderID);
             }
+
+            m_riskMonitor->onOrderField(inputOrder, symbol);
 
             Utils::logOrder(inputOrder, m_orderLog, symbol, inputOrder->orderStatus,
                             m_tradingDay, inputOrder->epoch_time);
@@ -114,13 +121,13 @@ namespace Cosmos {
         }
 
         double Executor::_setOptionSignalPrice(const Types::Symbol *symbol, Types::OrderSide orderSide) {
-            if (m_engineParam.futureEI == Types::ExecuteIntension::EIPut) {
+            if (m_engineParam.optionEI == Types::ExecuteIntension::EIPut) {
                 if (orderSide == Types::OrderSide::buy) {
                     return symbol->lastMD->bidPrice[0];
                 } else if (orderSide == Types::OrderSide::sell) {
                     return symbol->lastMD->askPrice[0];
                 }
-            } else if (m_engineParam.futureEI == Types::ExecuteIntension::EIMid) {
+            } else if (m_engineParam.optionEI == Types::ExecuteIntension::EIMid) {
                 int ofi = _checkOFI(symbol->lastMD, symbol->instrumentInfo.tickSize);
                 if (orderSide == Types::OrderSide::buy) {
                     if (ofi == 0) { //tickSize large 1
@@ -144,11 +151,16 @@ namespace Cosmos {
             if (symbol->m_kSeriesMap.begin() != symbol->m_kSeriesMap.end()) {
                 auto kseries = symbol->m_kSeriesMap.begin()->second;
                 int strikPrice = static_cast<int>(symbol->instrumentInfo.strikePrice);
-                auto itrCallPut = kseries->m_callPutSeriesMap->find(strikPrice);
-                if (itrCallPut != kseries->m_callPutSeriesMap->end()) {
+                auto itrCallPut = kseries->m_underlySeries->m_callPutSeriesMap->find(strikPrice);
+                if (itrCallPut != kseries->m_underlySeries->m_callPutSeriesMap->end()) {
                     auto callMD = itrCallPut->second->callSeries->m_lastPMD;
                     auto putMD = itrCallPut->second->putSeries->m_lastPMD;
                     auto underlyMD = kseries->m_underlySeries->m_lastPMD;
+                    spdlog::info("[{}], getOptionPrioPrice EIMid instrument=%s, updateTime=%s, orderSide=%s, callBidPrice={:%.3f}, "
+                                 "callAskPrice={:%.3f}, putBidPrice={:.3f}, putAskPrice={:.3f}, underlyBidPrice={:.3f}, underlyAskPrice={:.3f}",
+                                 m_engineName.data(), symbol->instrumentInfo.instrumentID.data(), symbol->underlySymbol->lastMD->updateTime.data(),
+                                 Types::orderSideMap[orderSide].data(), callMD->bidPrice[0], callMD->askPrice[0], putMD->bidPrice[0],
+                                 putMD->askPrice[0], underlyMD->bidPrice[0], underlyMD->askPrice[0]);
                     if (optionType == 'C' && orderSide == Types::OrderSide::buy) {
                         auto callTheoryBidPrice = underlyMD->bidPrice[0] + putMD->bidPrice[0] - strikPrice;
                         return std::max(callTheoryBidPrice, symbol->lastMD->bidPrice[0]);
@@ -224,22 +236,27 @@ namespace Cosmos {
         }
 
         void Executor::_sendSignal(Types::Signal const &signal, Types::Symbol *symbol) {
-
             int assignid = 0;
             auto order = m_orderList.getNewMemory(assignid);
             order->pOrderID = assignid;
 
             _setOrder(signal, symbol, order);
             m_riskMonitor->modifyOrderByRisk(symbol->lastMD, order, symbol->instrumentInfo.productIDClass == Types::ProductClass::option);
-            if (true == m_riskMonitor->isRiskForOrder(symbol->underlySymbol, order)) {
+            if (true == m_riskMonitor->isRiskForOrder(symbol->underlySymbol, order, symbol->instrumentInfo.productIDClass == Types::ProductClass::option)) {
+                fprintf(stderr, "[%s]_[%s], updateTime=%s, isRiskForOrder is true\n", m_engineName.c_str(), symbol->instrumentInfo.instrumentID.data(),
+                    symbol->lastMD->updateTime.data());
                 order->OI = Types::OrderIntension::OINoT;
             }
 
-            Utils::logOrder(order, m_orderLog, symbol, Types::OrderStatus::signal,
-                            m_tradingDay, signal.epoch_time);
             if (order->OI != Types::OrderIntension::OINoT) {
+                Utils::logOrder(order, m_orderLog, symbol, Types::OrderStatus::signal,
+                m_tradingDay, signal.epoch_time);
                 symbol->order = order;
+                m_riskMonitor->onOrderField(order, symbol);
                 m_driver->sendOrder(*order);
+            }else {
+                order->orderStatus = Types::OrderStatus::failed;
+                order->isTerminal = Utils::checkTerminal(order);
             }
         }
 
@@ -265,18 +282,22 @@ namespace Cosmos {
 
 
             int timeOut = m_engineParam.putResendTimeout;
-            if (symbol->order->OI != Types::OrderIntension::OIPut) {
+            if (symbol->order->OI == Types::OrderIntension::OIHit) {
                 timeOut = m_engineParam.hitResendTimeout;
             }
 
             if (symbol->lastMD->psSecond - symbol->order->insertPSTimes > timeOut) {
                 return true;
-            } else if (symbol->order->OI == Types::OrderIntension::OIMid) {
+            }
+
+            auto ei = symbol->instrumentInfo.productIDClass == Types::ProductClass::future ? m_engineParam.futureEI : m_engineParam.optionEI;
+
+            if (symbol->order->OI == Types::OrderIntension::OIPut && ei == Types::ExecuteIntension::EIMid) {
                 int ofi = _checkOFI(symbol->lastMD, symbol->instrumentInfo.tickSize);
-                if (symbol->order->orderSide == Types::OrderSide::buy && ofi > 0 and
+                if (symbol->order->orderSide == Types::OrderSide::buy && ofi < 0 and
                     abs(symbol->order->orderPrice - symbol->lastMD->bidPrice[0]) < Types::g_epsilon) {
                     return true;
-                } else if (symbol->order->orderSide == Types::OrderSide::sell && ofi < 0 and
+                } else if (symbol->order->orderSide == Types::OrderSide::sell && ofi > 0 and
                            abs(symbol->order->orderPrice - symbol->lastMD->askPrice[0]) < Types::g_epsilon) {
                     return true;
                 }
@@ -319,7 +340,7 @@ namespace Cosmos {
             order->OI = signal.OI;
             order->orderSide = signal.signalSide;
             order->orderTimeType = signal.orderTimeType;
-            order->insertPSTimes = symbol->lastMD->psSecond;
+            order->insertPSTimes = symbol->underlySymbol->lastMD->psSecond;
             order->hedgeType = m_engineParam.hedgeType;
             if(order->orderSide ==  Types::OrderSide::buy){
                 order->pet = this->_getPet(order->orderVolume, symbol->tradePosition.T_sellHold, symbol->tradePosition.Y_sellHold, 0, m_engineParam.futurePreCloseToday);

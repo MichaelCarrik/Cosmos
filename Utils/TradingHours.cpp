@@ -8,7 +8,7 @@
 namespace Cosmos {
     namespace Utils {
         std::map<Types::Product_t, TradingSession> TradingHours::m_productTradingSession;
-        std::map<Types::Instrument_t, TradingSession> TradingHours::m_instrumentTradingSession;
+      //  std::map<Types::Instrument_t, TradingSession> TradingHours::m_instrumentTradingSession;
         std::map<Types::Product_t, std::unordered_map<int, int> *> TradingHours::m_productPsTimeToSession;
 
         void TradingHours::loadTradingHourTypes(boost::property_tree::ptree &pt,
@@ -25,6 +25,9 @@ namespace Cosmos {
 
                     duration.beginTime = Utils::ToPsSeconds(beginTime);
                     duration.endTime = Utils::ToPsSeconds(endTime);
+                    if (duration.beginTime > DayBegin) {
+                        duration.isDay = true;
+                    }
                     int isCritical = trading.second.get<int>("<xmlattr>.isCritical");
                     if (isCritical == 1) {
                         tradingSession.criticalEndingVec.emplace_back(duration.endTime);
@@ -128,6 +131,9 @@ namespace Cosmos {
                     initTime += 1800;
                 }
             }
+
+
+
         }
 
         int TradingHours::getDayMinutesCount(Types::Product_t const &product) {
@@ -143,12 +149,12 @@ namespace Cosmos {
             return dayMinutesCount / 60;
         }
 
-        bool TradingHours::isNoTradeBeforeCritical(Types::Instrument_t const &instrument, int psTime,
+        bool TradingHours::isNoTradeBeforeCritical(Types::Product_t const &product, int psTime,
                                                    int beforeSeonds) {
-            fprintf(stderr, "isNoTradeBeforeCritical, %s\n", instrument.data());
-            auto itr = TradingHours::m_instrumentTradingSession.find(instrument);
-            if (itr == TradingHours::m_instrumentTradingSession.end()) {
-                fprintf(stderr, "cannot find %s in m_instrumentTradingSession\n", instrument.data());
+            fprintf(stderr, "isNoTradeBeforeCritical, %s\n", product.data());
+            auto itr = TradingHours::m_productTradingSession.find(product);
+            if (itr == TradingHours::m_productTradingSession.end()) {
+                fprintf(stderr, "cannot find %s in m_instrumentTradingSession\n", product.data());
                 assert(false);
             }
             for (auto &endTime: itr->second.criticalEndingVec) {
@@ -161,9 +167,9 @@ namespace Cosmos {
         }
 
 
-        bool TradingHours::isNoTradeBeforeTime(Types::Instrument_t const &instrument, int psTime, int beforeSeonds) {
-            auto itr = TradingHours::m_instrumentTradingSession.find(instrument);
-            if (itr == TradingHours::m_instrumentTradingSession.end()) {
+        bool TradingHours::isNoTradeBeforeTime(Types::Product_t const &product, int psTime, int beforeSeonds) {
+            auto itr = TradingHours::m_productTradingSession.find(product);
+            if (itr == TradingHours::m_productTradingSession.end()) {
                 assert(false && "cannot find in m_instrumentTradingSession");
             }
             for (auto &tradingPtr: itr->second.tradingVec) {
@@ -177,9 +183,9 @@ namespace Cosmos {
         }
 
 
-        bool TradingHours::isNoTradeAfterTime(Types::Instrument_t const &instrument, int psTime, int afterSeonds) {
-            auto itr = TradingHours::m_instrumentTradingSession.find(instrument);
-            if (itr == TradingHours::m_instrumentTradingSession.end()) {
+        bool TradingHours::isNoTradeAfterTime(Types::Product_t const &product, int psTime, int afterSeonds) {
+            auto itr = TradingHours::m_productTradingSession.find(product);
+            if (itr == TradingHours::m_productTradingSession.end()) {
                 assert(false && "cannot find in m_instrumentTradingSession");
             }
             for (auto &tradingPtr: itr->second.tradingVec) {
@@ -197,28 +203,32 @@ namespace Cosmos {
             auto map = Utils::TradingHours::m_productPsTimeToSession[product];
             auto sectorItr = map->find(sectorTime);
             if (sectorItr == map->end()) {
-                assert(false);
+                fprintf(stderr, "getPsTimeToNumb not find : product=%s, psTime=%d\n", product.data(), psTime);
+                return 0;
+              //  assert(false);
             }
             sectorSize = map->size();
             return sectorItr->second;
         }
 
 
-        FTTrait TradingHours::getProductTrait(Types::Instrument_t const &instrument, int psTime) {
-            auto itr = TradingHours::m_instrumentTradingSession.find(instrument);
-            if (itr == TradingHours::m_instrumentTradingSession.end()) {
+        FTTrait TradingHours::getProductTrait(Types::Product_t const &product, int psTime, bool isDay) {
+            auto itr = TradingHours::m_productTradingSession.find(product);
+            if (itr == TradingHours::m_productTradingSession.end()) {
                 assert(false && "cannot find in m_instrumentTradingSession");
             }
             for (auto &tradingPtr: itr->second.tradingVec) {
                 // fprintf(stderr, "getProductTrait instruemnt=%s, psTime=%d, beginTime=%d, endTime=%d\n",
                 //		instrument.data(), psTime, tradingPtr.beginTime, tradingPtr.endTime);
-                if (tradingPtr.beginTime <= psTime && psTime <= tradingPtr.endTime) {
+
+                if (isDay == tradingPtr.isDay && tradingPtr.beginTime <= psTime && psTime <= tradingPtr.endTime) {
+
                     return FTTrait::FT_TRADING;
                 }
             }
 
             for (auto &auctionPtr: itr->second.auctionVec) {
-                if (auctionPtr.beginTime <= psTime && psTime <= auctionPtr.endTime) {
+                if (isDay == auctionPtr.isDay && auctionPtr.beginTime <= psTime && psTime <= auctionPtr.endTime) {
                     return FTTrait::FT_AUCTION;
                 }
             }
@@ -230,25 +240,12 @@ namespace Cosmos {
             return FTTrait::FT_NOT_TRADING;
         }
 
-        void TradingHours::initInstrumentTradingHours(Types::Instrument_t const &instrument) {
-            //   fprintf(stderr, "initInstrumentTradingHours %s\n", instrument.data());
-            Types::Product_t productId{""};
-            Utils::InstrumentToProduct(instrument, productId);
-            auto itr = TradingHours::m_productTradingSession.find(productId);
+
+
+
+        TradingSession *TradingHours::getTradingSession(Types::Product_t const &product) {
+            auto itr = TradingHours::m_productTradingSession.find(product);
             if (itr == TradingHours::m_productTradingSession.end()) {
-                char buff[256]{""};
-                sprintf(buff, "cannot find %s in m_productTradingSession", instrument.data());
-                fprintf(stderr, "%s\n", buff);
-                assert(false && "initInstrumentTradingHours");
-            }
-
-            m_instrumentTradingSession[instrument] = itr->second;
-        }
-
-
-        TradingSession *TradingHours::getTradingSession(Types::Instrument_t const &instrument) {
-            auto itr = TradingHours::m_instrumentTradingSession.find(instrument);
-            if (itr == TradingHours::m_instrumentTradingSession.end()) {
                 assert(false && "cannot find in m_instrumentTradingSession");
             }
             return &itr->second;

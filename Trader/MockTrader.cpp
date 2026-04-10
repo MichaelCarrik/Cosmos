@@ -41,12 +41,12 @@ namespace Cosmos {
                 itrSymbol = m_tradeSymbols.find(querySymbol.instrumentID);
             }
 
-            Types::OnQuerySymbol onQuerySymbol;
-            onQuerySymbol.id = querySymbol.id;
-            onQuerySymbol.tradingDay = m_tradingDay;
-            onQuerySymbol.tradePosition = itrSymbol->second->tradePosition;
-            strcpy(onQuerySymbol.instrumentID.data(), querySymbol.instrumentID.data());
-            m_driver->send(onQuerySymbol);
+            auto onQuerySymbol = getOnQuerySymbol(querySymbol.instrumentID);
+            onQuerySymbol->id = querySymbol.id;
+            onQuerySymbol->tradingDay = m_tradingDay;
+            memcpy(onQuerySymbol->tradePosition , &itrSymbol->second->tradePosition, sizeof(Types::TradePosition));
+            strcpy(onQuerySymbol->instrumentInfo->instrumentID.data(), querySymbol.instrumentID.data());
+            m_driver->send(*onQuerySymbol);
         };
 
         void MockTrader::onMarketData(Types::MarketData const &marketData) {
@@ -55,17 +55,35 @@ namespace Cosmos {
         };
 
         void MockTrader::onUnderlyInfo(Types::UnderlyInfo const &underlyInfo) {
-            std::vector<Types::InstrumentInfo> insInfos;
-            Utils::readInstrumentsFromFiles(m_tradingDay, underlyInfo.instrumentID, m_rawTickPath, insInfos,
+
+            Utils::readInstrumentsFromFiles(m_tradingDay, underlyInfo.instrumentID, m_rawTickPath, m_instrumentInfoMap,
                                             m_isDay);
 
-            for (auto &instrumentInfo: insInfos) {
-                if (strcmp(instrumentInfo.underly.data(), underlyInfo.instrumentID.data()) == 0 && underlyInfo.isWithOption == true) {   //option
-                    m_driver->send(instrumentInfo);
-                }else if (strcmp(instrumentInfo.instrumentID.data(), underlyInfo.instrumentID.data()) == 0) {  //future
-                    m_driver->send(instrumentInfo);
+            for (auto &itr: m_instrumentInfoMap) {
+                if (strcmp(itr.second->underly.data(), underlyInfo.instrumentID.data()) == 0 && underlyInfo.isWithOption == true) {   //option
+                    m_driver->send(*(itr.second));
+                }else if (strcmp(itr.second->instrumentID.data(), underlyInfo.instrumentID.data()) == 0) {  //future
+                    m_driver->send(*(itr.second));
                 }
             }
+        }
+
+        Types::OnQuerySymbol * MockTrader::getOnQuerySymbol(Types::Instrument_t const& instrumentID) {
+            auto itr = m_onQuerySymbolMap.find(instrumentID);
+            if (itr == m_onQuerySymbolMap.end()) {
+                auto insInfoItr =  m_instrumentInfoMap.find(instrumentID);
+                if (insInfoItr == m_instrumentInfoMap.end()) {
+                    assert(false);
+                }
+
+                Types::OnQuerySymbol * onQuerySymbol = new Types::OnQuerySymbol();
+                onQuerySymbol->instrumentInfo = insInfoItr->second;
+                onQuerySymbol->tradePosition = new Types::TradePosition();
+                onQuerySymbol->riskIndicator = new Types::RiskIndicator();
+                m_onQuerySymbolMap[instrumentID] = onQuerySymbol;
+                itr = m_onQuerySymbolMap.find(instrumentID);
+            }
+            return itr->second;
         }
 
         void MockTrader::simMatch() {
@@ -76,9 +94,9 @@ namespace Cosmos {
                     continue;
                 }
                 bool isFilled{false};
-                if (order->orderSide == Types::OrderSide::buy and order->orderPrice > m_lastMD->lastPrice - 0.0001) {
+                if (order->orderSide == Types::OrderSide::buy and order->orderPrice >= m_lastMD->askPrice[0] - 0.0001) {
                     isFilled = true;
-                } else if (order->orderSide == Types::OrderSide::sell and order->orderPrice < m_lastMD->lastPrice +
+                } else if (order->orderSide == Types::OrderSide::sell and order->orderPrice <= m_lastMD->bidPrice[0] +
                            0.0001) {
                     isFilled = true;
                 }

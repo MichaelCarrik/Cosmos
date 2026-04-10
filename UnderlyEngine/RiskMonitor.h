@@ -23,10 +23,15 @@ namespace Cosmos {
             int m_policyID{-1};
             std::string m_engineName;
             int m_tradingDay{0};
-            bool isRiskForNoTrade(const Types::Symbol * underlySymbol, bool isOption) ;
-            bool isRiskForOrder(const Types::Symbol * underlySymbol, const Types::OrderField * orderField);
+            bool isRiskForNoTrade(const Types::Symbol * , bool isOption) ;
+            bool isRiskForOrder(const Types::Symbol * , const Types::OrderField * , bool isOption);
 
             void modifyOrderByRisk(const Types::MarketData *pMD, Types::OrderField * orderField, bool isOption);
+
+            void onOrderField(const Types::OrderField *inputOrder,
+                                             Types::Symbol *symbol);
+
+
         };
     }
 }

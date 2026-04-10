@@ -11,7 +11,8 @@
 
 namespace Cosmos {
     namespace Market {
-        int CtpMarket::start(std::vector<Types::MarketData *> const &initMarketDataVector) {
+        int CtpMarket::start(std::vector<Types::MarketData *> const &initMarketDataVector, bool isDay) {
+            m_isDay = isDay;
             boost::property_tree::ptree pt;
             boost::property_tree::read_xml(m_configPath, pt);
             m_ctpMarketConnection.username = pt.get_child("ThostUser2.ConnectConfig.Username").get<std::string>(
@@ -40,13 +41,13 @@ namespace Cosmos {
                 auto itr = m_subScribeInstruments.find(initMarket->instrumentID);
                 if (itr != m_subScribeInstruments.end()) {
                     if (Utils::FTTrait::FT_TRADING == Utils::TradingHours::getProductTrait(
-                            initMarket->instrumentID, initMarket->psSecond) ||
+                            initMarket->productID, initMarket->psSecond, m_isDay) ||
                         Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
-                             initMarket->instrumentID, initMarket->psSecond) ||
+                             initMarket->productID, initMarket->psSecond,  m_isDay) ||
                             (initMarket->psSecond >= 15 * 3600  &&  initMarket->psSecond <= 17 * 3600)) {
                         auto event = itr->second->eventDataList.getNewMemory();
                         event->point = initMarket;
-                        event->type = 0;
+                        event->eventType = Types::EventType::marketEvent;
                         for (auto i: itr->second->subscribePolicy) {
                             if (initMarket == nullptr) {
                                 assert(false && "market is nullptr");
@@ -126,12 +127,12 @@ namespace Cosmos {
                 Utils::convertToMarketDaTa(pDepthMarketData, marketData);
                 marketData->isInit = 0;
                 if (Utils::FTTrait::FT_TRADING == Utils::TradingHours::getProductTrait(
-                        marketData->instrumentID, marketData->psSecond) ||
+                        marketData->productID, marketData->psSecond, m_isDay ) ||
                     Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
-                        marketData->instrumentID, marketData->psSecond) ||
+                        marketData->productID, marketData->psSecond, m_isDay ) ||
                     (marketData->psSecond >= 15 * 3600  &&  marketData->psSecond <= 17 * 3600)) {
                     event->point = marketData;
-                    event->type = 0;
+                    event->eventType = Types::EventType::marketEvent;
                     for (auto i: itr->second->subscribePolicy) {
                         if (marketData == nullptr) {
                             assert(false && "market is nullptr");
@@ -170,7 +171,6 @@ namespace Cosmos {
             Types::Instrument_t instrument{""};
             strcpy(instrument.data(), subScribeQuote.instrumentID.data());
 
-            Utils::TradingHours::initInstrumentTradingHours(instrument);
             auto itr = m_subScribeInstruments.find(instrument);
             if (itr == m_subScribeInstruments.end()) {
                 Types::PushMarket *pushMarket = new Types::PushMarket(0);

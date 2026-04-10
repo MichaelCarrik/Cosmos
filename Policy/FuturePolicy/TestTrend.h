@@ -175,7 +175,7 @@ namespace Cosmos {
                             m_lots = calAdjRiksLots(lastBar->m_close);
                             writePolicyLog(lastBar, pMD);
                         }
-                    } else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {
+                    } else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex || strcmp(pMD->updateTime.data(), "09:30:58") ==0) {
                         m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex - 1;
 
                         auto lastBar = m_underlyKseries->m_KDataVecs[m_lastUnderlyBarIndex];
@@ -191,18 +191,26 @@ namespace Cosmos {
 
 
 
-                        if (m_trendSignal.marketPosition <0) //long open
-                        {
+                        // if (m_trendSignal.marketPosition <0) //long open
+                        // {
+                        //     ++m_tradeNum;
+                        //     m_trendSignal.marketPosition = 1;
+                        //     m_targetSignal.targetPosMaps[m_underlyInstrument] = m_lots;
+                        //     m_trendSignal.signalPrice = lastBar->m_close;
+                        //     m_onoff = 0;
+                        // } else if ( m_trendSignal.marketPosition >= 0) //short open
+                        // {
+                        //     ++m_tradeNum;
+                        //     m_trendSignal.marketPosition = -1;
+                        //     m_targetSignal.targetPosMaps[m_underlyInstrument] = -m_lots;
+                        //     m_trendSignal.signalPrice = lastBar->m_close;
+                        //     m_onoff = 0;
+                        // }
+                        if (strcmp(pMD->updateTime.data(), "10:00:00") ==0 && pMD->milliSeconds == 100) {
                             ++m_tradeNum;
                             m_trendSignal.marketPosition = 1;
-                            m_targetSignal.targetPosMaps[m_underlyInstrument] = m_lots;
-                            m_trendSignal.signalPrice = lastBar->m_close;
-                            m_onoff = 0;
-                        } else if ( m_trendSignal.marketPosition >= 0) //short open
-                        {
-                            ++m_tradeNum;
-                            m_trendSignal.marketPosition = -1;
-                            m_targetSignal.targetPosMaps[m_underlyInstrument] = -m_lots;
+                            Types::Instrument_t ins{"MO2403-C-5200"};
+                            m_targetSignal.targetPosMaps[ins] = m_lots;
                             m_trendSignal.signalPrice = lastBar->m_close;
                             m_onoff = 0;
                         }

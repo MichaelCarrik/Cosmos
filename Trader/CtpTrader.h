@@ -32,13 +32,6 @@ namespace Cosmos {
             int sell_openVolume{0};
         };
 
-        struct PO {
-            std::string orderRef{""};
-            Types::OrderStatus orderStatus;
-            int frontId{0};
-            int sessionId{0};
-            Types::Instrument_t instrument{""};
-        };
 
         class CtpTrader : public CThostFtdcTraderSpi {
 
@@ -49,8 +42,6 @@ namespace Cosmos {
                 int query_sellVolume{0};
                  Types::Instrument_t  instrumentid{""};
             };
-
-
 
         public:
              Driver::RealtimeDriver * m_driver;
@@ -71,7 +62,6 @@ namespace Cosmos {
                 }
             }
 
-
             std::promise<int> m_loginPromise;
             std::promise<int>  m_queryOrderPromise;
             std::promise<int>  m_queryPositionPromise;
@@ -83,30 +73,31 @@ namespace Cosmos {
             std::vector<Types::MarketData *> m_initMarketDataVector;
 
             int m_tradingDay;
+            bool m_isDay{false};
             int m_frontID{0};
             int m_sessionID{0};
             int m_maxOrderRef{0};
-            std::vector< Types::QryRspTrade> m_QryRspTradeVec;
-            std::unordered_map<Types::Instrument_t, Types::TradePosition, Types::InstrumentHash> m_onQuerySymbolMap;
+            std::map< Types::Instrument_t, std::vector< Types::OrderField* >> m_qryRspOrderFieldMap;
+            std::unordered_map<Types::Instrument_t, Types::OnQuerySymbol*, Types::InstrumentHash> m_onQuerySymbolMap;
             std::unordered_map<Types::Instrument_t, CtpPosition, Types::InstrumentHash> m_ctpPositionMap;
 
             int m_requestID{0};
 
             std::string m_configPath;
             double m_preSettlementPrice{0.0};
-            std::vector< Types::InstrumentInfo*> m_tradeInsInfoVec;
-            std::map<std::string, PO> m_queryOrderStatusMap;
+            std::map<Types::Instrument_t , Types::InstrumentInfo*> m_instrumentInfoMap;
+         //   std::map<std::string, PO> m_queryOrderStatusMap;
 
             CtpInterpreter * m_interpreter;
             bool m_isLogin{false};
          //   NetRootInterpreter * m_interpreter;
 
-            int start(int &);
+            int start(int &, bool);
             template<typename T>
              Types::EventData* convertToEvent(const  Types::OrderField * orderField,  T* list){
                 auto event = list->getNewMemory();
                 event->point = orderField;
-                event->type =1;
+                event->eventType = Types::EventType::orderEvent ;
                 return event;
             }
 
@@ -202,9 +193,6 @@ namespace Cosmos {
             virtual void OnRspRemoveParkedOrderAction(CThostFtdcRemoveParkedOrderActionField *pRemoveParkedOrderAction,
                                                       CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast);
             void assignPosition();
-
-
-
 
             ///???????????????��?��??
             virtual void
@@ -627,7 +615,7 @@ namespace Cosmos {
 
         public:
 
-
+            Types::OnQuerySymbol * getOnQuerySymbol(Types::Instrument_t const&);
             char getOrderSide( Types::OrderSide orderSide);
             char getOrderPositionEffect( Types::PositionEffectType pet);
             char getOrderHedgeFlag( Types::HedgeType ht);
@@ -647,8 +635,8 @@ namespace Cosmos {
             void onQuerySymbol( Types::QuerySymbol const & querySymbol);
 
 
-            const std::vector<Types::InstrumentInfo*>* getInstrumentInfoVec() {
-                return &m_tradeInsInfoVec;
+            const decltype(m_instrumentInfoMap)* getInstrumentInfoVec() {
+                return &m_instrumentInfoMap;
             };
 
         };

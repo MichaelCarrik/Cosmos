@@ -26,7 +26,7 @@
 namespace Cosmos{
     namespace Types{
 
-        constexpr int g_epsilon = 0.00001;
+        constexpr double g_epsilon = 0.00001;
 
         constexpr int SingeInstrumenBuffSize = 9;
 
@@ -89,7 +89,6 @@ namespace Cosmos{
                 {HedgeType::hedge,  std::array<char,9>{"hedg"}},
                 {HedgeType::spec,  std::array<char,9>{"spec"}}};
 
-
         static std::unordered_map<ExchangeType, std::array<char,9>>  exchangeMap{
                 {ExchangeType::CFFEX,  std::array<char,9>{"cffex"}},
                 {ExchangeType::SHFE,  std::array<char,9>{"SHFE"}},
@@ -98,18 +97,16 @@ namespace Cosmos{
                 {ExchangeType::INE,  std::array<char,9>{"INE"}}
                 };
 
-
         static std::unordered_map<ExecuteIntension, std::array<char,9>>  EIMap{
                     {ExecuteIntension::EIPut,  std::array<char,9>{"EIPut"}},
                     {ExecuteIntension::EIHit,  std::array<char,9>{"EIHit"}},
-                    {ExecuteIntension::EIMid,  std::array<char,9>{"Mid"}}};
+                    {ExecuteIntension::EIMid,  std::array<char,9>{"EIMid"}}};
 
         static const std::unordered_map<std::string, ExecuteIntension> configParamToEIMap{
                     {"EIPut", ExecuteIntension::EIPut},
                     {"EIHit", ExecuteIntension::EIHit},
                     {"EIMid", ExecuteIntension::EIMid}
             };
-
 
         static std::unordered_map<OrderIntension, std::array<char,9>>  OIMap{
                         {OrderIntension::OIPut,  std::array<char,9>{"OIPut"}},

@@ -103,10 +103,10 @@ void getInstruments(int tradingday, std::string &futureProductId, std::string &r
 
 
 int main(int argc, char *argv[]) {
-    int tradingday = atoi(argv[1]);
+    int tradingDay = atoi(argv[1]);
     std::string productid = argv[2];
     std::string fileName = argv[3];
-    fprintf(stderr, "tradingday=%d, productid=%s, fileName=%s\n", tradingday, productid.c_str(), fileName.c_str());
+    fprintf(stderr, "tradingday=%d, productid=%s, fileName=%s\n", tradingDay, productid.c_str(), fileName.c_str());
     //  std::string config_tradinghours = "tradinghour.xml";
     std::string config_path = "CosmosKBarRead.xml";
     spdlog::init_thread_pool(1024 * 64, 1);
@@ -138,20 +138,29 @@ int main(int argc, char *argv[]) {
     std::array<bool, 2> isDayArray{false, true};
 
     for (auto isDay: isDayArray) {
+
+        char read_path[256]{""};
+        std::string dayOrNigh = isDay == true ? "day" : "ngt";
+        sprintf(read_path, "%s/%d_%s", rawTickPath.c_str(), tradingDay, dayOrNigh.c_str());
+        std::filesystem::path filePath(read_path);
+        if( std::filesystem::exists(filePath) == false) {
+            continue;
+        }
+
         Cosmos::Driver::TestDriver driver;
         //    fprintf(stderr,"%d_%s\n",tradingday, isDay== false ? "ngt":"day");
         std::vector<Cosmos::Types::InstrumentInfo> queryOptionInstruments;
         std::vector<Cosmos::Types::InstrumentInfo> queryFutureInstruments;
         // std::set< Types::Instrument_t> queryInstruments{ Types::Instrument_t {"au2108"}} ;
-        getInstruments(tradingday, productid, rawTickPath, queryOptionInstruments, queryFutureInstruments, isDay);
+        getInstruments(tradingDay, productid, rawTickPath, queryOptionInstruments, queryFutureInstruments, isDay);
         Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath);
 
         Cosmos::KBarSaverEngine::KBarReadEngine saveEngine(&driver, engineName, queryOptionInstruments,
-                                                           queryFutureInstruments, tradingday, isDay, savePath);
+                                                           queryFutureInstruments, tradingDay, isDay, savePath);
         driver.setPolicySize(2);
         saveEngine.m_policyID = 0;
         saveEngine.onStart();
-        market.start(tradingday, isDay);
+        market.start(tradingDay, isDay);
         driver.onStart();
 
         saveEngine.dumpKline(fileName);

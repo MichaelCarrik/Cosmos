@@ -174,14 +174,14 @@ namespace Cosmos {
 
             }
 
-            void addTick(const  Types::MarketData *pMD) {
+            void addTick(const  Types::MarketData *pMD, bool isDay) {
 
                  // if (strcmp(pMD->instrumentID.data(), "i2502P890") ==0 && pMD->settlementPrice > 0.0 && pMD->settlementPrice < 99999999.0 ) {
                  //     int a = 1;
                  // }
 
                 int psTime = pMD->psSecond;
-                if ( Utils::TradingHours::getProductTrait(pMD->instrumentID, pMD->psSecond) ==
+                if ( Utils::TradingHours::getProductTrait(pMD->productID, pMD->psSecond, isDay) ==
                      Utils::FTTrait::FT_AUCTION) {
                     if (psTime < 0) {
                         psTime = 0;
@@ -249,25 +249,25 @@ namespace Cosmos {
                 }
             }
 
-            void refreshSeries(int tradingday,  Utils::TradingSession &tradingSession, bool isDay) {
-
-                m_kseriesTime->initKTime(tradingSession, isDay);
-
-                m_tradingday = tradingday;
-                int remainK = 0;
-
-                m_kTime = m_kseriesTime->getCurrent(remainK);
-                for (auto i = 0; i < remainK; i++) {
-                    KData *kline = new KData();
-                    m_KDataVecs.emplace_back(kline);
-                    //   m_seriesIndex++;
-                }
-                if (m_Period == Types::KPeriod::D1 and m_KDataVecs[m_seriesIndex]->m_tradingday == m_tradingday) {
-                    m_seriesIndex = m_seriesIndex;
-                } else {
-                    m_seriesIndex += 1;
-                }
-            }
+            // void refreshSeries(int tradingday,  Utils::TradingSession &tradingSession, bool isDay) {
+            //
+            //     m_kseriesTime->initKTime(tradingSession, isDay);
+            //
+            //     m_tradingday = tradingday;
+            //     int remainK = 0;
+            //
+            //     m_kTime = m_kseriesTime->getCurrent(remainK);
+            //     for (auto i = 0; i < remainK; i++) {
+            //         KData *kline = new KData();
+            //         m_KDataVecs.emplace_back(kline);
+            //         //   m_seriesIndex++;
+            //     }
+            //     if (m_Period == Types::KPeriod::D1 and m_KDataVecs[m_seriesIndex]->m_tradingday == m_tradingday) {
+            //         m_seriesIndex = m_seriesIndex;
+            //     } else {
+            //         m_seriesIndex += 1;
+            //     }
+            // }
         };
 
 

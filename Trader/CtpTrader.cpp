@@ -183,40 +183,69 @@ namespace Cosmos {
         void CtpTrader::OnRspQryOrder(CThostFtdcOrderField *pOrder, CThostFtdcRspInfoField *pRspInfo, int nRequestID,
                                       bool bIsLast) {
             if (pOrder != nullptr && (pRspInfo == nullptr || pRspInfo->ErrorID == 0)) {
+                // fprintf(stderr, "CtpTrader::OnRspQryOrder  instrument=%s, orderSide=%c, orderPrice=%.3f, orderVolume=%d,"
+                //                 "OrderSysID=%s, orderStatus=%c, VolumeTraded=%d, VolumeTotal=%d, InsertTime=%s\n", pOrder->InstrumentID,
+                //                 pOrder->Direction, pOrder->LimitPrice, pOrder->VolumeTotalOriginal, pOrder->OrderSysID, pOrder->OrderStatus,
+                //                 pOrder->VolumeTraded, pOrder->VolumeTotalOriginal, pOrder->InsertTime);
+                if (strcmp(pOrder->InstrumentID, "i2605-C-820") == 0) {
+                    int a = 1;
+                }
                 if (pOrder->OrderRef[0] == m_ctpConnection.OrderPrefix[0] &&
                     pOrder->OrderRef[1] == m_ctpConnection.OrderPrefix[1] &&
                     pOrder->OrderRef[2] == m_ctpConnection.OrderPrefix[2]) {
-                    std::string orderSysId{pOrder->OrderSysID};
-                    PO po;
-                    po.orderStatus = Types::OrderStatus::signal;
-                    po.orderRef = pOrder->OrderRef;
-                    po.frontId = pOrder->FrontID;
-                    po.sessionId = pOrder->SessionID;
-                    strcpy(po.instrument.data(), pOrder->InstrumentID);
-                    switch (pOrder->OrderStatus) {
-                        case THOST_FTDC_OSS_Accepted:
-                            po.orderStatus = Types::OrderStatus::accept;
-                            break;
-                        case THOST_FTDC_OST_AllTraded:
 
-                            po.orderStatus = Types::OrderStatus::allTraded;
-                            break;
+                 //   PO po;
+                    Types::OrderField * orderField = new Types::OrderField();
+                    orderField->orderStatus = Types::OrderStatus::signal;
+                    strcpy(orderField->orderRef.data(), pOrder->OrderRef);
+                    strcpy(orderField->orderSysID.data(), pOrder->OrderSysID);
 
-                        case THOST_FTDC_OST_PartTradedNotQueueing:
-                        case THOST_FTDC_OST_PartTradedQueueing:
-
-                            po.orderStatus = Types::OrderStatus::partTraded;
-                            break;
-                        case THOST_FTDC_OST_Canceled:
-                            po.orderStatus = Types::OrderStatus::canceled;
-                            break;
-                        default:
-
-                            po.orderStatus = Types::OrderStatus::unknown;
-                            break;
+                    if ( pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday) {
+                        orderField->pet = Types::PositionEffectType::T_close;
+                    }else if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_CloseYesterday) {
+                        orderField->pet = Types::PositionEffectType::Y_close;
+                    }
+                    else if (pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_Open) {
+                        orderField->pet = Types::PositionEffectType::open;
                     }
 
-                    m_queryOrderStatusMap[orderSysId] = po;
+                  //  po.frontId = pOrder->FrontID;
+                 //   po.sessionId = pOrder->SessionID;
+                    strcpy(orderField->instrumentID.data(), pOrder->InstrumentID);
+                    switch (pOrder->OrderStatus) {
+                        case THOST_FTDC_OSS_Accepted:
+                            orderField->orderStatus = Types::OrderStatus::accept;
+                            orderField->isTerminal = false;
+                            break;
+                        case THOST_FTDC_OST_AllTraded:
+                            orderField->lastFilledVolume = pOrder->VolumeTraded;
+                            orderField->orderStatus = Types::OrderStatus::allTraded;
+                            orderField->isTerminal = true;
+                            break;
+                        case THOST_FTDC_OST_PartTradedNotQueueing:
+                        case THOST_FTDC_OST_PartTradedQueueing:
+                            orderField->lastFilledVolume = pOrder->VolumeTraded;
+                            orderField->orderStatus = Types::OrderStatus::partTraded;
+                            orderField->isTerminal = false;
+                            break;
+                        case THOST_FTDC_OST_Canceled:
+                            orderField->lastFilledVolume = pOrder->VolumeTraded;
+                            orderField->orderStatus = Types::OrderStatus::canceled;
+                            orderField->isTerminal = true;
+                            break;
+                        default:
+                            orderField->orderStatus = Types::OrderStatus::unknown;
+                            orderField->isTerminal = false;
+                            break;
+                    }
+                    auto itr = m_qryRspOrderFieldMap.find(orderField->instrumentID);
+                    if (itr == m_qryRspOrderFieldMap.end()) {
+                        std::vector<Types::OrderField *> orderFieldVec;
+                        m_qryRspOrderFieldMap[orderField->instrumentID] = orderFieldVec;
+                        itr = m_qryRspOrderFieldMap.find(orderField->instrumentID);
+                    }
+
+                    itr->second.emplace_back(orderField);
                 }
             } else if (pRspInfo != nullptr && pRspInfo->ErrorID != 0) {
                 m_queryOrderPromise.set_value(pRspInfo->ErrorID);
@@ -335,9 +364,12 @@ namespace Cosmos {
 
         void CtpTrader::OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo,
                                            int nRequestID, bool bIsLast) {
-            if (pInstrument != nullptr && (pInstrument->ProductClass == THOST_FTDC_PC_Futures ||
-                                           pInstrument->ProductClass == THOST_FTDC_PC_Options ||
-                                           pInstrument->ProductClass == THOST_FTDC_PC_SpotOption)) {
+            if (pInstrument != nullptr && (pInstrument->ProductClass == THOST_FTDC_PC_Futures
+                                           ||pInstrument->ProductClass == THOST_FTDC_PC_Options
+                                           || pInstrument->ProductClass == THOST_FTDC_PC_SpotOption
+                                           )) {
+                fprintf(stderr, "OnRspQryInstrument instrument=%s, ProductClass=%c\n",
+                        pInstrument->InstrumentID, pInstrument->ProductClass);
                 Types::InstrumentInfo *instrumentInfo = new Types::InstrumentInfo();
                 strcpy(instrumentInfo->instrumentID.data(), pInstrument->InstrumentID);
                 Utils::InstrumentToProduct(instrumentInfo->instrumentID, instrumentInfo->productID);
@@ -345,24 +377,25 @@ namespace Cosmos {
                 instrumentInfo->productIDClass = pInstrument->ProductClass == THOST_FTDC_PC_Futures
                                                      ? Types::ProductClass::future
                                                      : Types::ProductClass::option;
-                if (instrumentInfo->productIDClass == Types::ProductClass::option) {
-                    instrumentInfo->optionType = pInstrument->OptionsType == THOST_FTDC_CP_CallOptions ? 'C' : 'P';
-                    instrumentInfo->strikePrice = pInstrument->StrikePrice;
-                    strcpy(instrumentInfo->underly.data(), pInstrument->UnderlyingInstrID);
-                    if (strcmp("CFFEX", pInstrument->ExchangeID) == 0) {
-                        if (strcmp(instrumentInfo->productID.data(), "IO") == 0) {
-                            instrumentInfo->underly[0] = 'I';
-                            instrumentInfo->underly[1] = 'F';
-                        } else if (strcmp(instrumentInfo->productID.data(), "HO") == 0) {
-                            instrumentInfo->underly[0] = 'I';
-                            instrumentInfo->underly[1] = 'H';
-                        } else if (strcmp(instrumentInfo->productID.data(), "MO") == 0) {
-                            instrumentInfo->underly[0] = 'I';
-                            instrumentInfo->underly[1] = 'M';
+                if (instrumentInfo->productIDClass == Types::ProductClass::future ||
+                    instrumentInfo->productIDClass == Types::ProductClass::option)
+                    {
+                        instrumentInfo->optionType = pInstrument->OptionsType == THOST_FTDC_CP_CallOptions ? 'C' : 'P';
+                        instrumentInfo->strikePrice = pInstrument->StrikePrice;
+                        strcpy(instrumentInfo->underly.data(), pInstrument->UnderlyingInstrID);
+                        if (strcmp("CFFEX", pInstrument->ExchangeID) == 0) {
+                            if (strcmp(instrumentInfo->productID.data(), "IO") == 0) {
+                                instrumentInfo->underly[0] = 'I';
+                                instrumentInfo->underly[1] = 'F';
+                            } else if (strcmp(instrumentInfo->productID.data(), "HO") == 0) {
+                                instrumentInfo->underly[0] = 'I';
+                                instrumentInfo->underly[1] = 'H';
+                            } else if (strcmp(instrumentInfo->productID.data(), "MO") == 0) {
+                                instrumentInfo->underly[0] = 'I';
+                                instrumentInfo->underly[1] = 'M';
+                            }
+
                         }
-                        //                    fprintf(stderr, "OnRspQryInstrument instrument=%s, UnderlyingInstrID=%s, EXCHAGE=%s\n",
-                        //                            instrumentInfo->instrumentID.data(), instrumentInfo->underly.data(), pInstrument->ExchangeID);
-                    }
                 }
                 instrumentInfo->exchanges = Utils::getExchangeType(pInstrument->ExchangeID);
                 instrumentInfo->tickSize = pInstrument->PriceTick;
@@ -374,7 +407,7 @@ namespace Cosmos {
 
                 //     fprintf(stderr, "OnRspQryInstrument instrument=%s, product=%s\n", pInstrument->InstrumentID, pInstrument->ProductID);
                 if (true == Utils::TradingHours::isProductIn(instrumentInfo->productID)) {
-                    m_tradeInsInfoVec.emplace_back(instrumentInfo);
+                    m_instrumentInfoMap[instrumentInfo->instrumentID] = instrumentInfo;
                 } else {
                     spdlog::error("instrument={} is not in tradingdayHour.xml", pInstrument->InstrumentID);
                 }
@@ -494,12 +527,18 @@ namespace Cosmos {
         };
 
         void CtpTrader::onUnderlyInfo(Types::UnderlyInfo const &underlyInfo) {
-            for (auto &instrumentInfo: m_tradeInsInfoVec) {
-                //  fprintf(stderr, "onUnderlyInfo : %s %s\n", instrumentInfo->instrumentID.data(), instrumentInfo->underly.data());
-                if (strcmp(instrumentInfo->underly.data(), underlyInfo.instrumentID.data()) == 0 && underlyInfo.isWithOption == true) {   //option
-                    m_driver->send(instrumentInfo);
-                }else if (strcmp(instrumentInfo->instrumentID.data(), underlyInfo.instrumentID.data()) == 0) {  //future
-                    m_driver->send(instrumentInfo);
+            if (underlyInfo.isWithOption==false) {
+                auto insInfoItr = m_instrumentInfoMap.find(underlyInfo.instrumentID);
+                if (insInfoItr==m_instrumentInfoMap.end()) {
+                    assert(false);
+                }
+                m_driver->send(*(insInfoItr->second));
+            }else {
+                for (auto &insInfoItr : m_instrumentInfoMap) {
+                    //  fprintf(stderr, "onUnderlyInfo : %s %s\n", instrumentInfo->instrumentID.data(), instrumentInfo->underly.data());
+                    if (strcmp(insInfoItr.second->underly.data(), underlyInfo.instrumentID.data()) == 0 ) {   //option
+                        m_driver->send(*(insInfoItr.second));
+                    }
                 }
             }
         }
@@ -550,7 +589,8 @@ namespace Cosmos {
         }
 
 
-        int CtpTrader::start(int &tradingday) {
+        int CtpTrader::start(int &tradingday, bool isDay) {
+            m_isDay = isDay;
             boost::property_tree::ptree pt;
             boost::property_tree::read_xml(m_configPath, pt);
             m_ctpConnection.username = pt.get_child("ThostUser2.ConnectConfig.Username").get<std::string>(
@@ -609,28 +649,74 @@ namespace Cosmos {
             auto insRetcode = this->queryTradeInstrument();
             sleep(1);
             auto pendingOrderRetCode = this->_queryOrder();
-            for (auto &pendingOrder: m_queryOrderStatusMap) {
-                if (Utils::checkTerminal(pendingOrder.second.orderStatus) == false) {
-                    CThostFtdcInputOrderActionField actionField;
-                    memset(&actionField, 0, sizeof(CThostFtdcInputOrderActionField));
-                    strcpy(actionField.InstrumentID, pendingOrder.second.instrument.data());
-                    actionField.FrontID = pendingOrder.second.frontId;
-                    actionField.SessionID = pendingOrder.second.sessionId;
-                    strcpy(actionField.OrderRef, pendingOrder.second.orderRef.c_str());
-                    strcpy(actionField.OrderSysID, pendingOrder.first.c_str());
-                    actionField.ActionFlag = THOST_FTDC_AF_Delete;
-                    strcpy(actionField.BrokerID, m_ctpConnection.brokerId.c_str());
-                    strcpy(actionField.UserID, m_ctpConnection.username.c_str());
-                    int ret = m_pTradeApi->ReqOrderAction(&actionField, 0);
-                    int a = 1;
-                }
-            }
+
             sleep(1);
             auto posRetcode = this->_queryAllPosition();
             m_isLogin = true;
 
+            if ((insRetcode | posRetcode | marketRetcode || pendingOrderRetCode) != 0) {
+                return insRetcode | posRetcode | marketRetcode || pendingOrderRetCode;
+            }
 
-            return insRetcode | posRetcode | marketRetcode || pendingOrderRetCode;
+            for (auto ctp_itr: m_ctpPositionMap) {
+                auto onQuerySymbol = getOnQuerySymbol(ctp_itr.first);
+                onQuerySymbol->tradePosition->T_buyHold = ctp_itr.second.buy_todayPosition;
+                onQuerySymbol->tradePosition->Y_buyHold = ctp_itr.second.buy_position - ctp_itr.second.buy_todayPosition;
+                onQuerySymbol->tradePosition->T_sellHold = ctp_itr.second.sell_todayPosition;
+                onQuerySymbol->tradePosition->Y_sellHold = ctp_itr.second.sell_position - ctp_itr.second.sell_todayPosition;
+                onQuerySymbol->tradePosition->filledPosition = onQuerySymbol->tradePosition->T_buyHold + onQuerySymbol->tradePosition->Y_buyHold -
+                                                               onQuerySymbol->tradePosition->T_sellHold - onQuerySymbol->tradePosition->Y_sellHold;
+            }
+
+            for (auto &ofItr: m_qryRspOrderFieldMap) {
+                auto onQuerySymbol = getOnQuerySymbol(ofItr.first);
+                bool isOption = onQuerySymbol->instrumentInfo->productIDClass == Types::ProductClass::option;
+                if (isOption == false) {
+                    onQuerySymbol->riskIndicator->sendOrderNumb += ofItr.second.size();
+                }else {
+                    auto underlyOnQuerySymbol = getOnQuerySymbol(onQuerySymbol->instrumentInfo->underly);
+                    underlyOnQuerySymbol->riskIndicator->optionSendOrderNumb += ofItr.second.size();
+                }
+                for (auto & orderField : ofItr.second) {
+
+                    if (Utils::checkTerminal(orderField->orderStatus) == false) {
+                        this->cancelOrder(*orderField, orderField->epoch_time);
+                    }
+                    if (isOption == false) {
+                        onQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption);
+                    }else {
+                        if (strcmp(onQuerySymbol->instrumentInfo->underly.data(), "i2605")==0) {
+
+                            fprintf(stderr, "CtpTrader::start instrument=%s, pOrderID=%d, requestID=%d, orderRef=%s, orderSide=%s, "
+                                                  "orderPrice=%.3f, orderVolume=%d, orderStatus=%s\n",
+                                          orderField->instrumentID.data(), orderField->pOrderID, orderField->tOrderID,
+                                          orderField->orderRef.data(), Types::orderSideMap[orderField->orderSide].data(),  orderField->orderPrice, orderField->orderVolume,
+                                          Types::orderStatusMap[orderField->orderStatus].data());
+                        }
+                        auto underlyOnQuerySymbol = getOnQuerySymbol(onQuerySymbol->instrumentInfo->underly);
+                        underlyOnQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption);
+                    }
+                }
+            }
+            return 0;
+        }
+
+        Types::OnQuerySymbol * CtpTrader::getOnQuerySymbol(Types::Instrument_t const& instrumentID) {
+            auto itr = m_onQuerySymbolMap.find(instrumentID);
+            if (itr == m_onQuerySymbolMap.end()) {
+                auto insInfoItr =  m_instrumentInfoMap.find(instrumentID);
+                if (insInfoItr == m_instrumentInfoMap.end()) {
+                    assert(false);
+                }
+
+                Types::OnQuerySymbol * onQuerySymbol = new Types::OnQuerySymbol();
+                onQuerySymbol->instrumentInfo = insInfoItr->second;
+                onQuerySymbol->tradePosition = new Types::TradePosition();
+                onQuerySymbol->riskIndicator = new Types::RiskIndicator();
+                m_onQuerySymbolMap[instrumentID] = onQuerySymbol;
+                itr = m_onQuerySymbolMap.find(instrumentID);
+            }
+            return itr->second;
         }
 
 
@@ -656,38 +742,28 @@ namespace Cosmos {
                     "send order failed={}, instrumentId={}, tradeOrderID={}, policyOrderID={}, orderPrice={}, assignId={}",
                     nRetCode, orderField->instrumentID.data(),
                     orderField->tOrderID, orderField->pOrderID, orderField->orderPrice, orderField->tOrderID);
-                return;
             }
         }
-
 
         bool CtpTrader::cancelOrder(Types::OrderField const &inputOrder, int64_t &epoch_time) {
             m_interpreter->cancelOrder(inputOrder, epoch_time);
             return true;
         }
 
-
         void CtpTrader::onQuerySymbol(Types::QuerySymbol const &querySymbol) {
-            Types::OnQuerySymbol onQuerySymbol;
-            onQuerySymbol.id = querySymbol.id;
-            onQuerySymbol.tradingDay = m_tradingDay;
+
             //   onQuerySymbol.cancelOrderCounts = m_queryPosition.cancelOrderCounts;
-            strcpy(onQuerySymbol.instrumentID.data(), querySymbol.instrumentID.data());
+            Types::OnQuerySymbol* onQuerySymbol = nullptr;
             auto itrQS = m_onQuerySymbolMap.find(querySymbol.instrumentID);
             if (itrQS == m_onQuerySymbolMap.end()) {
-                Types::TradePosition tradePosition;
-                memcpy(&onQuerySymbol.tradePosition, &tradePosition, sizeof(Types::TradePosition));
+                onQuerySymbol = getOnQuerySymbol(querySymbol.instrumentID);
             } else {
-                memcpy(&onQuerySymbol.tradePosition, &itrQS->second, sizeof(Types::TradePosition));
-                m_driver->send(onQuerySymbol);
+                onQuerySymbol = itrQS->second;
             }
-
-            //            if(0!= this->_queryOrder(m_queryPosition.instrumentid)){
-            //                assert(false);
-            //                return ;
-            //            }
+            onQuerySymbol->id = querySymbol.id;
+            onQuerySymbol->tradingDay = m_tradingDay;
+            m_driver->send(*onQuerySymbol);
         }
-
 
         int CtpTrader::_querySingleTrade(Types::Instrument_t const &queyInstrument) {
             //            strcpy(m_queryMarketInstrument.data() ,queyInstrument.data());
@@ -831,20 +907,6 @@ namespace Cosmos {
                 }
             }
 
-            for (auto ctp_itr: m_ctpPositionMap) {
-                Types::TradePosition tradePosition;
-                tradePosition.T_buyHold = ctp_itr.second.buy_todayPosition;
-                tradePosition.Y_buyHold = ctp_itr.second.buy_position - ctp_itr.second.buy_todayPosition;
-                tradePosition.T_sellHold = ctp_itr.second.sell_todayPosition;
-                tradePosition.Y_sellHold = ctp_itr.second.sell_position - ctp_itr.second.sell_todayPosition;
-                tradePosition.openBuyVolume = ctp_itr.second.buy_openVolume;
-                tradePosition.openSellVolume = ctp_itr.second.sell_openVolume;
-                tradePosition.filledPosition = tradePosition.T_buyHold + tradePosition.Y_buyHold - tradePosition.
-                                               T_sellHold - tradePosition.Y_sellHold;
-                m_onQuerySymbolMap[ctp_itr.first] = tradePosition;
-                //                fprintf(stderr, "m_onQuerySymbolMap %s , net=%d, T_buyHold=%d, Y_buyHold=%d, T_sellHold=%d, Y_sellHold=%d\n", ctp_itr.first.data(),
-                //                        tradePosition.filledPosition, tradePosition.T_buyHold, tradePosition.Y_buyHold, tradePosition.T_sellHold, tradePosition.Y_sellHold );
-            }
 
             return retCode;
         }

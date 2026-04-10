@@ -37,16 +37,16 @@ namespace Cosmos{
             bool futurePreCloseToday{false};
             int futureMinVolume{1};
             int optionMinVolume{1};
-            int futureMaxPosition{1};
-            int optionMaxPosition{1};
-            int riskOTR{1000};
+            int riskFutureMaxPosition{1};
+            int riskOptionMaxPosition{1};
+            int riskInformVolume{1000};
             int riskOpenVolume{480};
-            int riskMaxOrderNumb{200};
+            int riskMaxOrderRatio{20};
             ExecuteIntension futureEI{ExecuteIntension::EIPut};
             ExecuteIntension optionEI{ExecuteIntension::EIPut};
             HedgeType hedgeType{HedgeType::spec};
             bool isUseUnderlyPrice{true};
-            int m_kbarBiasSeconds{0};
+            int kbarBiasSeconds{0};
 
         };
     }

@@ -43,6 +43,7 @@ namespace Cosmos {
             std::promise<int> m_loginPromise;
             CThostFtdcMdApi *m_pMdApi;
             bool m_isLogin{false};
+            bool m_isDay{false};
 
 //            std::map< Types::Instrument_t ,  Types::MarketData*> m_lastMarketMap;
 
@@ -61,7 +62,7 @@ namespace Cosmos {
                 }
             }
 
-            int start(std::vector<Types::MarketData *> const& initMarketDataVector);
+            int start(std::vector<Types::MarketData *> const& initMarketDataVector, bool);
 
             void SubScribeQuote(Types::SubScribeQuote const &subScribeQuot);
            // PairsTrading::KData::KDataManager* initKSeries(int tradingday, bool, std::set<PairsTrading::Types::Instrument_t> *);

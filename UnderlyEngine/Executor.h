@@ -7,6 +7,7 @@
 
 #include "RiskMonitor.h"
 #include "../Driver/TestDriver.h"
+#include "../Driver/RealtimeDriver.h"
 #include "../Types/Type.h"
 #include "../Types/Param.h"
 #include "../Types/Symbol.h"
@@ -24,8 +25,8 @@ namespace Cosmos {
             int m_policyID{-1};
             std::string m_engineName;
             int m_tradingDay{0};
-            //  Driver::RealtimeDriver *m_driver;
-            Driver::TestDriver *m_driver{nullptr};
+            //Driver::RealtimeDriver *m_driver;
+             Driver::TestDriver *m_driver{nullptr};
             spdlog::logger* m_positionLog{nullptr};
             spdlog::logger* m_orderLog{nullptr};
 
@@ -39,7 +40,7 @@ namespace Cosmos {
                 m_riskMonitor = new RiskMonitor(engineName, policyID, m_tradingDay, m_engineParam);
             }
 
-            void updateSymbol(const Types::OrderField *inputOrder,
+            void onOrderField(const Types::OrderField *inputOrder,
                                              Types::Symbol *symbol);
             Types::OrderField * getNewOrderField();
             spdlog::logger* getPositionLog();

@@ -20,8 +20,9 @@ namespace Cosmos{
         public:
             int id;
             int tradingDay{0};
-            Instrument_t instrumentID{""};
-            TradePosition tradePosition;
+            TradePosition * tradePosition{nullptr};
+            RiskIndicator * riskIndicator{nullptr};
+            InstrumentInfo * instrumentInfo{nullptr};
         };
 
 

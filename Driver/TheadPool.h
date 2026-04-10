@@ -100,10 +100,10 @@ namespace Cosmos {
 
                         if (CPU_ISSET(affiThreadId, &get)) {
                             spdlog::info("this {}  quote task thread {} is running in processor {}",
-                                         policyEngine->m_engineName, pid, affiThreadId);
+                                         policyEngine->m_engineName.data(), pid, affiThreadId);
                         } else {
                             spdlog::error("this {} quote task thread {} is not running in processor {}",
-                                          policyEngine->m_engineName, pid, affiThreadId);
+                                          policyEngine->m_engineName.data(), pid, affiThreadId);
 
                         }
 

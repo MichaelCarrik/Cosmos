@@ -30,7 +30,7 @@ namespace Cosmos {
 
             //    strcpy(instrument.data() , "ag2102");
 
-             Utils::TradingHours::initInstrumentTradingHours(instrument);
+           //  Utils::TradingHours::initInstrumentTradingHours(instrument);
             auto itr = m_subScribeInstruments.find(instrument);
             if (itr == m_subScribeInstruments.end()) {
                 Types::PushMarket *pushMarket = new Types::PushMarket(0);
@@ -52,10 +52,9 @@ namespace Cosmos {
         };
 
         void MockMarket::onRtnQuote(const Types::MarketData *marketData) {
-            if (Utils::FTTrait::FT_TRADING == Utils::TradingHours::getProductTrait(
-                   marketData->instrumentID, marketData->psSecond) ||
-               Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
-                    marketData->instrumentID, marketData->psSecond) ||
+            auto fttrait = Utils::TradingHours::getProductTrait(marketData->productID, marketData->psSecond, m_isDay);
+            if (Utils::FTTrait::FT_TRADING == fttrait ||
+               Utils::FTTrait::FT_AUCTION == fttrait ||
                   ( marketData->psSecond >= 15 * 3600 && marketData->psSecond <= 17 * 3600)) {
                 auto itr = m_subScribeInstruments.find(marketData->instrumentID);
                 if (itr != m_subScribeInstruments.end()) {
@@ -78,7 +77,7 @@ namespace Cosmos {
         }
 
         int MockMarket::start(int tradingday, bool isDay) {
-
+            m_isDay = isDay;
             std::string dayOrNigh = isDay == true ? "day" : "ngt";
 
 
@@ -179,6 +178,7 @@ namespace Cosmos {
                     Types::MarketData marketData;
                     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
                     strcpy(marketData.instrumentID.data(), line_vector[1].c_str());
+                    Utils::InstrumentToProduct(marketData.instrumentID, marketData.productID);
                     marketData.openPrice = atof(line_vector[8].c_str());
                     marketData.highestPrice = atof(line_vector[9].c_str());
                     marketData.lowestPrice = atof(line_vector[10].c_str());

@@ -65,7 +65,8 @@ namespace Cosmos {
 
         static bool isSTGInstrument(const char *instrument) {
             if ((instrument[0] == 'S' && instrument[1] == 'T' & instrument[2] == 'G') ||
-                (instrument[0] == 'P' && instrument[1] == 'R' & instrument[2] == 'T')) {
+                (instrument[0] == 'P' && instrument[1] == 'R' & instrument[2] == 'T') ||
+                (instrument[0] == 'S' && instrument[1] == 'T' & instrument[2] == 'D')) {
                 return true;
             }
             return false;
@@ -210,7 +211,7 @@ namespace Cosmos {
         }
 
         static void readInstrumentsFromFiles(int tradingday, Types::Instrument_t const &filterUnderly,
-                                             std::string &rawPath, std::vector<Types::InstrumentInfo> &testSymbols,
+                                             std::string &rawPath, std::map<Types::Instrument_t, Types::InstrumentInfo*> &testSymbols,
                                              int isDay) {
             char buff[256]{""};
             sprintf(buff, "%s/%d_%s/instruments", rawPath.c_str(), tradingday, isDay == true ? "day" : "ngt");
@@ -251,37 +252,37 @@ namespace Cosmos {
                     if (line_vector.size() < 20 ) {
                         continue;
                             }
-                    Types::InstrumentInfo instrumentInfo;
+                    Types::InstrumentInfo *instrumentInfo = new Types::InstrumentInfo();
                     //   fprintf(stderr, "%s\n", line_vector[1].c_str());
                     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'),
                                          line_vector[1].end());
-                    strcpy(instrumentInfo.instrumentID.data(), line_vector[1].c_str());
+                    strcpy(instrumentInfo->instrumentID.data(), line_vector[1].c_str());
                     // if (strcmp(instrumentInfo.instrumentID.data(), "i2405") ==0) {
                     //     fprintf(stderr,"instrument=%s\n",instrumentInfo.instrumentID.data());
                     // }
-                    instrumentInfo.multi = atof(line_vector[13].c_str());
-                    instrumentInfo.tickSize = atof(line_vector[14].c_str());
+                    instrumentInfo->multi = atof(line_vector[13].c_str());
+                    instrumentInfo->tickSize = atof(line_vector[14].c_str());
                     int PIC = atoi(line_vector[6].c_str()) ;
                     if (PIC == 1) {
-                        instrumentInfo.productIDClass = Types::ProductClass::future ;
+                        instrumentInfo->productIDClass = Types::ProductClass::future ;
                     }else if (PIC == 2 || PIC == 6) {
-                        instrumentInfo.productIDClass = Types::ProductClass::option ;
+                        instrumentInfo->productIDClass = Types::ProductClass::option ;
                     }else {
                         continue;
                     }
 
-                    instrumentInfo.expireDate = atoi(line_vector[17].c_str());
-                    Utils::InstrumentToProduct(instrumentInfo.instrumentID, instrumentInfo.productID);
-                    Utils::parseInstruemnt(instrumentInfo.instrumentID, instrumentInfo.underly,
-                                           instrumentInfo.optionType, instrumentInfo.strikePrice);
+                    instrumentInfo->expireDate = atoi(line_vector[17].c_str());
+                    Utils::InstrumentToProduct(instrumentInfo->instrumentID, instrumentInfo->productID);
+                    Utils::parseInstruemnt(instrumentInfo->instrumentID, instrumentInfo->underly,
+                                           instrumentInfo->optionType, instrumentInfo->strikePrice);
 
-                    if (strcmp(instrumentInfo.instrumentID.data(), filterUnderly.data()) == 0){
+                    if (strcmp(instrumentInfo->instrumentID.data(), filterUnderly.data()) == 0){
 
-                        testSymbols.emplace_back(instrumentInfo);
+                        testSymbols[instrumentInfo->instrumentID] = instrumentInfo;
                     }
-                    else if (strcmp(instrumentInfo.underly.data(), filterUnderly.data()) == 0) {
+                    else if (strcmp(instrumentInfo->underly.data(), filterUnderly.data()) == 0) {
                       //  fprintf(stderr,"instrument=%s\n",instrumentInfo.instrumentID.data());
-                        testSymbols.emplace_back(instrumentInfo);
+                        testSymbols[instrumentInfo->instrumentID] = instrumentInfo;
                     }
                 }
                 i++;
@@ -319,6 +320,8 @@ namespace Cosmos {
             std::copy(std::begin(pDepthMarketData->InstrumentID),
                       std::begin(pDepthMarketData->InstrumentID) + marketData->instrumentID.size(),
                       std::begin(marketData->instrumentID));
+
+            Utils::InstrumentToProduct(marketData->instrumentID, marketData->productID);
 
             marketData->bidVolume[0] = pDepthMarketData->BidVolume1;
             marketData->askVolume[0] = pDepthMarketData->AskVolume1;

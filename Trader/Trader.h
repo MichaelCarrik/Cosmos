@@ -26,9 +26,6 @@ namespace Cosmos{
             Driver* _realtimeDriver;
         public:
 
-
-
-
             template <typename ...Args>
             Trader(Driver* realtimeDriver, Args &&... args){
                 _realtimeDriver = realtimeDriver;
@@ -75,8 +72,8 @@ namespace Cosmos{
                 return &_traderSpi->m_initMarketDataVector;
             };
 
-            decltype(_traderSpi->m_tradeInsInfoVec) * getInstrumentInfoVec() {
-                return &_traderSpi->m_tradeInsInfoVec;
+            decltype(_traderSpi->m_instrumentInfoMap) * getInstrumentInfoVec() {
+                return &_traderSpi->m_instrumentInfoMap;
             }
 
         };

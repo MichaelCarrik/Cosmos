@@ -26,10 +26,6 @@ namespace Cosmos
             int Y_buyHold{0}; // Total Net yestoday Long Position
             int T_sellHold{0}; // Total Net today Short Position
             int Y_sellHold{0}; // Total Net yestoday Short Position
-            int Y_buyPendingClose{0};
-            int T_buyPendingClose{0};
-            int Y_sellPendingClose{0};
-            int T_sellPendingClose{0};
 
             double profit{0.0};
 
@@ -118,7 +114,10 @@ namespace Cosmos
             int optionCancelOrderNumb{0};
             int optionFilledOrderNumb{0};
 
-            void updateRiskIndicator(Types::OrderField* orderField, bool isOption)
+
+
+
+            void updateRiskIndicator(const Types::OrderField* orderField, bool isOption)
             {
                 if (isOption == false)
                 {
@@ -138,11 +137,11 @@ namespace Cosmos
                     if (orderField->orderStatus == OrderStatus::allTraded || orderField->orderStatus ==
                      OrderStatus::partTraded)
                     {
-                        if (orderField->orderSide == OrderSide::buy)
+                        if (orderField->pet == Types::PositionEffectType::open && orderField->orderSide == OrderSide::buy)
                         {
                             openBuyVolume += orderField->lastFilledVolume;
                         }
-                        else if (orderField->orderSide == OrderSide::sell)
+                        else if (orderField->pet == Types::PositionEffectType::open && orderField->orderSide == OrderSide::sell)
                         {
                             openSellVolume += orderField->lastFilledVolume;
                         }
@@ -161,10 +160,7 @@ namespace Cosmos
                     {
                         optionCancelOrderNumb += 1;
                     }
-
                 }
-
-
 
             }
         };
@@ -205,18 +201,16 @@ namespace Cosmos
                           int tradeOrderId)
             {
                 m_positionLog->info(
-                    "tradeSymbol={} tickTime={} {}.{} {}, filledPosition={}, averagePrice={:.3f}, T_buyHold={}, Y_buyHold={}, T_sellHold={}, "
-                    "Y_sellHold={}, T_BuyClosePend={}, T_SellClosePend={}, profit={:.3f}, tradeOrderId={}, openBuyVolume={}, openSellVolume={}, "
-                    "sendOrderNumb={}, cancelOrderNumb={}, filledOrderNumb={}",
+                    "symbol={} tickTime={} {}.{} {}, filledPos={}, avgPrice={:.3f}, T_BHold={}, Y_BHold={}, T_SHold={}, "
+                    "Y_SHold={}, profit={:.3f}, tradeOrderId={}, openBVlm={}, openSVlm={}, "
+                    "SendNumb={}, CancelNumb={}, filledNumb={}, O_SendNumb={}, O_CancelNumb={}, O_filledNumb={},",
                     this->instrumentInfo.instrumentID.data(), tradingDay, updateTime.data(), milli, isTrade,
-                    this->tradePosition.filledPosition, this->tradePosition.averagePrice,
-                    this->tradePosition.T_buyHold, this->tradePosition.Y_buyHold,
-                    this->tradePosition.T_sellHold, this->tradePosition.Y_sellHold,
-                    this->tradePosition.T_buyPendingClose, this->tradePosition.T_sellPendingClose,
+                    this->tradePosition.filledPosition, this->tradePosition.averagePrice,this->tradePosition.T_buyHold,
+                    this->tradePosition.Y_buyHold, this->tradePosition.T_sellHold, this->tradePosition.Y_sellHold,
                     this->tradePosition.profit, tradeOrderId, this->riskIndicator.openBuyVolume,
-                    this->riskIndicator.openSellVolume,
-                    this->riskIndicator.sendOrderNumb, this->riskIndicator.cancelOrderNumb,
-                    this->riskIndicator.filledOrderNumb);
+                    this->riskIndicator.openSellVolume, this->riskIndicator.sendOrderNumb, this->riskIndicator.cancelOrderNumb,
+                    this->riskIndicator.filledOrderNumb, this->riskIndicator.optionSendOrderNumb, this->riskIndicator.optionCancelOrderNumb,
+                    this->riskIndicator.optionFilledOrderNumb);
                 m_positionLog->flush();
             }
         };

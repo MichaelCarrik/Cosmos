@@ -30,6 +30,7 @@ namespace Cosmos {
         struct Duration{
             int beginTime{0};
             int endTime{0};
+            bool isDay{false};
         };
 
         struct TradingSession{
@@ -44,7 +45,7 @@ namespace Cosmos {
           class TradingHours {
           private:
               static std::map< Types::Product_t, TradingSession> m_productTradingSession;
-              static std::map< Types::Instrument_t , TradingSession> m_instrumentTradingSession;
+         //     static std::map< Types::Instrument_t , TradingSession> m_instrumentTradingSession;
               static std::map<Types::Product_t, std::unordered_map<int, int> *> m_productPsTimeToSession;
               // static std::map<Types::Product_t , Types::Instrument_t> m_productToTradingHoursMap;
               // static std::map<  std::tuple<Types::Product_t, Types::KPeriod>, std::vector<KData::KTime>> m_tradingHoursToKTimeMap;
@@ -56,23 +57,22 @@ namespace Cosmos {
 
               static void loadTradingHourTypes( boost::property_tree::ptree & pt, std::map<std::string, TradingSession> & tradingHourTypesMap);
 
-              static TradingSession* getTradingSession( Types::Instrument_t const& instrument);
+              static TradingSession* getTradingSession( Types::Product_t const& product);
 
               static  Types::ExchangeType getExchangeType(std::string &exchange);
 
-              static  bool isNoTradeBeforeCritical( Types::Instrument_t const& instrument ,int psTime, int beforeSeonds);
+              static  bool isNoTradeBeforeCritical( Types::Product_t const&, int psTime, int beforeSeonds);
 
-              static bool isNoTradeBeforeTime( Types::Instrument_t const& instrument ,int psTime ,int);
+              static bool isNoTradeBeforeTime( Types::Product_t const&, int psTime ,int);
 
-              static bool isNoTradeAfterTime( Types::Instrument_t const& instrument, int psTime ,int);
+              static bool isNoTradeAfterTime( Types::Product_t const&, int psTime ,int);
 
-              static void initInstrumentTradingHours( Types::Instrument_t const & instrument);
-
-              static  FTTrait getProductTrait( Types::Instrument_t const & instrument, int psTime);
+              static  FTTrait getProductTrait( Types::Product_t const &, int psTime, bool);
 
               static int getDayMinutesCount( Types::Product_t const &);
 
               static void calTradeSection(TradingSession const& tradingSession, std::unordered_map<int, int> * resultMap);
+
               static int  getPsTimeToNumb(Types::Product_t product, int psTime,  int&);
 
           };

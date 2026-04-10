@@ -86,19 +86,19 @@ namespace Cosmos {
                         _getValueInLine(buf, ciname, configIndexStr);
                         if (std::stoi(configIndexStr.c_str()) == inputConfigIndex) {
                             FileRead fileRead;
-                            char insname[56]{"instrument"};
+                            char insname[56]{"instr"};
                             _getValueInLine(buf, insname, fileRead.instrumentStr);
-                            char tagname[56]{"targetPosition"};
+                            char tagname[56]{"targetPos"};
                             _getValueInLine(buf, tagname, fileRead.targetPositionStr);
 
                             if(strcmp(fileRead.instrumentStr.c_str(), underlyInstrument.data())==0){
-                                char mpname[56]{"marketPosition"};
+                                char mpname[56]{"mktPos"};
                                 _getValueInLine(buf, mpname, fileRead.marketPositionStr);
 
-                                char preMpname[56]{"preMarketPosition"};
+                                char preMpname[56]{"preMktPos"};
                                 _getValueInLine(buf, preMpname, fileRead.preMarketPositionStr);
 
-                                char sgnname[56]{"signalPrice"};
+                                char sgnname[56]{"sgnPrice"};
                                 _getValueInLine(buf, sgnname, fileRead.signalPriceStr);
 
                                 char stpname[56]{"holdStrikePrice"};
@@ -289,8 +289,8 @@ namespace Cosmos {
                             _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
                             m_preMarketPosition = m_marketPosition;
 
-                            _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, 1, m_maxOptionPosition);
-                            _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, 1, m_maxOptionPosition);
+                            _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, -1, m_maxOptionPosition);
+                            _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, -1, m_maxOptionPosition);
 
                         }
 

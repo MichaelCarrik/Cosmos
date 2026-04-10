@@ -31,7 +31,8 @@ namespace Cosmos{
         private:
              Utils::MemoryList< Types::MarketData, 9999999> m_marketDataList{0};
              Driver::TestDriver * m_driver;
-            std::string m_rawTickPath{""};
+             std::string m_rawTickPath{""};
+             bool m_isDay{false};
 
         public:
 
