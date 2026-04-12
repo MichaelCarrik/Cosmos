@@ -112,11 +112,10 @@ namespace Cosmos {
 //                            assert(false);
 //                        }down
                         m_configLog->info(
-                                "configIndex={}, instr={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
-                                "targetPos={}, seriesIndex={}",
-                                configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingday,
-                                lastOptionK->m_updateTimeBegin.data(), lastOptionK->m_endPsTime,
-                                lastOptionK->m_close, lastOptionK->delta, targetPosition,
+                                "configIndex={}, instr={}, {}, {}, {}, close={:.3f}({:.3f}, {:.3f}), sgnPrice={:.3f}, delta={:.3f}, "
+                                "targetPos={}, seriesIndex={}", configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingday,
+                                lastOptionK->m_updateTimeBegin.data(), lastOptionK->m_endPsTime, lastOptionK->m_close, lastOptionK->m_bidPrice,
+                                lastOptionK->m_askPrice, (lastOptionK->m_bidPrice +lastOptionK->m_askPrice) * 0.5, lastOptionK->delta, targetPosition,
                                 optionIndex);
                     }
                 }

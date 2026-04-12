@@ -20,7 +20,6 @@
 //#include "NetRootInterpreter.h"
 #include <set>
 
-
 namespace Cosmos {
     namespace Trader {
         struct CtpPosition{
@@ -31,7 +30,6 @@ namespace Cosmos {
             int sell_todayPosition{0};
             int sell_openVolume{0};
         };
-
 
         class CtpTrader : public CThostFtdcTraderSpi {
 
@@ -86,11 +84,9 @@ namespace Cosmos {
             std::string m_configPath;
             double m_preSettlementPrice{0.0};
             std::map<Types::Instrument_t , Types::InstrumentInfo*> m_instrumentInfoMap;
-         //   std::map<std::string, PO> m_queryOrderStatusMap;
 
             CtpInterpreter * m_interpreter;
             bool m_isLogin{false};
-         //   NetRootInterpreter * m_interpreter;
 
             int start(int &, bool);
             template<typename T>

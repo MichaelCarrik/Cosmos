@@ -105,12 +105,9 @@ void Session(Cosmos::Driver::TestDriver * driver ,boost::asio::ip::tcp::socket s
         Cosmos::Utils::MemoryList<Cosmos::Types::EventData, 32> eventDataList(0);
         while (true) {
             char receiveData[65536]{""};
-
             boost::system::error_code ec;
             std::size_t length = socket.read_some(boost::asio::buffer(receiveData), ec);
             fprintf(stderr, "receiveData : %s\n", receiveData);
-
-
             if (ec == boost::asio::error::eof) {
                 std::cout << "connect is closed by client" << std::endl;
                 break;
@@ -133,8 +130,6 @@ void Session(Cosmos::Driver::TestDriver * driver ,boost::asio::ip::tcp::socket s
                 }
                 driver->callback_asyncEventData(eventData, itr->second->m_policyID);
             }
-
-
 
             boost::asio::write(socket, boost::asio::buffer(receiveData, length));
             std::cout<<"echo server send back!"<<std::endl;
