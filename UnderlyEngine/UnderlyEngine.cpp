@@ -10,21 +10,21 @@
 // #include "../Policy/LongGammaGod.h"
 #include "../Policy/OptionPolicy/LongGammaVulture.h"
 #include "../Policy/OptionPolicy/CoveredVulture.h"
-#include "../Policy/OptionPolicy/TestTrendOption.h"
+//#include "../Policy/OptionPolicy/TestTrendOption.h"
 // #include "../Policy/Calendar.h"
 #include "../Policy/OptionPolicy/SellStrangleV2.h"
-#include "../Policy/FuturePolicy/TestTrend.h"
+//#include "../Policy/FuturePolicy/TestTrend.h"
 #include "../Policy/FuturePolicy/VultureTrend.h"
 
 
 namespace Cosmos {
     namespace Engine {
         void UnderlyEngine::onStart() {
-            if (m_isDay == false && (( m_engineParam.productID[0] == 'I' && m_engineParam.productID[1] == 'F')
-                                     || (m_engineParam.productID[0] == 'I' && m_engineParam.productID[1]== 'H')
-                                     || (m_engineParam.productID[0] == 'I' && m_engineParam.productID[1]== 'M'))) {
-                return;
-                                     }
+            // if (m_isDay == false && (( m_engineParam.productID[0] == 'I' && m_engineParam.productID[1] == 'F')
+            //                          || (m_engineParam.productID[0] == 'I' && m_engineParam.productID[1]== 'H')
+            //                          || (m_engineParam.productID[0] == 'I' && m_engineParam.productID[1]== 'M'))) {
+            //     return;
+            //                          }
 
             m_kDataManager = new KData::KDataManager(m_tradingDay, m_isDay, m_engineParam.isUseUnderlyPrice, m_mySql,
                 m_engineParam.kbarBiasSeconds);
@@ -118,16 +118,15 @@ namespace Cosmos {
             if (strcmp(initParamMap.engineName.c_str(), m_engineName.c_str()) != 0) {
                 assert(false);
             }
-            auto underlyAStr = Utils::getParamMapValue(initParamMap.paramMap, "mainFutureInstr");
-            strcpy(m_mainFutureInstr.data(), underlyAStr.c_str());
+
 
             m_engineParam.affiThreadId = stoi(Utils::getParamMapValue(initParamMap.paramMap, "affiThreadId"));
-            strcpy(m_engineParam.productID.data(), Utils::getParamMapValue(initParamMap.paramMap, "productId").c_str());
             m_engineParam.putResendTimeout = stoi(Utils::getParamMapValue(initParamMap.paramMap, "putResendTimeout"));
             m_engineParam.hitResendTimeout = stoi(Utils::getParamMapValue(initParamMap.paramMap, "putResendTimeout"));
             m_engineParam.futurePreCloseToday = stoi(Utils::getParamMapValue(initParamMap.paramMap, "futurePreCloseToday"));
             m_engineParam.futureMinVolume = stoi(Utils::getParamMapValue(initParamMap.paramMap, "futureMinVolume"));
             m_engineParam.optionMinVolume = stoi(Utils::getParamMapValue(initParamMap.paramMap, "optionMinVolume"));
+            m_engineParam.futureMinOV = stoi(Utils::getParamMapValue(initParamMap.paramMap, "futureMinOV"));
             m_engineParam.futureEI =  Types::configParamToEIMap.at(Utils::getParamMapValue(initParamMap.paramMap, "futureEI"));
             m_engineParam.optionEI = Types::configParamToEIMap.at(Utils::getParamMapValue(initParamMap.paramMap, "optionEI"));
 
@@ -144,18 +143,18 @@ namespace Cosmos {
             m_engineParam.riskFutureMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "riskFutureMaxPosition"));
             m_engineParam.riskOptionMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "riskOptionMaxPosition"));
 
-            fprintf(stderr, "[%s_%d]， mainFutureInstr=%s, affiThreadId=%d, productID=%s, putResendTimeout=%d, hitResendTimeout=%d, "
-                            "futurePreCloseToday=%d, futureMinVolume=%d, optionMinVolume=%d, futureEI=%s, optionEI=%s, kbarBiasSeconds=%d, "
-                            "hedgeType=%s, riskInformVolume=%d, riskOpenVolume=%d, riskMaxOrderRatio=%d, riskFutureMaxPosition=%d, riskOptionMaxPosition=%d\n",
-                            m_engineName.c_str(), m_policyID, m_mainFutureInstr.data(), m_engineParam.affiThreadId,  m_engineParam.productID.data(),
+            fprintf(stderr, "[%s_%d]， affiThreadId=%d, putResendTimeout=%d, hitResendTimeout=%d, futurePreCloseToday=%d, futureMinVolume=%d, optionMinVolume=%d, "
+                            "futureMinOV=%d, futureEI=%s, optionEI=%s, kbarBiasSeconds=%d, hedgeType=%s, riskInformVolume=%d, riskOpenVolume=%d, riskMaxOrderRatio=%d, "
+                            "riskFutureMaxPosition=%d, riskOptionMaxPosition=%d\n",
+                            m_engineName.c_str(), m_policyID,  m_engineParam.affiThreadId,
                             m_engineParam.putResendTimeout,  m_engineParam.hitResendTimeout, m_engineParam.futurePreCloseToday,  m_engineParam.futureMinVolume,
-                            m_engineParam.optionMinVolume, Types::EIMap[m_engineParam.futureEI].data(), Types::EIMap[m_engineParam.optionEI].data(),
+                            m_engineParam.optionMinVolume, m_engineParam.futureMinOV, Types::EIMap[m_engineParam.futureEI].data(), Types::EIMap[m_engineParam.optionEI].data(),
                             m_engineParam.kbarBiasSeconds, Types::hedgeMap[m_engineParam.hedgeType].data(), m_engineParam.riskInformVolume, m_engineParam.riskOpenVolume,
                             m_engineParam.riskMaxOrderRatio, m_engineParam.riskFutureMaxPosition, m_engineParam.riskOptionMaxPosition);
-            spdlog::info("[{}_{}]， mainFutureInstr={}, affiThreadId={}, productID={}, putResendTimeout={}, hitResendTimeout={}, "
+            spdlog::info("[{}_{}]， affiThreadId={}, putResendTimeout={}, hitResendTimeout={}, "
                             "futurePreCloseToday={}, futureMinVolume={}, optionMinVolume={}, futureEI={}, optionEI={}, kbarBiasSeconds={}, "
                             "hedgeType={}, riskInformVolume={}, riskOpenVolume={}, riskMaxOrderRatio={}, riskFutureMaxPosition={}, riskOptionMaxPosition={}",
-                            m_engineName.c_str(), m_policyID, m_mainFutureInstr.data(), m_engineParam.affiThreadId,  m_engineParam.productID.data(),
+                            m_engineName.c_str(), m_policyID,  m_engineParam.affiThreadId,
                             m_engineParam.putResendTimeout,  m_engineParam.hitResendTimeout, m_engineParam.futurePreCloseToday,  m_engineParam.futureMinVolume,
                             m_engineParam.optionMinVolume, Types::EIMap[m_engineParam.futureEI].data(), Types::EIMap[m_engineParam.optionEI].data(),
                             m_engineParam.kbarBiasSeconds, Types::hedgeMap[m_engineParam.hedgeType].data(), m_engineParam.riskInformVolume, m_engineParam.riskOpenVolume,
@@ -206,29 +205,30 @@ namespace Cosmos {
                 return new Policy::VultureTrend(policyName, m_engineName, underlyInstrument, kPeriod,
                                                                            MV, futureInsInfo->multi,
                                                                            m_tradingDay, adjRiskTime, alpha, mark);
-            }else if(policyName.compare("TestTrend") == 0) {
-                Types::Instrument_t underlyInstrument{""};
-                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
-
-                auto kpstr = Utils::getParamMapValue(paramMap, "period");
-                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
-                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
-                this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
-
-
-                double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
-                auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
-                auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
-                double alpha = 0.7;
-                double mark = 2.0;
-                //  double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "adjRiskTime").c_str());
-
-                Types::InstrumentInfo * futureInsInfo{nullptr};
-                getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
-                return new Policy::TestTrend(policyName, m_engineName, underlyInstrument, kPeriod,
-                                                                           MV, futureInsInfo->multi,
-                                                                           m_tradingDay, adjRiskTime, alpha, mark);
-            }
+             }
+          //  else if(policyName.compare("TestTrend") == 0) {
+            //     Types::Instrument_t underlyInstrument{""};
+            //     strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+            //
+            //     auto kpstr = Utils::getParamMapValue(paramMap, "period");
+            //     Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+            //     this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
+            //     this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
+            //
+            //
+            //     double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+            //     auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
+            //     auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
+            //     double alpha = 0.7;
+            //     double mark = 2.0;
+            //     //  double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "adjRiskTime").c_str());
+            //
+            //     Types::InstrumentInfo * futureInsInfo{nullptr};
+            //     getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
+            //     return new Policy::TestTrend(policyName, m_engineName, underlyInstrument, kPeriod,
+            //                                                                MV, futureInsInfo->multi,
+            //                                                                m_tradingDay, adjRiskTime, alpha, mark);
+            // }
 
             assert(false);
             return nullptr;
@@ -257,7 +257,9 @@ namespace Cosmos {
                            underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
                             m_tradingDay, optionInsInfo->expireDate,
                            m_engineParam.riskOptionMaxPosition,
-                           isRefreshDelta, openAtDelta,baseRation);
+                           isRefreshDelta, openAtDelta,baseRation, [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
+                              return  this->m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(instrument, period);
+                           });
              }   else if (policyName.compare("CoveredVulture") == 0) {
 
                  Types::Instrument_t underlyInstrument{""};
@@ -306,27 +308,28 @@ namespace Cosmos {
                            [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
                               return  this->m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(instrument, period);
                            });
-             }else if (policyName.compare("TestTrendOption") == 0){
-
-                Types::Instrument_t underlyInstrument{""};
-                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
-
-                auto kpstr = Utils::getParamMapValue(paramMap, "period");
-                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
-                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
-                this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
-
-                double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
-
-                Types::InstrumentInfo * optionInsInfo{nullptr};
-                getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
-
-                //  auto underlyToTodayIndex =  m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(underlyInstrument, kPeriod);
-
-                return new Policy::TestTrendOption( policyName, m_engineName,
-                          underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
-                           m_tradingDay,optionInsInfo->expireDate);
              }
+            //else if (policyName.compare("TestTrendOption") == 0){
+             //
+             //    Types::Instrument_t underlyInstrument{""};
+             //    strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+             //
+             //    auto kpstr = Utils::getParamMapValue(paramMap, "period");
+             //    Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+             //    this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
+             //    this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
+             //
+             //    double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+             //
+             //    Types::InstrumentInfo * optionInsInfo{nullptr};
+             //    getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
+             //
+             //    //  auto underlyToTodayIndex =  m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(underlyInstrument, kPeriod);
+             //
+             //    return new Policy::TestTrendOption( policyName, m_engineName,
+             //              underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
+             //               m_tradingDay,optionInsInfo->expireDate);
+             // }
             //else if (policyName.compare("BuyStrangle") == 0) {
             //     auto kpstr = Types::Param::getValue(paramMap, "period");
             //     Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
@@ -438,7 +441,7 @@ namespace Cosmos {
                     futureSymbol->policyID = m_policyID;
                     memcpy(&futureSymbol->instrumentInfo, &instrumentInfo, sizeof(Types::InstrumentInfo));
                     futureSymbol->underlySymbol = futureSymbol;
-                    futureSymbol->m_positionLog = m_executor->getPositionLog();
+               //     futureSymbol->m_positionLog = m_executor->getPositionLog();
                     futureSymbol->order = m_executor->getNewOrderField();
                     m_symbolMap[futureSymbol->instrumentInfo.instrumentID] = futureSymbol;
                 }
@@ -448,7 +451,7 @@ namespace Cosmos {
                     auto optionSymbol = new Types::Symbol();
                     optionSymbol->policyID = m_policyID;
                     memcpy(&optionSymbol->instrumentInfo, &instrumentInfo, sizeof(Types::InstrumentInfo));
-                    optionSymbol->m_positionLog = m_executor->getPositionLog();
+               //     optionSymbol->m_positionLog = m_executor->getPositionLog();
                     optionSymbol->order = m_executor->getNewOrderField();
                     auto underlyItr = m_symbolMap.find(optionSymbol->instrumentInfo.underly);
                     if (underlyItr == m_symbolMap.end()) {
@@ -471,18 +474,20 @@ namespace Cosmos {
             memcpy(&itr->second->tradePosition, onQuerySymbol.tradePosition, sizeof(Types::TradePosition));
             memcpy(&itr->second->riskIndicator, onQuerySymbol.riskIndicator, sizeof(Types::RiskIndicator));
             if (itr->second->tradePosition.filledPosition != 0  || itr->second->instrumentInfo.productIDClass == Types::ProductClass::option) {
-                Types::UpdateTime_t updateTime{""};
-                itr->second->posWrite(false, m_tradingDay, updateTime, 0, 0);
+                // Types::UpdateTime_t updateTime{""};
+                // itr->second->posWrite(false, m_tradingDay, updateTime, 0, 0);
+                m_executor->logInitPos(itr->second);
+                // Utils::logPos( m_positionLog, true, m_tradingDay, symbol, symbol->underlySymbol->riskIndicator,
+                //   order->tOrderID);
             }
         }
 
         void UnderlyEngine::onEventData(Types::EventData const &eventData) {
             if (eventData.eventType == Types::EventType::marketEvent) {
                 auto pMD = (const Types::MarketData *) eventData.point;
-                // if (strcmp(pMD->instrumentID.data(), "i2405") ==0 ) {
-                // fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                // if (pMD->isInit ==true ) {
+                //     fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
                 //         pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit, pMD->epoch_time);
-                //
                 // }
 
                 m_kDataManager->KMAddTick(pMD);
@@ -492,7 +497,8 @@ namespace Cosmos {
                 }
                 symbolItr->second->lastMD = pMD;
 
-                if (pMD->isInit == 0 && strcmp(m_mainFutureInstr.data(), pMD->instrumentID.data()) ==0 ) {
+                auto underlyItr = m_underlyInitMap.find(pMD->instrumentID);
+                if (pMD->isInit == false && underlyItr != m_underlyInitMap.end() ) {
                     this->runEvent(pMD, pMD->epoch_time);
                 }
             } else if (eventData.eventType == Types::EventType::orderEvent) {
@@ -529,12 +535,9 @@ namespace Cosmos {
                     if (isFindPolicy == false) {
                           assert(false);
                     }
-
                 }
             }
         };
-
-
 
         void UnderlyEngine::getFutureInfoByInstrumentID(Types::Instrument_t const& instrument, Types::InstrumentInfo* & futureInsInfo) {
             auto itr = m_symbolMap.find(instrument);

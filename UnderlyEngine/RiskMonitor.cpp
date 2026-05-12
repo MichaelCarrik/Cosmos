@@ -13,13 +13,11 @@ namespace Cosmos {
             if (inputOrder->policyID != m_policyID) {
                 assert(false && "RiskMonitor::onOrderField policyID not match");
             }
-
             fprintf(stderr, "RiskMonitor::onEventData instrument=%s, updateTime=%s, %03d, pOrderID=%d, requestID=%d, orderRef=%s, orderSide=%s, "
                                   "orderPrice=%.3f, orderVolume=%d, orderStatus=%s\n",
                           inputOrder->instrumentID.data(), symbol->lastMD->updateTime.data(), symbol->lastMD->milliSeconds, inputOrder->pOrderID, inputOrder->tOrderID,
                           inputOrder->orderRef.data(), Types::orderSideMap[inputOrder->orderSide].data(),  inputOrder->orderPrice, inputOrder->orderVolume,
                           Types::orderStatusMap[inputOrder->orderStatus].data());
-
 
             symbol->underlySymbol->riskIndicator.updateRiskIndicator(inputOrder, symbol->instrumentInfo.productIDClass == Types::ProductClass::option);
         }
@@ -58,8 +56,9 @@ namespace Cosmos {
                 return false;
             }
 
-            bool RiskMonitor::isRiskForOrder(const Types::Symbol * underlySymbol, const Types::OrderField * orderField, bool isOption)
+            bool RiskMonitor::isRiskForOrder(const Types::Symbol * symbol, const Types::OrderField * orderField, bool isOption)
             {
+                auto underlySymbol = symbol->underlySymbol;
                 if (orderField->orderStatus == Types::OrderStatus::signal)
                 {
                     int sectorSize=1;
@@ -90,9 +89,20 @@ namespace Cosmos {
                         return true;
                     }
 
-                    if (isOption && orderField->OI == Types::OrderIntension::OIHit) {
+                    if (isOption == true && orderField->OI == Types::OrderIntension::OIHit) {
                         spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder option order not permit hit , instrumentID={}",
                             m_engineName, underlySymbol->lastMD->updateTime.data(), underlySymbol->instrumentInfo.instrumentID.data());
+                        return true;
+                    }
+
+                    if (underlySymbol->lastMD->psSecond - symbol->riskIndicator.lastSendOrderTime < 15  ) {
+                        spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder symbolLastSendTooClose , instrumentID={}",
+                        m_engineName, underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data());
+                        return true;
+                    }
+                    if (isOption == false && orderField->pet == Types::PositionEffectType::open && orderField->orderVolume < m_engineParam.futureMinOV ) {
+                        spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder open minVolume lessThan futureMinOV, instrumentID={}",
+                                             m_engineName, underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data());
                         return true;
                     }
                 }
@@ -101,9 +111,9 @@ namespace Cosmos {
 
             void RiskMonitor::modifyOrderByRisk(const Types::MarketData * pMD, Types::OrderField * orderField, bool isOption) {
                 if (isOption == false) {
-                    orderField->orderVolume = std::min(orderField->orderVolume, m_engineParam.futureMinVolume);
+                    orderField->orderVolume = std::min(orderField->orderVolume, 2*m_engineParam.futureMinVolume);
                 }else {
-                    orderField->orderVolume = std::min(orderField->orderVolume, m_engineParam.optionMinVolume);
+                    orderField->orderVolume = std::min(orderField->orderVolume, 2*m_engineParam.optionMinVolume);
                 }
 
                 if (orderField->orderSide == Types::OrderSide::buy && orderField->OI != Types::OrderIntension::OIHit && orderField->orderPrice >= pMD->askPrice[0] + Types::g_epsilon  ) {

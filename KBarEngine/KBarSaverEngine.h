@@ -49,7 +49,7 @@ namespace Cosmos{
             folly::ProducerConsumerQueue< KBarsRows>  m_sqlThreadQueue{9999999};
             Utils::MemoryList< KBarsRows, 9999999> m_kbarRowsPool{0};
             std::map< Types::Instrument_t, Types::InstrumentInfo*> m_instrumentInfoMap;
-            std::vector< Cosmos::Types::InstrumentInfo*>* m_tradeInsInfoVec{nullptr};
+            std::map<Types::Instrument_t, Types::InstrumentInfo*>* m_tradeInsInfoMap{nullptr};
             std::vector<TableInsertBuffer> m_TableInsertBufferVec;
 
         public:
@@ -62,8 +62,8 @@ namespace Cosmos{
             KData::KDataManager * m_kDataManager{nullptr};
 
             KBarSaverEngine( Driver::RealtimeDriver *driver, std::string const&  engineName ,   Utils::CppMySQL3DB * mysql,
-                             std::vector< Cosmos::Types::InstrumentInfo*>* tradeInsInfoVec, int tradingday , bool  isDay) :
-                    m_engineName(engineName), m_mysql(mysql), m_tradingDay(tradingday), m_tradeInsInfoVec{tradeInsInfoVec}, m_isDay(isDay) {
+                             decltype(m_tradeInsInfoMap) tradeInsInfoMap, int tradingday , bool  isDay) :
+                    m_engineName(engineName), m_mysql(mysql), m_tradingDay(tradingday), m_tradeInsInfoMap{tradeInsInfoMap}, m_isDay(isDay) {
                 m_driver = driver;
                 m_driver->add_receiver< Types::OnSubScribeQuote>(
                     m_driver->passn([this]( Types::OnSubScribeQuote const &onSubScribeQuote) {

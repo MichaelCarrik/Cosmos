@@ -199,21 +199,21 @@ int main(int argc, char *argv[]) {
             driver.onStart();
 
 
-            fprintf(stderr, "start asio\n");
-
-            unsigned short port = 25000;
-            boost::asio::io_context ioc;
-            boost::asio::ip::tcp::acceptor acceptor(
-                ioc, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
-            try {
-                // 一次处理一个连接
-                while (true) {
-                    Session(&driver, acceptor.accept(), engines_map);
-                    int a = 1;
-                }
-            } catch (const std::exception &e) {
-                std::cerr << "Exception: " << e.what() << std::endl;
-            }
+            // fprintf(stderr, "start asio\n");
+            //
+            // unsigned short port = 25000;
+            // boost::asio::io_context ioc;
+            // boost::asio::ip::tcp::acceptor acceptor(
+            //     ioc, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));
+            // try {
+            //     // 一次处理一个连接
+            //     while (true) {
+            //         Session(&driver, acceptor.accept(), engines_map);
+            //         int a = 1;
+            //     }
+            // } catch (const std::exception &e) {
+            //     std::cerr << "Exception: " << e.what() << std::endl;
+            // }
         }
     }
 

@@ -49,7 +49,7 @@ namespace Cosmos {
             virtual void runTick(const Types::MarketData *pMD) override {
                 if (strcmp(pMD->instrumentID.data(), m_underlyInstrument.data()) == 0) {
                      if ( strcmp(pMD->updateTime.data(), "10:00:00") ==0 ) {  //waiting all instrtuments finish KData
-                        Types::Instrument_t ins{"MO2403P5600"};
+                        Types::Instrument_t ins{"i2505P1020"};
                         m_callPolicySymbols.targetSignal.targetPosMaps[ins] = -3;
                     }
                 }

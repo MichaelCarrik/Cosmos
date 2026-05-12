@@ -5,9 +5,9 @@ cmake_minimum_required(VERSION 3.14)
 project(Cosmos)
 
 set(CMAKE_CXX_STANDARD 17)
-#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
+set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
 
 INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIRS})
 
@@ -36,7 +36,7 @@ add_subdirectory(Trader)
 
 include_directories(./Market)
 add_subdirectory(Market)
-
+#
 #include_directories(./KBarEngine)
 #add_subdirectory(KBarEngine)
 
@@ -53,9 +53,7 @@ add_subdirectory(Utils)
 #	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 #		        ${LIB_MYSQL} Threads::Threads stdc++fs)
 
-#add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp
-#		UnderlyEngine/Execute.cpp
-#		UnderlyEngine/Execute.h)
+#add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
 #target_link_libraries(CosmosKBSaver Market
 #		Trader
 #		KBarEngine Utils
@@ -63,16 +61,16 @@ add_subdirectory(Utils)
 #		${LIB_CTPTRADE} ${LIB_MYSQL}
 #		Threads::Threads stdc++fs)
 
-#
-add_executable(CosmosHedge_Test UnderlyEngine/UOTradingTest_main.cpp)
-target_link_libraries(CosmosHedge_Test Market Trader KData Utils UnderlyEngine
-		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
-		${LIB_MYSQL} Threads::Threads stdc++fs)
-
-#add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp)
-#target_link_libraries(CosmosHedge Market Trader KData Utils UnderlyEngine
+##
+#add_executable(CosmosHedge_Test UnderlyEngine/UOTradingTest_main.cpp)
+#target_link_libraries(CosmosHedge_Test Market Trader KData Utils UnderlyEngine
 #		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 #		${LIB_MYSQL} Threads::Threads stdc++fs)
+
+add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp)
+target_link_libraries(CosmosHedge Market Trader KData Utils UnderlyEngine
+		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
+		${LIB_MYSQL} Threads::Threads stdc++fs)
 
 
 

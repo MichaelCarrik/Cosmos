@@ -89,15 +89,15 @@ int main() {
     InitMySql(mySql, store_config);
 
     int tradingday = 0;
-    if (trader.start(tradingday) != 0) {
+    if (trader.start(tradingday, Cosmos::Utils::is_day()) != 0) {
         fprintf(stderr, "trade error\n");
         spdlog::error("trader start error, program terminal");
         return -1;
     };
     spdlog::info("trader login successfully");
 
-    std::vector< Cosmos::Types::InstrumentInfo*>* tradeInsinfoVec{nullptr};
-    tradeInsinfoVec = trader.getInstrumentInfoVec();
+    std::map<Cosmos::Types::Instrument_t, Cosmos::Types::InstrumentInfo*>* tradeInsInfoMap{nullptr};
+    tradeInsInfoMap = trader.getInstrumentInfoMap();
 
     spdlog::info("initial policies");
     std::map<std::string, Cosmos::Types::InitParam> configParamMap;
@@ -110,24 +110,19 @@ int main() {
     for (auto & params : configParamMap) {
 
         auto saveEngine = new Cosmos::KBarEngine::KBarSaverEngine(&driver, params.first ,   mySql,
-                             tradeInsinfoVec,  tradingday , Cosmos::Utils::is_day());
+                             tradeInsInfoMap,  tradingday , Cosmos::Utils::is_day());
         saveEngine->m_policyID = policyID++;
     //    underlyngine->m_tradingDay = tradingday;
         engines_map[params.first] = saveEngine;
         saveEngine->onInitParams(params.second);
     }
 
-
-
-
-
     for (auto & iengineItr: engines_map) {
         iengineItr.second->onStart();
     }
 
-
     auto initMarketVec = trader.getInitMarketVec();
-    market.start(*initMarketVec);
+    market.start(*initMarketVec, Cosmos::Utils::is_day());
     driver.onStart();
 
 

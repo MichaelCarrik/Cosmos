@@ -199,6 +199,7 @@ namespace Cosmos {
                     orderField->orderStatus = Types::OrderStatus::signal;
                     strcpy(orderField->orderRef.data(), pOrder->OrderRef);
                     strcpy(orderField->orderSysID.data(), pOrder->OrderSysID);
+                    strcpy(orderField->exchangeID.data(), pOrder->ExchangeID);
 
                     if ( pOrder->CombOffsetFlag[0] == THOST_FTDC_OF_CloseToday) {
                         orderField->pet = Types::PositionEffectType::T_close;
@@ -298,9 +299,9 @@ namespace Cosmos {
         void CtpTrader::OnRspQryInvestorPosition(CThostFtdcInvestorPositionField *pInvestorPosition,
                                                  CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
             if (pInvestorPosition != nullptr && (pRspInfo == nullptr || pRspInfo->ErrorID == 0)) {
-                //                fprintf(stderr,"instrument=%s, direction=%c, Position=%d, TodayPosition=%d, YdPosition=%d, OpenVolume=%d\n",
-                //                        pInvestorPosition->InstrumentID, pInvestorPosition->PosiDirection, pInvestorPosition->Position,
-                //                        pInvestorPosition->TodayPosition, pInvestorPosition->YdPosition, pInvestorPosition->OpenVolume);
+                // fprintf(stderr,"instrument=%s, direction=%c, Position=%d, TodayPosition=%d, YdPosition=%d, OpenVolume=%d\n",
+                //         pInvestorPosition->InstrumentID, pInvestorPosition->PosiDirection, pInvestorPosition->Position,
+                //         pInvestorPosition->TodayPosition, pInvestorPosition->YdPosition, pInvestorPosition->OpenVolume);
                 Types::Instrument_t instrument{""};
                 strcpy(instrument.data(), pInvestorPosition->InstrumentID);
                 if (Utils::isSTGInstrument(instrument.data()) == false) {
@@ -368,8 +369,8 @@ namespace Cosmos {
                                            ||pInstrument->ProductClass == THOST_FTDC_PC_Options
                                            || pInstrument->ProductClass == THOST_FTDC_PC_SpotOption
                                            )) {
-                fprintf(stderr, "OnRspQryInstrument instrument=%s, ProductClass=%c\n",
-                        pInstrument->InstrumentID, pInstrument->ProductClass);
+                // fprintf(stderr, "OnRspQryInstrument instrument=%s, ProductClass=%c\n",
+                //         pInstrument->InstrumentID, pInstrument->ProductClass);
                 Types::InstrumentInfo *instrumentInfo = new Types::InstrumentInfo();
                 strcpy(instrumentInfo->instrumentID.data(), pInstrument->InstrumentID);
                 Utils::InstrumentToProduct(instrumentInfo->instrumentID, instrumentInfo->productID);
@@ -383,19 +384,33 @@ namespace Cosmos {
                         instrumentInfo->optionType = pInstrument->OptionsType == THOST_FTDC_CP_CallOptions ? 'C' : 'P';
                         instrumentInfo->strikePrice = pInstrument->StrikePrice;
                         strcpy(instrumentInfo->underly.data(), pInstrument->UnderlyingInstrID);
-                        if (strcmp("CFFEX", pInstrument->ExchangeID) == 0) {
-                            if (strcmp(instrumentInfo->productID.data(), "IO") == 0) {
-                                instrumentInfo->underly[0] = 'I';
-                                instrumentInfo->underly[1] = 'F';
-                            } else if (strcmp(instrumentInfo->productID.data(), "HO") == 0) {
-                                instrumentInfo->underly[0] = 'I';
-                                instrumentInfo->underly[1] = 'H';
-                            } else if (strcmp(instrumentInfo->productID.data(), "MO") == 0) {
-                                instrumentInfo->underly[0] = 'I';
-                                instrumentInfo->underly[1] = 'M';
-                            }
-
+                        // if (strcmp(instrumentInfo->instrumentID.data(), "IO2606-C-3400") == 0) {
+                        //     int a = 1;
+                        // }
+                        if ( instrumentInfo->underly[0] == 'I'&& instrumentInfo->underly[1] == 'O') {
+                            instrumentInfo->underly[0] = 'I';
+                            instrumentInfo->underly[1] = 'F';
+                        } else if (instrumentInfo->underly[0] == 'H'&& instrumentInfo->underly[1] == 'O') {
+                            instrumentInfo->underly[0] = 'I';
+                            instrumentInfo->underly[1] = 'H';
+                        } else if (instrumentInfo->underly[0] == 'M'&& instrumentInfo->underly[1] == 'O') {
+                            instrumentInfo->underly[0] = 'I';
+                            instrumentInfo->underly[1] = 'M';
                         }
+
+                        // if (strcmp("CFFEX", pInstrument->ExchangeID) == 0) {
+                        //     if (strcmp(instrumentInfo->productID.data(), "IO") == 0) {
+                        //         instrumentInfo->underly[0] = 'I';
+                        //         instrumentInfo->underly[1] = 'F';
+                        //     } else if (strcmp(instrumentInfo->productID.data(), "HO") == 0) {
+                        //         instrumentInfo->underly[0] = 'I';
+                        //         instrumentInfo->underly[1] = 'H';
+                        //     } else if (strcmp(instrumentInfo->productID.data(), "MO") == 0) {
+                        //         instrumentInfo->underly[0] = 'I';
+                        //         instrumentInfo->underly[1] = 'M';
+                        //     }
+                        //
+                        // }
                 }
                 instrumentInfo->exchanges = Utils::getExchangeType(pInstrument->ExchangeID);
                 instrumentInfo->tickSize = pInstrument->PriceTick;
@@ -426,12 +441,15 @@ namespace Cosmos {
                                                 CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
             // fprintf(stderr, "OnRspQryDepthMarketData %s %.3f\n", pDepthMarketData->InstrumentID, pDepthMarketData->LastPrice);
             if (pDepthMarketData != nullptr) {
+                if (strcmp(pDepthMarketData->UpdateTime, "") == 0) {
+                    return;
+                }
                 Types::MarketData *marketData = new Types::MarketData();
 
                 marketData->epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::high_resolution_clock::now().time_since_epoch()).count();
                 Utils::convertToMarketDaTa(pDepthMarketData, marketData);
-                marketData->isInit = 1;
+                marketData->isInit = true;
                 m_initMarketDataVector.emplace_back(marketData);
             }
             if (bIsLast == true) {
@@ -527,13 +545,15 @@ namespace Cosmos {
         };
 
         void CtpTrader::onUnderlyInfo(Types::UnderlyInfo const &underlyInfo) {
-            if (underlyInfo.isWithOption==false) {
-                auto insInfoItr = m_instrumentInfoMap.find(underlyInfo.instrumentID);
-                if (insInfoItr==m_instrumentInfoMap.end()) {
-                    assert(false);
-                }
-                m_driver->send(*(insInfoItr->second));
-            }else {
+
+
+            auto insInfoItr = m_instrumentInfoMap.find(underlyInfo.instrumentID);
+            if (insInfoItr==m_instrumentInfoMap.end()) {
+                assert(false);
+            }
+            m_driver->send(*(insInfoItr->second));
+
+            if (underlyInfo.isWithOption==true) {
                 for (auto &insInfoItr : m_instrumentInfoMap) {
                     //  fprintf(stderr, "onUnderlyInfo : %s %s\n", instrumentInfo->instrumentID.data(), instrumentInfo->underly.data());
                     if (strcmp(insInfoItr.second->underly.data(), underlyInfo.instrumentID.data()) == 0 ) {   //option
@@ -654,8 +674,8 @@ namespace Cosmos {
             auto posRetcode = this->_queryAllPosition();
             m_isLogin = true;
 
-            if ((insRetcode | posRetcode | marketRetcode || pendingOrderRetCode) != 0) {
-                return insRetcode | posRetcode | marketRetcode || pendingOrderRetCode;
+            if ((insRetcode || posRetcode || marketRetcode || pendingOrderRetCode) != 0) {
+                return insRetcode || posRetcode || marketRetcode || pendingOrderRetCode;
             }
 
             for (auto ctp_itr: m_ctpPositionMap) {
@@ -706,6 +726,7 @@ namespace Cosmos {
             if (itr == m_onQuerySymbolMap.end()) {
                 auto insInfoItr =  m_instrumentInfoMap.find(instrumentID);
                 if (insInfoItr == m_instrumentInfoMap.end()) {
+                    fprintf(stderr, "CtpTrader::getOnQuerySymbol : instrumentID=%s\n", instrumentID.data());
                     assert(false);
                 }
 
@@ -1026,8 +1047,10 @@ namespace Cosmos {
         void
         CtpTrader::OnErrRtnOrderAction(CThostFtdcOrderActionField *pOrderAction, CThostFtdcRspInfoField *pRspInfo) {
             if (pRspInfo->ErrorID != 0) {
-                spdlog::info("OnErrRtnOrderAction : OrderRef={}, OrderSysID={}, error {} {}", pOrderAction->OrderRef,
-                             pOrderAction->OrderSysID, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+                fprintf(stderr,"OnErrRtnOrderAction : instrument=%s, OrderRef=%s, OrderSysID=%s, error %d %s\n", pOrderAction->InstrumentID,
+                    pOrderAction->OrderRef, pOrderAction->OrderSysID, pRspInfo->ErrorID, pRspInfo->ErrorMsg );
+                spdlog::info("OnErrRtnOrderAction : instrument=%s,  OrderRef={}, OrderSysID={}, error {} {}",  pOrderAction->InstrumentID,
+                    pOrderAction->OrderRef, pOrderAction->OrderSysID, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
             }
         };
 

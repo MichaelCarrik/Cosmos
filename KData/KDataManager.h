@@ -55,7 +55,7 @@ namespace Cosmos {
                 auto series = this->getSeries(pMD->instrumentID, period);
                 int lastSeriesIndex = series->m_seriesIndex;
                 series->addTick(pMD, m_isDay);
-                if (pMD->isInit == 1) {
+                if (pMD->isInit == true) {
                     lastSeriesIndex = series->m_seriesIndex;
                     series->m_recordIndex = series->m_seriesIndex;
                 }
@@ -78,7 +78,7 @@ namespace Cosmos {
                     auto series = itrIns.second;
                     int lastSeriesIndex = series->m_seriesIndex;
                     series->addTick(pMD, m_isDay);
-                    if (pMD->isInit == 1) {
+                    if (pMD->isInit == true) {
                         lastSeriesIndex = series->m_seriesIndex;
                         series->m_recordIndex = series->m_seriesIndex;
                     }
@@ -287,7 +287,7 @@ namespace Cosmos {
             }
 
             double _calForwardPrice(const KSeries *underlySeries, std::map<int, CallPutSeries *> *calPutMap) {
-                if (m_isUseUnderlyPrice == true) {
+                if (m_isUseUnderlyPrice == true && underlySeries->m_lastPMD->bidVolume[0] > 0 && underlySeries->m_lastPMD->askVolume[0] > 0) {
                     return underlySeries->m_lastPMD->midPrice;
                 } else {
                     double minSpread = 9999;
@@ -296,8 +296,8 @@ namespace Cosmos {
                     for (auto &optionSeriesItr: *calPutMap) {
                         auto callSeries = optionSeriesItr.second->callSeries;
                         auto putSeries = optionSeriesItr.second->putSeries;
-                        if (callSeries->m_lastPMD->bidVolume[0] == 0 || callSeries->m_lastPMD->askVolume[0] == 0 ||
-                            putSeries->m_lastPMD->bidVolume[0] == 0 || putSeries->m_lastPMD->askVolume[0] == 0) {
+                        if (callSeries->m_lastPMD == nullptr || callSeries->m_lastPMD->bidVolume[0] == 0 || callSeries->m_lastPMD->askVolume[0] == 0 ||
+                            putSeries->m_lastPMD == nullptr || putSeries->m_lastPMD->bidVolume[0] == 0 || putSeries->m_lastPMD->askVolume[0] == 0) {
                             continue;
                         }
                         double spread = (callSeries->m_lastPMD->askPrice[0] - callSeries->m_lastPMD->bidPrice[0]) +
@@ -309,7 +309,7 @@ namespace Cosmos {
                         }
                     }
 
-                    if (minSpread > underlySeries->m_insInfo.tickSize * 5) {
+                    if (minSpread > underlySeries->m_insInfo.tickSize * 5 && underlySeries->m_lastPMD->bidVolume[0] > 0 && underlySeries->m_lastPMD->askVolume[0] > 0) {
                         forwardPrice = underlySeries->m_lastPMD->lastPrice;
                     }
 
@@ -332,14 +332,6 @@ namespace Cosmos {
                 }
             }
 
-            // void refreshSeries(int tradingday, bool isDay) {
-            //     for (auto itrSeries = m_allKLineSeries.begin(); itrSeries != m_allKLineSeries.end(); itrSeries++) {
-            //         for (auto itrSerie = itrSeries->second->begin(); itrSerie != itrSeries->second->end(); itrSerie++) {
-            //             auto tradingSession = Utils::TradingHours::getTradingSession(itrSeries->first);
-            //             itrSerie->second->refreshSeries(tradingday, *tradingSession, isDay);
-            //         }
-            //     }
-            // }
         };
     }
 }

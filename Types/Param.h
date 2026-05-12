@@ -31,12 +31,12 @@ namespace Cosmos{
 
         struct EngineParam {
             int affiThreadId{-1};
-            Product_t productID{""};
             int putResendTimeout{600};
             int hitResendTimeout{60};
             bool futurePreCloseToday{false};
             int futureMinVolume{1};
             int optionMinVolume{1};
+            int futureMinOV{1};
             int riskFutureMaxPosition{1};
             int riskOptionMaxPosition{1};
             int riskInformVolume{1000};

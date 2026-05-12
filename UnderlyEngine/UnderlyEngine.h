@@ -35,7 +35,6 @@ namespace Cosmos {
             double m_riskFreeR{0.023};
             std::unordered_map< Types::Instrument_t,   Types::Symbol * ,  Types::InstrumentHash> m_symbolMap;
             std::map<Types::Instrument_t, bool>  m_underlyInitMap;
-            Types::Instrument_t m_mainFutureInstr{""};
             KData::KDataManager * m_kDataManager{nullptr};
        //     Utils::MemoryList<  Types::OrderField ,  Types::OrderBuffSize> m_orderList{0};
         //    spdlog::logger* m_orderLog{nullptr};
@@ -51,8 +50,8 @@ namespace Cosmos {
 
         public:
             std::string m_engineName;
-          //    Driver::RealtimeDriver *m_driver;
-            Driver::TestDriver *m_driver;
+            Driver::RealtimeDriver *m_driver;
+            //Driver::TestDriver *m_driver;
             int m_policyID{-1};
 
             UnderlyEngine(decltype(m_driver) driver, std::string const& engineName, int policyID, int tradingDay,

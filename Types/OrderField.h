@@ -50,6 +50,7 @@ namespace Cosmos{
             OrderIntension OI;
             int insertPSTimes{0};
             HedgeType hedgeType;
+            std::array<char, 8> exchangeID{""};
             std::array<char, 31> orderSysID{""};
             std::array<char, 31> orderRef{""};
          //   ExchangeType exchangeId;

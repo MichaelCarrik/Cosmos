@@ -183,13 +183,28 @@ namespace Cosmos {
         }
 
 
-        bool TradingHours::isNoTradeAfterTime(Types::Product_t const &product, int psTime, int afterSeonds) {
+        bool TradingHours::isNoTradeAfterTime(Types::Product_t const &product, int psTime, int afterSeconds) {
             auto itr = TradingHours::m_productTradingSession.find(product);
             if (itr == TradingHours::m_productTradingSession.end()) {
                 assert(false && "cannot find in m_instrumentTradingSession");
             }
             for (auto &tradingPtr: itr->second.tradingVec) {
-                if (psTime - afterSeonds <= tradingPtr.beginTime && psTime >= tradingPtr.beginTime) {
+                if (psTime - afterSeconds <= tradingPtr.beginTime && psTime >= tradingPtr.beginTime) {
+                    //     spdlog::error("isNoTradeAfterTime : beginTime={}, psTime={}",tradingPtr.beginTime, psTime);
+                    return true;
+                }
+            }
+
+            return false;
+        }
+
+        bool TradingHours::isNoTradeAfterAuctionEnd( Types::Product_t const& product, int psTime ,int afterSeconds) {
+            auto itr = TradingHours::m_productTradingSession.find(product);
+            if (itr == TradingHours::m_productTradingSession.end()) {
+                assert(false && "cannot find in m_instrumentTradingSession");
+            }
+            for (auto &tradingPtr: itr->second.auctionVec) {
+                if (psTime - afterSeconds <= tradingPtr.endTime && psTime >= tradingPtr.endTime) {
                     //     spdlog::error("isNoTradeAfterTime : beginTime={}, psTime={}",tradingPtr.beginTime, psTime);
                     return true;
                 }

@@ -35,7 +35,7 @@ namespace Cosmos{
             Instrument_t instrumentID{""};
             Product_t productID{""};
             UpdateTime_t  updateTime;
-            int isInit{0};
+            bool isInit{false};
             MarketData() { memset(this, 0, sizeof(MarketData)); };
         };
 

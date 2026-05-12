@@ -44,15 +44,15 @@ namespace Cosmos {
             double m_alpha{0.7};
             double m_mark{2.0};
 
-            std::function<int(Types::Instrument_t const&, Types::KPeriod)> m_getUnderlyToBeginIndexFunc;
+
 
         public:
             CoveredVulture( std::string const &policyName, std::string const &engineName,
                           Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
                           int tradingDay, int expireDay, int maxOptionPosition,
                          double openAtDelta, decltype(m_getUnderlyToBeginIndexFunc) getUnderlyToBeginIndexFunc) :  IOptionPolicy(policyName, engineName, instrument,
-                                                kperiod, mv, multi,  tradingDay, expireDay), m_maxOptionPosition(maxOptionPosition),
-                                                m_openAtDelta(openAtDelta), m_getUnderlyToBeginIndexFunc(getUnderlyToBeginIndexFunc){
+                                                kperiod, mv, multi,  tradingDay, expireDay , getUnderlyToBeginIndexFunc), m_maxOptionPosition(maxOptionPosition),
+                                                m_openAtDelta(openAtDelta){
 
 
 
@@ -129,7 +129,6 @@ namespace Cosmos {
                 }
                 m_fiveMinCloseVec.emplace_back(lastUnderlyBar->m_close);
                 m_minsMA = Indicator::MA(m_fiveMinCloseVec, beginI, endI);
-
             }
 
             void _initVulture() {
@@ -277,8 +276,9 @@ namespace Cosmos {
                     }
                     else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {  //waiting all instrtuments finish KData
                         auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
-                        _updateVultureSignal(lastUnderlyBar);
+                        m_lastOptionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
 
+                        _updateVultureSignal(lastUnderlyBar);
                         if(m_tradingDay  != m_expireDay){
                             _isCloseMarketPosition(lastUnderlyBar);
 
@@ -392,12 +392,12 @@ namespace Cosmos {
             }
 
             void _setOpenPostion(PolicySymbolStruct & policySymbols, double targetDelta, char optionType, double underlyClose) {
-                auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
+            //    auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
 
-                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose, optionKBarIndex);
+                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose);
                 if(openAtSymbol != nullptr){
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
-                    auto symbolDelta = (openAtSeries->m_KDataVecs[optionKBarIndex])->delta;
+                    auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->delta;
                     addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps,
                                         symbolDelta, targetDelta);
                 }else {

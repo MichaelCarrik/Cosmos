@@ -106,7 +106,7 @@ int main(int argc, char *argv[]) {
 
     for (auto & params : configParamMap) {
         auto underlyngine = new Cosmos::Engine::UnderlyEngine(&driver,
-             params.first, policyID++, tradingDay, mySql, isDay, false);
+             params.first, policyID++, tradingDay, mySql, isDay, true);
         engines_map[params.first] = underlyngine;
         underlyngine->onInitParams(params.second);
     }

@@ -67,6 +67,8 @@ namespace Cosmos {
 
               static bool isNoTradeAfterTime( Types::Product_t const&, int psTime ,int);
 
+              static bool isNoTradeAfterAuctionEnd( Types::Product_t const&, int psTime ,int);
+
               static  FTTrait getProductTrait( Types::Product_t const &, int psTime, bool);
 
               static int getDayMinutesCount( Types::Product_t const &);

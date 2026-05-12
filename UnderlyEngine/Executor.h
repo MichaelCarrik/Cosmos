@@ -25,8 +25,8 @@ namespace Cosmos {
             int m_policyID{-1};
             std::string m_engineName;
             int m_tradingDay{0};
-            //Driver::RealtimeDriver *m_driver;
-             Driver::TestDriver *m_driver{nullptr};
+            Driver::RealtimeDriver *m_driver;
+            //Driver::TestDriver *m_driver{nullptr};
             spdlog::logger* m_positionLog{nullptr};
             spdlog::logger* m_orderLog{nullptr};
 
@@ -42,6 +42,9 @@ namespace Cosmos {
 
             void onOrderField(const Types::OrderField *inputOrder,
                                              Types::Symbol *symbol);
+
+            void logInitPos(const Types::Symbol *symbol);
+
             Types::OrderField * getNewOrderField();
             spdlog::logger* getPositionLog();
             int syncPosition(Types::Symbol *symbol, const int64_t epoch_time);
@@ -57,10 +60,10 @@ namespace Cosmos {
 
             bool _isCancelPendingOrder(const Types::Symbol *symbol, int,  int64_t epoch_time);
 
-            double _setFutureSignalPrice(const Types::Symbol *symbol, Types::OrderSide orderSide);
-            double _setOptionSignalPrice(const Types::Symbol *symbol, Types::OrderSide orderSide);
+            void _setFutureSignalPrice(Types::Signal&, const Types::Symbol *symbol);
+            void _setOptionSignalPrice(Types::Signal&, const Types::Symbol* );
 
-            double getOptionPrioPrice(const Types::Symbol *symbol, char, Types::OrderSide orderSide);
+            double getOptionPrioPrice( const Types::Symbol *symbol, char , Types::OrderSide orderSide);
 
             void _setInitLog();
 

@@ -62,55 +62,22 @@ namespace Cosmos {
                 m_underlySeries = inputSeries;
             }
 
-            template<class T>
-            double getKFairClose(T *kdata) {
-                 if (kdata->m_bidVolume > 0 && kdata->m_askVolume > 0) {
-                    return (kdata->m_bidPrice + kdata->m_askPrice) * 0.5;
-                } else {
-                   return kdata->m_close;
-                }
-            }
 
-            void calGreeks(int updateUnderlyIndex, int optionUpdateIndex, double forwardPrice, int psTime) {
 
-                auto optionKData = m_KDataVecs[optionUpdateIndex];
+            void calGreeks(int optionUpdateIndex, double optionFairPrice, double forwardPrice, double bidPrioPrice, double askPrioPrice) {
+
+                 auto optionKData = m_KDataVecs[optionUpdateIndex];
                 optionKData->m_forwardPrice = forwardPrice;
-                auto optionFairPrice = getKFairClose(optionKData);
+                // optionKData->m_forwardPrice = forwardPrice;
+                // auto optionFairPrice = getKFairClose(optionKData);
+                //
+                // auto underlyKData = this->m_underlySeries->m_KDataVecs[updateUnderlyIndex];
+                //
 
-                auto underlyKData = this->m_underlySeries->m_KDataVecs[updateUnderlyIndex];
-
-                if (strcmp(optionKData->m_instrument.data() , "MO2603C8400") ==0 && m_Period == Types::KPeriod::Min15 &&
-                    strcmp(optionKData->m_updateTimeBegin.data(), "14:45:00") ==0) {
-                    int  a = 1;
-                }
-
-                if (optionKData->m_tradingday !=0 && (underlyKData->m_tradingday != optionKData->m_tradingday ||
-                    strcmp(underlyKData->m_updateTimeBegin.data(), optionKData->m_updateTimeBegin.data()) != 0) ) {
-
-                    fprintf(stderr, "calGreeks error : underly=%s(%d, %s) , optionKD=%s(%d, %s), period=%d\n",
-                            underlyKData->m_instrument.data(),
-                            underlyKData->m_tradingday, underlyKData->m_updateTimeBegin.data(),
-                            this->m_insInfo.instrumentID.data(),
-                            optionKData->m_tradingday, optionKData->m_updateTimeBegin.data(),
-                            Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)]);
-                      if (strcmp(this->m_insInfo.productID.data(),"MO")!=0 &&
-                        strcmp(this->m_insInfo.productID.data(),"HO")!=0 &&
-                        strcmp(this->m_insInfo.productID.data(),"IO")!=0 ) {
-                        assert(false);
-                    }
-                }
-//                    if (strcmp(this->m_insInfo.instrumentID.data(), "m2412-C-3000") == 0 ||
-//                        strcmp(this->m_insInfo.instrumentID.data(), "m2412-P-3000") == 0) {
-//                        int a = 1;
-//                    }
                 try {
                     this->m_KDataVecs[optionUpdateIndex]->IV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
                                                                                           optionFairPrice);
 
-                    this->m_KDataVecs[optionUpdateIndex]->bidIV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
-                                                                                optionKData->m_bidPrice);
-                    this->m_KDataVecs[optionUpdateIndex]->askIV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
-                                                                                optionKData->m_askPrice);
 
                     m_BSModelQuantLib->calGreeks(    optionKData->m_forwardPrice, this->m_KDataVecs[optionUpdateIndex]->IV,
                                                  this->m_KDataVecs[optionUpdateIndex]->delta,
@@ -118,7 +85,7 @@ namespace Cosmos {
                                                  this->m_KDataVecs[optionUpdateIndex]->theta,
                                                  this->m_KDataVecs[optionUpdateIndex]->vega);
 
-                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->delta) < 0.001) {
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->delta) < 0.00001) {
                         this->m_KDataVecs[optionUpdateIndex]->delta = m_lastDelta;
                     }
                     m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->delta;
@@ -136,7 +103,7 @@ namespace Cosmos {
                         //         optionFairPrice);
 
               //      }
-                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->delta) < 0.001) {
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->delta) < 0.00001) {
                         this->m_KDataVecs[optionUpdateIndex]->delta = m_lastDelta;
                     }
                     m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->delta;
@@ -146,10 +113,27 @@ namespace Cosmos {
                     //   return 1;
 
                 }
+
+                // try {
+                //     this->m_KDataVecs[optionUpdateIndex]->bidIV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
+                //                                                         bidPrioPrice);
+                // }catch (...) {
+                //     //    std::cerr << "unknown error" << std::endl;
+                //     //   return 1;
+                //
+                // }
+                // try {
+                //     this->m_KDataVecs[optionUpdateIndex]->askIV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
+                //                                                        askPrioPrice);
+                // }catch (...) {
+                //     //    std::cerr << "unknown error" << std::endl;
+                //     //   return 1;
+                //
+                // }
             }
 
             void ffill( int psTime ) {
-                while (m_kseriesTime->isLast() == false and psTime > m_kTime->endPstime) {  //qianzhi bu
+                while (m_kseriesTime->isLast() == false and psTime >= m_kTime->endPstime) {  //qianzhi bu
                     if (m_lastPMD ==nullptr) {
                         int a = 1;
                     }
@@ -163,7 +147,7 @@ namespace Cosmos {
 
                     m_seriesIndex += 1;
                     m_kTime = m_kseriesTime->getNext();
-                    if (psTime > m_kTime->endPstime) {
+                    if (psTime >= m_kTime->endPstime) {
                         //                        fprintf(stderr, "init k pmd 2 : instrumentid=%s, updateTime=%s, millisec=%d, volume=%d, m_seriesIndex=%d, m_kseries.size()=%d\n",
                         //                                pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, m_seriesIndex, m_kseries.size());
 
@@ -230,6 +214,8 @@ namespace Cosmos {
             void setHistoryKLine(std::vector<KData *> &ktimeVec) {
 
                 for (int i = ktimeVec.size() - 1; i >= 0; i--) {
+                    ktimeVec[i]->m_beginPsTime += m_biasSeconds;
+                    ktimeVec[i]->m_endPsTime += m_biasSeconds;
                     m_KDataVecs.emplace_back(ktimeVec[i]);
                     m_seriesIndex++;
 
@@ -237,7 +223,7 @@ namespace Cosmos {
                 //    m_seriesIndex = ktimeVec.size()-1 >0 ? ktimeVec.size()-1 : 0;
                 if (ktimeVec.size() > 0) {
                     int lastTradingday = ktimeVec[0]->m_tradingday;
-                    int lastKBeginTime =  Utils::ToPsSeconds(ktimeVec[0]->m_updateTimeBegin, false);
+                    int lastKBeginTime = ktimeVec[0]->m_beginPsTime; // Utils::ToPsSeconds(ktimeVec[0]->m_updateTimeBegin, false);
                     m_kseriesTime->align(lastTradingday, lastKBeginTime);
                 }
                 int remainToday = 0;

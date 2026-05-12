@@ -49,7 +49,7 @@ namespace Cosmos{
 
         enum class ExecuteIntension{EIPut, EIHit, EIMid};
 
-        enum class OrderIntension{OIPut, OIHit, OIMid, OINoT};
+        enum class OrderIntension{OIPut, OIHit, OIMid, OFIHit, OINoT};
 
         enum class ExchangeType{CFFEX, SHFE, ZCE, DCE, INE, GFE};
 
@@ -111,7 +111,9 @@ namespace Cosmos{
         static std::unordered_map<OrderIntension, std::array<char,9>>  OIMap{
                         {OrderIntension::OIPut,  std::array<char,9>{"OIPut"}},
                         {OrderIntension::OIHit,  std::array<char,9>{"OIHit"}},
-                        {OrderIntension::OIMid,  std::array<char,9>{"OIMid"}}};
+                        {OrderIntension::OIMid,  std::array<char,9>{"OIMid"}},
+                        {OrderIntension::OFIHit,  std::array<char,9>{"OFIHit"}},
+                        {OrderIntension::OINoT,  std::array<char,9>{"OINoT"}}};
 
         // static const std::unordered_map<std::string, ExecuteIntension> configParamToOIMap{
         //                 {"EIPut", ExecuteIntension::EIPut},

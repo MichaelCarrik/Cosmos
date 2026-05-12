@@ -21,8 +21,8 @@ namespace Cosmos {
             SellStrangleV2(std::string const &policyName, std::string const &engineName,
                           Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
                               int tradingDay, int expireDay, int maxOptionPos,
-                           int isRefreshDelta, double openAtDelta, double biasRation) : Strangle(policyName, engineName,
-                    instrument, kperiod, mv, multi,  tradingDay, expireDay),
+                           int isRefreshDelta, double openAtDelta, double biasRation, decltype(m_getUnderlyToBeginIndexFunc) getUnderlyToBeginIndexFunc) : Strangle(policyName, engineName,
+                    instrument, kperiod, mv, multi,  tradingDay, expireDay, getUnderlyToBeginIndexFunc),
                 m_maxOptionPos(maxOptionPos), m_isRefreshDelta(isRefreshDelta), m_openAtDelta(openAtDelta),
                 m_biasRation(biasRation) {
                 if (m_openAtDelta < 0.1 || m_openAtDelta > 0.5) {
@@ -109,7 +109,7 @@ namespace Cosmos {
                         }
 
                         if (isFind==true) {
-                            auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex - 1];
+                            auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_lastUnderlyBarIndex];
 
                             double allCallDelta = getAllHoldDelta(m_callPolicySymbols);
                             double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
@@ -132,9 +132,9 @@ namespace Cosmos {
                 }
             };
 
-            virtual void start (
-                std::unordered_map<Types::Instrument_t, Types::Symbol *, Types::InstrumentHash> &
+            virtual void start ( std::unordered_map<Types::Instrument_t, Types::Symbol *, Types::InstrumentHash> &
                 inputSymbolMap) override {
+                m_underlyToBeginIndex =  m_getUnderlyToBeginIndexFunc(m_underlyInstrument, m_kperiod);
                 char configPath[256]{""};
                 sprintf(configPath, "./logs/policy/%s_%s_%s.txt", m_engineName.c_str(), m_policyName.c_str(),
                         m_underlyInstrument.data());
@@ -194,7 +194,16 @@ namespace Cosmos {
                         m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
                     } else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {
                         //    fprintf(stderr,"instrument=%s, updateTime=%s\n", pMD->instrumentID.data(), pMD->updateTime.data());
-                        auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex - 1];
+
+
+
+                        auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_lastUnderlyBarIndex];
+                        m_lastOptionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
+
+                        if (Utils::TradingHours::isNoTradeAfterAuctionEnd( m_underlyKseries->m_insInfo.productID, pMD->psSecond ,240) == true) {
+                            return;
+                        }
+
 
                         double allCallDelta = getAllHoldDelta(m_callPolicySymbols);
                         double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
@@ -203,7 +212,7 @@ namespace Cosmos {
                         bool isZeroPut = isHaveZeroDeltaPos(m_putPolicySymbols);
 
                         if (isZeroCall == true || isZeroPut == true) {
-                            spdlog::info("policyName=%s, updateTime=%s, isZeroCall=%d, isZeroPut=%d\n",
+                            spdlog::info("policyName={}, updateTime={}, isZeroCall={}, isZeroPut={}\n",
                                          m_policyName.c_str(), pMD->updateTime.data(), isZeroCall, isZeroPut);
                         }
 

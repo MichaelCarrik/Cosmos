@@ -40,23 +40,24 @@ namespace Cosmos {
             for (auto &initMarket: initMarketDataVector) {
                 auto itr = m_subScribeInstruments.find(initMarket->instrumentID);
                 if (itr != m_subScribeInstruments.end()) {
-                    if (Utils::FTTrait::FT_TRADING == Utils::TradingHours::getProductTrait(
-                            initMarket->productID, initMarket->psSecond, m_isDay) ||
-                        Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
-                             initMarket->productID, initMarket->psSecond,  m_isDay) ||
-                            (initMarket->psSecond >= 15 * 3600  &&  initMarket->psSecond <= 17 * 3600)) {
-                        auto event = itr->second->eventDataList.getNewMemory();
-                        event->point = initMarket;
-                        event->eventType = Types::EventType::marketEvent;
-                        for (auto i: itr->second->subscribePolicy) {
-                            if (initMarket == nullptr) {
-                                assert(false && "market is nullptr");
-                            }
+                    // if (Utils::FTTrait::FT_TRADING == Utils::TradingHours::getProductTrait(
+                    //         initMarket->productID, initMarket->psSecond, m_isDay) ||
+                    //     Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
+                    //          initMarket->productID, initMarket->psSecond,  m_isDay) ||
+                    //         (initMarket->psSecond >= 15 * 3600  &&  initMarket->psSecond <= 17 * 3600))
+                        {
+                            auto event = itr->second->eventDataList.getNewMemory();
+                            event->point = initMarket;
+                            event->eventType = Types::EventType::marketEvent;
+                            for (auto i: itr->second->subscribePolicy) {
+                                if (initMarket == nullptr) {
+                                    assert(false && "market is nullptr");
+                                }
 
-                            // fprintf(stderr, "initMarket %s %s\n", initMarket->instrumentID.data(),
-                            //         initMarket->updateTime.data());
+                                // fprintf(stderr, "initMarket %s %s\n", initMarket->instrumentID.data(),
+                                //         initMarket->updateTime.data());
 
-                            m_driver->callback_asyncEventData(event, i);
+                                m_driver->callback_asyncEventData(event, i);
                         }
                     }
                 }
@@ -125,7 +126,7 @@ namespace Cosmos {
                 marketData->epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
                     std::chrono::high_resolution_clock::now().time_since_epoch()).count();
                 Utils::convertToMarketDaTa(pDepthMarketData, marketData);
-                marketData->isInit = 0;
+                marketData->isInit = false;
                 if (Utils::FTTrait::FT_TRADING == Utils::TradingHours::getProductTrait(
                         marketData->productID, marketData->psSecond, m_isDay ) ||
                     Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(

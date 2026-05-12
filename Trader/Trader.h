@@ -72,7 +72,7 @@ namespace Cosmos{
                 return &_traderSpi->m_initMarketDataVector;
             };
 
-            decltype(_traderSpi->m_instrumentInfoMap) * getInstrumentInfoVec() {
+            decltype(_traderSpi->m_instrumentInfoMap) * getInstrumentInfoMap() {
                 return &_traderSpi->m_instrumentInfoMap;
             }
 

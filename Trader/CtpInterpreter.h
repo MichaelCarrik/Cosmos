@@ -139,7 +139,7 @@ namespace Cosmos {
                 fprintf(stderr,"sendOrder : instrument=%s, requestID=%d orderRef=%s, orderPrice=%.3f, orderVolume=%d\n",
                         orderField->instrumentID.data(), orderField->tOrderID, pCtpOrder->OrderRef, pCtpOrder->LimitPrice,
                         pCtpOrder->VolumeTotalOriginal);
-         //       nRetCode = m_pTradeApi->ReqOrderInsert(pCtpOrder, pCtpOrder->RequestID);
+                nRetCode = m_pTradeApi->ReqOrderInsert(pCtpOrder, pCtpOrder->RequestID);
                 m_sendOrderLock.unlock();
                 if (nRetCode != 0) {
                     orderField->orderStatus =  Types::OrderStatus::failed;
@@ -149,17 +149,18 @@ namespace Cosmos {
 
 
             void cancelOrder( Types::OrderField const & inputOrder, int64_t& epoch_time) {
-                auto order = m_orderList->getMemoryById(inputOrder.tOrderID);
-                if (order != nullptr) {
+           //     auto order = m_orderList->getMemoryById(inputOrder.tOrderID);
+          //      if (order != nullptr) {
                     int assignID;
                     auto field = m_ctpOrderActionList.getNewMemory(assignID);
 
                     strcpy(field->InstrumentID, inputOrder.instrumentID.data());
                     field->RequestID = inputOrder.tOrderID;
-                    field->FrontID = m_frontID;
-                    field->SessionID = m_sessionID;
-                    strcpy(field->OrderRef, order->orderRef.data());
-                    strcpy(field->OrderSysID, order->orderSysID.data());
+              //      field->FrontID = m_frontID;
+               //     field->SessionID = m_sessionID;
+               //     strcpy(field->OrderRef, inputOrder.orderRef.data());
+                    strcpy(field->OrderSysID, inputOrder.orderSysID.data());
+                    strcpy(field->ExchangeID, inputOrder.exchangeID.data());
                     field->ActionFlag = THOST_FTDC_AF_Delete;
                     strcpy(field->BrokerID, m_ctpConnection.brokerId.c_str());
                     strcpy(field->UserID, m_ctpConnection.username.c_str());
@@ -169,7 +170,7 @@ namespace Cosmos {
                     //                            "cancelOrder : frontid= {}, sessionid={}, OrderSysId={}, iRuquest={},  orderRef={}, ret={}, traderOrderID={}, policyOrderID={}",
                     //                            field->FrontID, field->SessionID, field->OrderSysID, field->RequestID, field->OrderRef,
                     //                            ret, inputOrder.tradeOrderID, inputOrder.policyOrderID);
-                }
+           //     }
             }
 
 
@@ -209,6 +210,7 @@ namespace Cosmos {
                         assert(ctpOrder->RequestID == order->tOrderID);
                         strcpy(order->orderSysID.data(), ctpOrder->OrderSysID);
                         strcpy(order->orderRef.data(), ctpOrder->OrderRef);
+                        strcpy(order->exchangeID.data(), ctpOrder->ExchangeID);
                         updateOrder_with(ctpOrder, order);
                         return order;
                     }

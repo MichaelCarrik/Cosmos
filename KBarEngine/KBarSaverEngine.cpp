@@ -13,8 +13,11 @@ namespace Cosmos {
         void KBarSaverEngine::onStart() {
             m_kDataManager = new KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice, m_mysql,0);
 
-            for (auto &insInfo: *m_tradeInsInfoVec) {
-                m_instrumentInfoMap[insInfo->instrumentID] = insInfo;
+            for (auto &itrInsInfo: *m_tradeInsInfoMap) {
+                // if (strcmp(itrInsInfo.first.data(), "IO2606-C-3400") == 0) {
+                //     int a = 1;
+                // }
+                m_instrumentInfoMap[itrInsInfo.first] = itrInsInfo.second;
             }
 
             for (auto &insItr: m_instrumentInfoMap) {
@@ -32,6 +35,7 @@ namespace Cosmos {
                     if (itr == m_instrumentInfoMap.end()) {
                         Types::InstrumentInfo *underlyInsInfo = new Types::InstrumentInfo();
                         strcpy(underlyInsInfo->instrumentID.data(), insItr.second->underly.data());
+                        Utils::InstrumentToProduct(underlyInsInfo->instrumentID, underlyInsInfo->productID);
                         underlyInsInfo->productIDClass = Types::ProductClass::future;
                         m_instrumentInfoMap[insItr.second->underly] = underlyInsInfo;
                         Cosmos::Types::SubScribeQuote subScribeUnderly;
@@ -82,14 +86,14 @@ namespace Cosmos {
 
             sprintf(m_TableInsertBufferVec[4].insertHead.data(), "%s",
               "INSERT INTO optionMinutes_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
-              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,IVBid,IVAsk,delta,gamma,vega,theta) "
+              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta) "
                       "VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[4]);
 
 
             sprintf(m_TableInsertBufferVec[5].insertHead.data(), "%s",
               "INSERT INTO optionOneMinute_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
-              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,IVBid,IVAsk,delta,gamma,vega,theta) "
+              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta) "
                       "VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[5]);
 
@@ -176,9 +180,6 @@ namespace Cosmos {
 
         void KBarSaverEngine::onRtnSubScribeQuote(Types::OnSubScribeQuote const &onSubScribeQuote) {
             //  fprintf(stderr, "onRtnSubScribeQuote : instrument=%s\n", onSubScribeQuote.instrumentID.data());
-            if (strcmp(onSubScribeQuote.instrumentID.data(), "CJ605C12400") == 0) {
-                int a = 1;
-            }
             if (m_kDataManager->m_allKLineSeries.find(onSubScribeQuote.instrumentID) ==
                 m_kDataManager->m_allKLineSeries.end()) {
                 auto itrInsInfo = m_instrumentInfoMap.find(onSubScribeQuote.instrumentID);
@@ -216,16 +217,13 @@ namespace Cosmos {
                 // if (strcmp(pMD->instrumentID.data(), "lc2605") !=0 ) {
                 //     return;
                 // }
-                fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
-                        pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
-                        pMD->epoch_time);
+                // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                //         pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit,
+                //         pMD->epoch_time);
                 auto startTime = std::chrono::duration_cast<std::chrono::microseconds>(
                std::chrono::high_resolution_clock::now().time_since_epoch()).count();
                 for (auto period: Types::m_kperoidVec) {
-
                     auto updateSeries = m_kDataManager->KMAddTick(pMD, period);
-
-
                     if (updateSeries != nullptr) {
                         if (updateSeries->m_insInfo.productIDClass == Types::ProductClass::future) {
                                saveKline(updateSeries, period);
@@ -254,6 +252,10 @@ namespace Cosmos {
             while (updateSeries->m_recordIndex < updateSeries->m_seriesIndex) {
                 _saveKline(updateSeries, updateSeries->m_recordIndex, period);
                 updateSeries->m_recordIndex += 1;
+            }
+
+            if (updateSeries->m_Period == Types::KPeriod::D1 && updateSeries->m_recordIndex==0 && updateSeries->m_seriesIndex ==0) {
+                _saveKline(updateSeries, updateSeries->m_recordIndex, period);
             }
         }
 
@@ -315,7 +317,7 @@ namespace Cosmos {
                     kline->isInsert = true;
                 }else  {
                     auto kbarsRows = m_kbarRowsPool.getNewMemory();
-                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%s\',\'%c\',%.1f,%d,%d,%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f)",
+                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%s\',\'%c\',%.1f,%d,%d,%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f)",
                     kline->m_instrument.data(),series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice, kline->m_tradingday,
                                   series->m_insInfo.expireDate,
                                   Types::KPeroidToIntervalVec[static_cast<int>(period)],
@@ -323,7 +325,7 @@ namespace Cosmos {
                                   kline->m_open, kline->m_high, kline->m_low,
                                   kline->m_close,  kline->m_forwardPrice,(double) kline->m_volume, kline->m_amount, kline->m_oi,
                                   kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume,
-                                  kline->IV, kline->bidIV,  kline->askIV,  kline->delta, kline->gamma, kline->vega, kline->theta);
+                                  kline->IV,  kline->delta, kline->gamma, kline->vega, kline->theta);
                     kbarsRows->table =  period == Types::KPeriod::Min1 ? KBars_T::optionOneMinute : KBars_T::optionMinutes;
                   //  if (kbarsRows->table == KBars_T::optionOneMinute) {
                         m_sqlThreadQueue.write(*kbarsRows);

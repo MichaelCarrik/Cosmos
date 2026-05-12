@@ -66,7 +66,11 @@ namespace Cosmos {
         static bool isSTGInstrument(const char *instrument) {
             if ((instrument[0] == 'S' && instrument[1] == 'T' & instrument[2] == 'G') ||
                 (instrument[0] == 'P' && instrument[1] == 'R' & instrument[2] == 'T') ||
-                (instrument[0] == 'S' && instrument[1] == 'T' & instrument[2] == 'D')) {
+                (instrument[0] == 'S' && instrument[1] == 'T' & instrument[2] == 'D') ||
+                (instrument[0] == 'S' && instrument[1] == 'P') ||
+                (instrument[0] == 'I' && instrument[1] == 'P') ||
+                (instrument[0] == 'B' && instrument[1] == 'E' && instrument[2] == 'S') ||
+                (instrument[0] == 'B' && instrument[1] == 'L' && instrument[2] == 'S')) {
                 return true;
             }
             return false;
@@ -83,6 +87,14 @@ namespace Cosmos {
                         assert(false && "InstrumentToProduct");
                     }
                 }
+
+            if (strcmp(productId.data(), "MO") == 0) {
+                strcpy(productId.data(), "IM");
+            } else if (strcmp(productId.data(), "IO") == 0) {
+                strcpy(productId.data(), "IF");
+            } else if (strcmp(productId.data(), "HO") == 0) {
+                strcpy(productId.data(), "IH");
+            }
         }
 
         static void parseInstruemnt(Types::Instrument_t const &instrument, Types::Instrument_t &underly,
@@ -99,15 +111,15 @@ namespace Cosmos {
                 Types::Instrument_t strickStr{""};
                 std::copy(std::begin(instrument) + 7, std::end(instrument), std::begin(strickStr));
                 strickPrice = atof(strickStr.data());
-                Types::Product_t productId{""};
-                InstrumentToProduct(instrument, productId);
-                if (strcmp(productId.data(), "IO") == 0) {
+                // Types::Product_t productId{""};
+                // InstrumentToProduct(instrument, productId);
+                if ( instrument[0] == 'I'&& instrument[1] == 'O') {
                     underly[0] = 'I';
                     underly[1] = 'F';
-                } else if (strcmp(productId.data(), "HO") == 0) {
+                } else if (instrument[0] == 'H'&& instrument[1] == 'O') {
                     underly[0] = 'I';
                     underly[1] = 'H';
-                } else if (strcmp(productId.data(), "MO") == 0) {
+                } else if (instrument[0] == 'M'&& instrument[1] == 'O') {
                     underly[0] = 'I';
                     underly[1] = 'M';
                 }
@@ -124,7 +136,9 @@ namespace Cosmos {
         }
 
         static bool updateOrder(Types::OrderField *orderField, const Types::OrderField *inputOrder) {
-            strcpy(orderField->orderSysID.data(), inputOrder->orderSysID.data());
+       //     strcpy(orderField->orderSysID.data(), inputOrder->orderSysID.data());
+            std::copy(std::begin(inputOrder->orderSysID), std::end(inputOrder->orderSysID), std::begin(orderField->orderSysID));
+            std::copy(std::begin(inputOrder->exchangeID), std::end(inputOrder->exchangeID), std::begin(orderField->exchangeID));
             orderField->lastFilledPrice = inputOrder->lastFilledPrice;
             orderField->lastFilledVolume = inputOrder->lastFilledVolume;
             orderField->filledVolume = inputOrder->filledVolume;

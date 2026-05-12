@@ -98,6 +98,7 @@ namespace Cosmos {
                     if (itr == m_instrumentInfoMap.end()) {
                         Types::InstrumentInfo underlyInsInfo;
                         strcpy(underlyInsInfo.instrumentID.data(), ins.underly.data());
+                        Utils::InstrumentToProduct(underlyInsInfo.instrumentID, underlyInsInfo.productID);
                         underlyInsInfo.productIDClass =  Types::ProductClass::future;
                         m_instrumentInfoMap[ins.underly] = underlyInsInfo;
                         Cosmos::Types::SubScribeQuote subScribeUnderly;
@@ -118,7 +119,7 @@ namespace Cosmos {
             
             void onRtnSubScribeQuote( Types::OnSubScribeQuote const &onSubScribeQuote) {
              //   fprintf(stderr, "onRtnSubScribeQuote : instrument=%s\n", onSubScribeQuote.instrumentID.data());
-                if (strcmp(onSubScribeQuote.instrumentID.data(), "MA608")==0) {
+                if (strcmp(onSubScribeQuote.instrumentID.data(), "IH2612")==0) {
                      int a = 1;
                 }
                 if (m_kDataManager->m_allKLineSeries.find(onSubScribeQuote.instrumentID) ==
@@ -132,8 +133,6 @@ namespace Cosmos {
             };
 
             void initKSeries(int tradingday, bool isDay, Types::InstrumentInfo const &insInfo) {
-                Utils::TradingHours::initInstrumentTradingHours(insInfo.instrumentID);
-
                 std::vector< KData::KData *> hisKline;
                 for (auto period: Types::m_kperoidVec) {
                     m_kDataManager->initKSeries(insInfo, period, tradingday, m_riskFreeR,
@@ -278,20 +277,20 @@ namespace Cosmos {
                     m_optionDayQueue.emplace_back(saveK);
                 } else if (period ==  Types::KPeriod::Min1 and strcmp(saveK.instrument.data(), "") != 0) {
                     sprintf(saveK.sql.data(),
-                            "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
+                            "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f",
                             kline->m_instrument.data(), series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice,
                             kline->m_tradingday,series->m_insInfo.expireDate, Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(), kline->m_updateTimeEnd.data(), kline->m_productID.data(),
                             kline->m_open, kline->m_high, kline->m_low,
                             kline->m_close, kline->m_forwardPrice, (double) kline->m_volume, kline->m_amount, kline->m_oi,
                             kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume,
-                            kline->IV, kline->bidIV, kline->askIV, kline->delta, kline->gamma, kline->vega, kline->theta);
+                            kline->IV, kline->delta, kline->gamma, kline->vega, kline->theta);
                     m_optionOneMinuteQueue.emplace_back(saveK);
                 } else if (period == Cosmos::Types::KPeriod::Min5 ||
                            period == Cosmos::Types::KPeriod::Min15 ||
                            period == Cosmos::Types::KPeriod::Min30) {
                     sprintf(saveK.sql.data(),
-                            "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f",
+                            "%s,%s,%c,%.1f,%d,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f",
                             kline->m_instrument.data(),series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice, kline->m_tradingday,
                             series->m_insInfo.expireDate,
                             Types::KPeroidToIntervalVec[static_cast<int>(period)],
@@ -299,7 +298,7 @@ namespace Cosmos {
                             kline->m_open, kline->m_high, kline->m_low,
                             kline->m_close,  kline->m_forwardPrice,(double) kline->m_volume, kline->m_amount, kline->m_oi,
                             kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume,
-                            kline->IV, kline->bidIV,  kline->askIV,  kline->delta, kline->gamma, kline->vega, kline->theta);
+                            kline->IV,  kline->delta, kline->gamma, kline->vega, kline->theta);
            //         fprintf(stderr, "%s", saveK.sql.data());
                     m_optionMinutesQueue.emplace_back(saveK);
                 }

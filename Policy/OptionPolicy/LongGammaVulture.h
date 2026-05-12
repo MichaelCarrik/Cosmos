@@ -44,15 +44,15 @@ namespace Cosmos {
             double m_alpha{0.7};
             double m_mark{2.0};
 
-            std::function<int(Types::Instrument_t const&, Types::KPeriod)> m_getUnderlyToBeginIndexFunc;
+        //    std::function<int(Types::Instrument_t const&, Types::KPeriod)> m_getUnderlyToBeginIndexFunc;
 
         public:
             LongGammaVulture( std::string const &policyName, std::string const &engineName,
                           Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
                           int tradingDay, int expireDay, int maxOptionPosition,
                          double openAtDelta, decltype(m_getUnderlyToBeginIndexFunc) getUnderlyToBeginIndexFunc) :  IOptionPolicy(policyName, engineName, instrument,
-                                                kperiod, mv, multi,  tradingDay, expireDay), m_maxOptionPosition(maxOptionPosition),
-                                                m_openAtDelta(openAtDelta), m_getUnderlyToBeginIndexFunc(getUnderlyToBeginIndexFunc){
+                                                kperiod, mv, multi,  tradingDay, expireDay, getUnderlyToBeginIndexFunc), m_maxOptionPosition(maxOptionPosition),
+                                                m_openAtDelta(openAtDelta){
 
 
 
@@ -277,6 +277,7 @@ namespace Cosmos {
                     }
                     else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {  //waiting all instrtuments finish KData
                         auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
+                        m_lastOptionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                         _updateVultureSignal(lastUnderlyBar);
 
                         if(m_tradingDay  != m_expireDay){
@@ -308,11 +309,11 @@ namespace Cosmos {
             void _writePolicyLog(const KData::KData *lastUnderlyKB, const Types::MarketData * pMD) {
 
                 m_configLog->info("configIndex={}, instr={}, {}, {}, {}, {:03d}, close={:.3f}, mktPos={}, preMktPos={}, sgnPrice={:.3f}, "
-                                  "strikePrice={:.3f}, minsMA={:.3f}, upBand={:.3f}, downBand={:.3f}",
+                                  "strikePrice={:.3f}, minsMA={:.3f}, upBand={:.3f}, downBand={:.3f}, seriesIndex={}",
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
                                   lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice,
-                                  m_minsMA, m_upBand, m_downBand);
+                                  m_minsMA, m_upBand, m_downBand, m_lastUnderlyBarIndex);
                 _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
                 _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
             }
@@ -394,12 +395,12 @@ namespace Cosmos {
             }
 
             void _setOpenPostion(PolicySymbolStruct & policySymbols, double targetDelta, char optionType, double underlyClose) {
-                auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
+            //    auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
 
-                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose, optionKBarIndex);
+                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose);
                 if(openAtSymbol != nullptr){
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
-                    auto symbolDelta = (openAtSeries->m_KDataVecs[optionKBarIndex])->delta;
+                    auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->delta;
 
                     addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps,
                                         symbolDelta, targetDelta);

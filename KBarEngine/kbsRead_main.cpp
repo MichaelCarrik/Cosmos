@@ -22,14 +22,14 @@
 void getInstruments(int tradingday, std::string &futureProductId, std::string &rawPath,
                     std::vector<Cosmos::Types::InstrumentInfo> &optionSymbols,
                     std::vector<Cosmos::Types::InstrumentInfo> &futureSymbols, int isDay) {
-    std::string optionProductId = futureProductId;
-    if (strcmp(futureProductId.c_str(), "IM") == 0) {
-        optionProductId = std::string("MO");
-    } else if (strcmp(futureProductId.c_str(), "IF") == 0) {
-        optionProductId = std::string("IO");
-    } else if (strcmp(futureProductId.c_str(), "IH") == 0) {
-        optionProductId = std::string("HO");
-    }
+  // std::string optionProductId = futureProductId;
+    // if (strcmp(futureProductId.c_str(), "IM") == 0) {
+    //     optionProductId = std::string("MO");
+    // } else if (strcmp(futureProductId.c_str(), "IF") == 0) {
+    //     optionProductId = std::string("IO");
+    // } else if (strcmp(futureProductId.c_str(), "IH") == 0) {
+    //     optionProductId = std::string("HO");
+    // }
 
     char buff[256]{""};
     sprintf(buff, "%s/%d_%s/instruments", rawPath.c_str(), tradingday, isDay == true ? "day" : "ngt");
@@ -73,6 +73,9 @@ void getInstruments(int tradingday, std::string &futureProductId, std::string &r
                 strcpy(instrumentInfo.instrumentID.data(), line_vector[1].c_str());
                 instrumentInfo.productIDClass = Cosmos::Types::ProductClass::future; // atoi(line_vector[6].c_str());
                 instrumentInfo.expireDate = atoi(line_vector[17].c_str());
+                // if (strcmp(instrumentInfo.instrumentID.data(), "IH2606") == 0) {
+                //     int a = 1;
+                // }
                 Cosmos::Utils::InstrumentToProduct(instrumentInfo.instrumentID, instrumentInfo.productID);
                 if (strcmp(futureProductId.data(), instrumentInfo.productID.data()) == 0) {
                     futureSymbols.emplace_back(instrumentInfo);
@@ -92,7 +95,7 @@ void getInstruments(int tradingday, std::string &futureProductId, std::string &r
                 Cosmos::Utils::InstrumentToProduct(instrumentInfo.instrumentID, instrumentInfo.productID);
                 Cosmos::Utils::parseInstruemnt(instrumentInfo.instrumentID, instrumentInfo.underly,
                                                instrumentInfo.optionType, instrumentInfo.strikePrice);
-                if (strcmp(instrumentInfo.productID.data(), optionProductId.c_str()) == 0) {
+                if (strcmp(instrumentInfo.productID.data(), futureProductId.c_str()) == 0) {
                     optionSymbols.emplace_back(instrumentInfo);
                 }
             }
@@ -160,7 +163,11 @@ int main(int argc, char *argv[]) {
         driver.setPolicySize(2);
         saveEngine.m_policyID = 0;
         saveEngine.onStart();
+        // auto log_epoch_time = std::chrono::duration_cast<std::chrono::seconds>(
+        //      std::chrono::system_clock::now().time_since_epoch()).count();
         market.start(tradingDay, isDay);
+        // fprintf(stderr, "consume TIME = %d\n", std::chrono::duration_cast<std::chrono::seconds>(
+        //      std::chrono::system_clock::now().time_since_epoch()).count()- log_epoch_time);
         driver.onStart();
 
         saveEngine.dumpKline(fileName);

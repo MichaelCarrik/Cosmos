@@ -41,8 +41,8 @@ namespace Cosmos {
             int m_bidVolume{0};
             int m_askVolume{0};
             double IV{0.0};
-            double bidIV{0.0};
-            double askIV{0.0};
+          //  double bidIV{0.0};
+          //  double askIV{0.0};
             double delta{0.0};
             double gamma{0.0};
             double vega{0.0};

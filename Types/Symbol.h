@@ -113,9 +113,7 @@ namespace Cosmos
             int optionQuoteOrderNumb{0};
             int optionCancelOrderNumb{0};
             int optionFilledOrderNumb{0};
-
-
-
+            int lastSendOrderTime{0};
 
             void updateRiskIndicator(const Types::OrderField* orderField, bool isOption)
             {
@@ -172,15 +170,11 @@ namespace Cosmos
             InstrumentInfo instrumentInfo{""};
             TradePosition tradePosition;
             int targetPosition{0};
-
             RiskIndicator riskIndicator;
-
             const MarketData* lastMD;
             const OrderField* order;
-
-            spdlog::logger* m_positionLog{nullptr};
+         //   spdlog::logger* m_positionLog{nullptr};
             std::map<KPeriod, const KData::KSeries*> m_kSeriesMap;
-
             Symbol * underlySymbol{nullptr};
 
             int getPendingPosition()
@@ -197,22 +191,22 @@ namespace Cosmos
                 return 0;
             }
 
-            void posWrite(bool isTrade, int tradingDay, Types::UpdateTime_t const& updateTime, int milli,
-                          int tradeOrderId)
-            {
-                m_positionLog->info(
-                    "symbol={} tickTime={} {}.{} {}, filledPos={}, avgPrice={:.3f}, T_BHold={}, Y_BHold={}, T_SHold={}, "
-                    "Y_SHold={}, profit={:.3f}, tradeOrderId={}, openBVlm={}, openSVlm={}, "
-                    "SendNumb={}, CancelNumb={}, filledNumb={}, O_SendNumb={}, O_CancelNumb={}, O_filledNumb={},",
-                    this->instrumentInfo.instrumentID.data(), tradingDay, updateTime.data(), milli, isTrade,
-                    this->tradePosition.filledPosition, this->tradePosition.averagePrice,this->tradePosition.T_buyHold,
-                    this->tradePosition.Y_buyHold, this->tradePosition.T_sellHold, this->tradePosition.Y_sellHold,
-                    this->tradePosition.profit, tradeOrderId, this->riskIndicator.openBuyVolume,
-                    this->riskIndicator.openSellVolume, this->riskIndicator.sendOrderNumb, this->riskIndicator.cancelOrderNumb,
-                    this->riskIndicator.filledOrderNumb, this->riskIndicator.optionSendOrderNumb, this->riskIndicator.optionCancelOrderNumb,
-                    this->riskIndicator.optionFilledOrderNumb);
-                m_positionLog->flush();
-            }
+            // void posWrite(bool isTrade, int tradingDay, Types::UpdateTime_t const& updateTime, int milli,
+            //               int tradeOrderId)
+            // {
+            //     m_positionLog->info(
+            //         "symbol={} tickTime={} {}.{} {}, filledPos={}, avgPrice={:.3f}, T_BHold={}, Y_BHold={}, T_SHold={}, "
+            //         "Y_SHold={}, profit={:.3f}, tradeOrderId={}, openBVlm={}, openSVlm={}, "
+            //         "SendNumb={}, CancelNumb={}, filledNumb={}, O_SendNumb={}, O_CancelNumb={}, O_filledNumb={},",
+            //         this->instrumentInfo.instrumentID.data(), tradingDay, updateTime.data(), milli, isTrade,
+            //         this->tradePosition.filledPosition, this->tradePosition.averagePrice,this->tradePosition.T_buyHold,
+            //         this->tradePosition.Y_buyHold, this->tradePosition.T_sellHold, this->tradePosition.Y_sellHold,
+            //         this->tradePosition.profit, tradeOrderId, this->riskIndicator.openBuyVolume,
+            //         this->riskIndicator.openSellVolume, this->riskIndicator.sendOrderNumb, this->riskIndicator.cancelOrderNumb,
+            //         this->riskIndicator.filledOrderNumb, this->riskIndicator.optionSendOrderNumb, this->riskIndicator.optionCancelOrderNumb,
+            //         this->riskIndicator.optionFilledOrderNumb);
+            //     m_positionLog->flush();
+            // }
         };
     }
 }
