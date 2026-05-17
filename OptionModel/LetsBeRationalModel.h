@@ -33,8 +33,10 @@ namespace Cosmos {
 
                 double calImpliedVol(double underlyPrice, double optionPrice) {
                     auto iv = LetsBeRational::ImpliedBlackVolatility(optionPrice, underlyPrice, m_strikePrice, m_T, m_optionTypeDouble);
-                    if (std::isinf(iv) == true) {
-                        throw std::runtime_error("ImpliedVolatility is infinity");
+                    if (std::isinf(iv) == true ) {
+                        throw std::runtime_error("ImpliedVolatility is infinity ");
+                    }else if (std::isnan(iv) == true) {
+                        throw std::runtime_error("ImpliedVolatility is nan");
                     }
                     return iv;
                 };

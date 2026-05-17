@@ -52,7 +52,8 @@ include_directories(./Utils)
 add_subdirectory(Utils)
 
 
-add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp)
+add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp
+)
 target_link_libraries(CosmosKBReader KData Market Trader  Utils  OptionModel
 	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}
 		        ${LIB_MYSQL} Threads::Threads stdc++fs)

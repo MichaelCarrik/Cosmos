@@ -81,7 +81,8 @@ namespace Cosmos {
                        m_T, m_fowardPrice,
                        m_alpha, m_beta, m_nu, m_rho,
                        false, true,
-                       false, false, true);
+                       false, false, true//, m_endCriteria, m_optimizationMethod
+                       );
                 }
                     catch (std::exception &e) {
                         m_sabrInterp = nullptr;

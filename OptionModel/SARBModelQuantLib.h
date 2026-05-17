@@ -9,7 +9,7 @@
 #include <any.hpp>
 
 #include "KData.h"
-
+#include <memory>
 #include <ql/quantlib.hpp>
 #include <ql/math/interpolations/sabrinterpolation.hpp>
 
@@ -19,7 +19,8 @@ namespace Cosmos {
         class SARBModelQuantLib {
         public:
             SARBModelQuantLib(int tradingDay, int expireDay) : m_expireDay(expireDay),  m_tradingDay(tradingDay){
-                m_endCriteria = new  QuantLib::EndCriteria(1000, 100, 1e-6, 1e-6, 1e-6);
+             //   m_optimizationMethod = boost::make_shared<QuantLib::Simplex>(0.05);
+             //   m_endCriteria = boost::make_shared< QuantLib::EndCriteria>(1000, 100, 1e-6, 1e-6, 1e-6);
                 auto diff = (Utils::intToSysDays(m_expireDay) - Utils::intToSysDays(m_tradingDay)).count();
                 m_T = std::max(diff / 365.0, 1e-5);
             };
@@ -55,8 +56,8 @@ namespace Cosmos {
 
             QuantLib::SABRInterpolation* m_sabrInterp{nullptr};
 
-            QuantLib::LevenbergMarquardt m_optimizationMethod;
-            QuantLib::EndCriteria *m_endCriteria{nullptr};
+     //      boost::shared_ptr<QuantLib::OptimizationMethod> m_optimizationMethod;
+      //     boost::shared_ptr<QuantLib::EndCriteria> m_endCriteria{nullptr};
 
             void _prepareSliceData(std::vector<QuantLib::Real>& strikes,  std::vector<QuantLib::Real>& volatilities,
             double forwardPrice, const std::map<int, KData::CallPutSeries *> *  callPutSeriesMap, int optionSeriesIndex) ;
