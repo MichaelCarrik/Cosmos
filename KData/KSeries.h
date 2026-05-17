@@ -7,9 +7,12 @@
 
 #include <iostream>
 #include "KSeriesTime.h"
-#include "BSModelQuantLib.h"
+#include "../OptionModel/BSModelQuantLib.h"
+#include "../OptionModel/LetsBeRationalModel.h"
 #include "KData.h"
-#include "CallPutSeries.h"
+//#include "CallPutSeries.h"
+//#include "../OptionModel/SARBModelQuantLib.h"
+#include "Common.h"
 
 namespace Cosmos {
     namespace KData {
@@ -29,7 +32,9 @@ namespace Cosmos {
             KSeries *m_underlySeries{nullptr};
             std::map<int, CallPutSeries *> * m_callPutSeriesMap{nullptr};
 
-            BSModelQuantLib *m_BSModelQuantLib{nullptr};
+         //   BSModelQuantLib *m_BSModelQuantLib{nullptr};
+            OptionModel::LetsBeRationalModel *m_BSModelQuantLib{nullptr};
+            OptionModel::SARBModelQuantLib * m_sabrModelQuantLib{nullptr};
 
             KSeries( Types::InstrumentInfo const &insInfo,
                     int tradingday, double r,
@@ -38,8 +43,14 @@ namespace Cosmos {
                     m_insInfo(insInfo), m_tradingday(tradingday), m_Period(period), m_biasSeconds(biasSeconds){
 
                 if (m_insInfo.productIDClass == Types::ProductClass::option) {
-                    m_BSModelQuantLib = new BSModelQuantLib(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
+                    // m_BSModelQuantLib = new BSModelQuantLib(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
+                    //                                        m_insInfo.expireDate, r);
+                    m_BSModelQuantLib = new OptionModel::LetsBeRationalModel(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
                                                             m_insInfo.expireDate, r);
+
+                }else if (m_insInfo.productIDClass == Types::ProductClass::future) {
+                      m_sabrModelQuantLib = new OptionModel::SARBModelQuantLib( tradingday,
+                                                          m_insInfo.expireDate);
                 }
 				
 				int secondsBias{0};
@@ -75,20 +86,22 @@ namespace Cosmos {
                 //
 
                 try {
-                    this->m_KDataVecs[optionUpdateIndex]->IV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
+                    this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
                                                                                           optionFairPrice);
 
-
-                    m_BSModelQuantLib->calGreeks(    optionKData->m_forwardPrice, this->m_KDataVecs[optionUpdateIndex]->IV,
-                                                 this->m_KDataVecs[optionUpdateIndex]->delta,
-                                                 this->m_KDataVecs[optionUpdateIndex]->gamma,
-                                                 this->m_KDataVecs[optionUpdateIndex]->theta,
-                                                 this->m_KDataVecs[optionUpdateIndex]->vega);
-
-                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->delta) < 0.00001) {
-                        this->m_KDataVecs[optionUpdateIndex]->delta = m_lastDelta;
+                    if (this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV > 99999) {
+                        this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV = 0.0;
                     }
-                    m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->delta;
+
+
+                    if (this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV > Types::g_epsilon) {
+
+                        m_BSModelQuantLib->calGreeks(optionKData->m_forwardPrice, this->m_KDataVecs[optionUpdateIndex]->m_greeks);
+                    }
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta) < 0.00001) {
+                        this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta = m_lastDelta;
+                    }
+                    m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta;
                 } catch (std::exception &e) {
                 //   if ( strcmp(this->m_insInfo.productID.data() , "si")==0 ) {
                         // fprintf(stderr,"%s-%d-%s, %s\n", this->m_KDataVecs[optionUpdateIndex]->m_instrument.data(),Types::KPeroidToIntervalMap[this->m_Period],
@@ -103,10 +116,10 @@ namespace Cosmos {
                         //         optionFairPrice);
 
               //      }
-                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->delta) < 0.00001) {
-                        this->m_KDataVecs[optionUpdateIndex]->delta = m_lastDelta;
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta) < 0.00001) {
+                        this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta = m_lastDelta;
                     }
-                    m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->delta;
+                    m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta;
                     //  return 1;
                 } catch (...) {
                     //    std::cerr << "unknown error" << std::endl;
@@ -222,7 +235,7 @@ namespace Cosmos {
                 }
                 //    m_seriesIndex = ktimeVec.size()-1 >0 ? ktimeVec.size()-1 : 0;
                 if (ktimeVec.size() > 0) {
-                    int lastTradingday = ktimeVec[0]->m_tradingday;
+                    int lastTradingday = ktimeVec[0]->m_tradingDay;
                     int lastKBeginTime = ktimeVec[0]->m_beginPsTime; // Utils::ToPsSeconds(ktimeVec[0]->m_updateTimeBegin, false);
                     m_kseriesTime->align(lastTradingday, lastKBeginTime);
                 }

@@ -157,7 +157,7 @@ namespace Cosmos {
 
 
         static int calBarVolume(const  KData::KData *bar, int lastTradingday, int &lastVolume) {
-            if (lastTradingday != bar->m_tradingday) {
+            if (lastTradingday != bar->m_tradingDay) {
                 lastVolume = 0;
             }
             return bar->m_volume - lastVolume;
@@ -171,7 +171,7 @@ namespace Cosmos {
                 auto bar = mainKSeries->m_KDataVecs[i];
 
                 barVolumeVec.emplace_back(calBarVolume(bar, lastTradingday, lastVolume));
-                lastTradingday = bar->m_tradingday;
+                lastTradingday = bar->m_tradingDay;
                 lastVolume = bar->m_volume;
 
                 //  fprintf(stderr, "array_calBarVolume %d: %d %s %d %d\n", i ,bar->m_tradingday, bar->m_updateTime.data(), bar->m_volume, barVolumeVec[i]);

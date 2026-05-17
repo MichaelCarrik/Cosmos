@@ -135,7 +135,7 @@ namespace Cosmos {
             void _initVulture() {
                  for (auto i = 0; i < m_dayKSeries->m_seriesIndex; i++) {
                         auto dayBar = m_dayKSeries->m_KDataVecs[i];
-                        if (dayBar->m_tradingday < m_tradingDay) {
+                        if (dayBar->m_tradingDay < m_tradingDay) {
                             m_dayHighestVec.emplace_back(dayBar->m_high);
                             m_dayLowestVec.emplace_back(dayBar->m_low);
                             m_dayCloseVec.emplace_back(dayBar->m_close);
@@ -310,7 +310,7 @@ namespace Cosmos {
 
                 m_configLog->info("configIndex={}, instr={}, {}, {}, {}, {:03d}, close={:.3f}, mktPos={}, preMktPos={}, sgnPrice={:.3f}, "
                                   "strikePrice={:.3f}, minsMA={:.3f}, upBand={:.3f}, downBand={:.3f}, seriesIndex={}",
-                                  m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
+                                  m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                                   lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice,
                                   m_minsMA, m_upBand, m_downBand, m_lastUnderlyBarIndex);
@@ -400,7 +400,7 @@ namespace Cosmos {
                 auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose);
                 if(openAtSymbol != nullptr){
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
-                    auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->delta;
+                    auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->m_greeks.delta;
 
                     addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps,
                                         symbolDelta, targetDelta);

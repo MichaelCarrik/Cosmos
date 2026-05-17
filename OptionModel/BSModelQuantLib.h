@@ -14,7 +14,7 @@
 #include <termstructures/volatility/equityfx/blackconstantvol.hpp>
 
 namespace Cosmos {
-    namespace KData {
+    namespace OptionModel {
         class BSModelQuantLib {
         public:
             BSModelQuantLib(char input_optionType, double strike, int tradingday, int expireday, double riskFreeRate){

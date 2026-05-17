@@ -77,16 +77,15 @@ namespace Cosmos {
         }
 
         static void InstrumentToProduct(Types::Instrument_t const &instrument, Types::Product_t &productId) {
-
-                for (auto i = 0; i < 5; i++) {
-                    if (instrument[i] >= '0' && instrument[i] <= '9') {
-                        std::copy(std::begin(instrument), std::begin(instrument) + i, std::begin(productId));
-                        break;
-                    }
-                    if (i == 5) {
-                        assert(false && "InstrumentToProduct");
-                    }
+            for (auto i = 0; i < 5; i++) {
+                if (instrument[i] >= '0' && instrument[i] <= '9') {
+                    std::copy(std::begin(instrument), std::begin(instrument) + i, std::begin(productId));
+                    break;
                 }
+                if (i == 5) {
+                    assert(false && "InstrumentToProduct");
+                }
+            }
 
             if (strcmp(productId.data(), "MO") == 0) {
                 strcpy(productId.data(), "IM");
@@ -105,7 +104,8 @@ namespace Cosmos {
                 Types::Instrument_t strickStr{""};
                 std::copy(std::begin(instrument) + 6, std::end(instrument), std::begin(strickStr));
                 strickPrice = atof(strickStr.data());
-            } else {
+            }
+            else {
                 std::copy(std::begin(instrument), std::begin(instrument) + 6, std::begin(underly));
                 optionType = instrument[6];
                 Types::Instrument_t strickStr{""};
@@ -113,13 +113,13 @@ namespace Cosmos {
                 strickPrice = atof(strickStr.data());
                 // Types::Product_t productId{""};
                 // InstrumentToProduct(instrument, productId);
-                if ( instrument[0] == 'I'&& instrument[1] == 'O') {
+                if (instrument[0] == 'I' && instrument[1] == 'O') {
                     underly[0] = 'I';
                     underly[1] = 'F';
-                } else if (instrument[0] == 'H'&& instrument[1] == 'O') {
+                } else if (instrument[0] == 'H' && instrument[1] == 'O') {
                     underly[0] = 'I';
                     underly[1] = 'H';
-                } else if (instrument[0] == 'M'&& instrument[1] == 'O') {
+                } else if (instrument[0] == 'M' && instrument[1] == 'O') {
                     underly[0] = 'I';
                     underly[1] = 'M';
                 }
@@ -136,9 +136,11 @@ namespace Cosmos {
         }
 
         static bool updateOrder(Types::OrderField *orderField, const Types::OrderField *inputOrder) {
-       //     strcpy(orderField->orderSysID.data(), inputOrder->orderSysID.data());
-            std::copy(std::begin(inputOrder->orderSysID), std::end(inputOrder->orderSysID), std::begin(orderField->orderSysID));
-            std::copy(std::begin(inputOrder->exchangeID), std::end(inputOrder->exchangeID), std::begin(orderField->exchangeID));
+            //     strcpy(orderField->orderSysID.data(), inputOrder->orderSysID.data());
+            std::copy(std::begin(inputOrder->orderSysID), std::end(inputOrder->orderSysID),
+                      std::begin(orderField->orderSysID));
+            std::copy(std::begin(inputOrder->exchangeID), std::end(inputOrder->exchangeID),
+                      std::begin(orderField->exchangeID));
             orderField->lastFilledPrice = inputOrder->lastFilledPrice;
             orderField->lastFilledVolume = inputOrder->lastFilledVolume;
             orderField->filledVolume = inputOrder->filledVolume;
@@ -225,7 +227,8 @@ namespace Cosmos {
         }
 
         static void readInstrumentsFromFiles(int tradingday, Types::Instrument_t const &filterUnderly,
-                                             std::string &rawPath, std::map<Types::Instrument_t, Types::InstrumentInfo*> &testSymbols,
+                                             std::string &rawPath,
+                                             std::map<Types::Instrument_t, Types::InstrumentInfo *> &testSymbols,
                                              int isDay) {
             char buff[256]{""};
             sprintf(buff, "%s/%d_%s/instruments", rawPath.c_str(), tradingday, isDay == true ? "day" : "ngt");
@@ -263,9 +266,9 @@ namespace Cosmos {
                         }
                     } while (index != std::string::npos);
                     line_vector.emplace_back(strLine.substr(start, index - start));
-                    if (line_vector.size() < 20 ) {
+                    if (line_vector.size() < 20) {
                         continue;
-                            }
+                    }
                     Types::InstrumentInfo *instrumentInfo = new Types::InstrumentInfo();
                     //   fprintf(stderr, "%s\n", line_vector[1].c_str());
                     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'),
@@ -276,12 +279,12 @@ namespace Cosmos {
                     // }
                     instrumentInfo->multi = atof(line_vector[13].c_str());
                     instrumentInfo->tickSize = atof(line_vector[14].c_str());
-                    int PIC = atoi(line_vector[6].c_str()) ;
+                    int PIC = atoi(line_vector[6].c_str());
                     if (PIC == 1) {
-                        instrumentInfo->productIDClass = Types::ProductClass::future ;
-                    }else if (PIC == 2 || PIC == 6) {
-                        instrumentInfo->productIDClass = Types::ProductClass::option ;
-                    }else {
+                        instrumentInfo->productIDClass = Types::ProductClass::future;
+                    } else if (PIC == 2 || PIC == 6) {
+                        instrumentInfo->productIDClass = Types::ProductClass::option;
+                    } else {
                         continue;
                     }
 
@@ -290,12 +293,10 @@ namespace Cosmos {
                     Utils::parseInstruemnt(instrumentInfo->instrumentID, instrumentInfo->underly,
                                            instrumentInfo->optionType, instrumentInfo->strikePrice);
 
-                    if (strcmp(instrumentInfo->instrumentID.data(), filterUnderly.data()) == 0){
-
+                    if (strcmp(instrumentInfo->instrumentID.data(), filterUnderly.data()) == 0) {
                         testSymbols[instrumentInfo->instrumentID] = instrumentInfo;
-                    }
-                    else if (strcmp(instrumentInfo->underly.data(), filterUnderly.data()) == 0) {
-                      //  fprintf(stderr,"instrument=%s\n",instrumentInfo.instrumentID.data());
+                    } else if (strcmp(instrumentInfo->underly.data(), filterUnderly.data()) == 0) {
+                        //  fprintf(stderr,"instrument=%s\n",instrumentInfo.instrumentID.data());
                         testSymbols[instrumentInfo->instrumentID] = instrumentInfo;
                     }
                 }
@@ -352,17 +353,29 @@ namespace Cosmos {
             marketData->oi = checkPriceValid(pDepthMarketData->OpenInterest);
         }
 
-        static std::string getParamMapValue(std::map<std::string, std::string> const& paramsMap, std::string&& key){
+        static std::string getParamMapValue(std::map<std::string, std::string> const &paramsMap, std::string &&key) {
             auto itr = paramsMap.find(key);
-            if (itr == paramsMap.end()){
+            if (itr == paramsMap.end()) {
                 assert(false);
             }
             return itr->second;
         };
 
+       static  std::chrono::sys_days intToSysDays(int dateInt) {
+            int year = dateInt / 10000;
+            int month = (dateInt % 10000) / 100;
+            int day = dateInt % 100;
+
+            // 构造 C++20 年-月-日对象并转换为天数基准
+            return std::chrono::sys_days{
+                std::chrono::year{year} / std::chrono::month{static_cast<unsigned>(month)} / std::chrono::day{
+                    static_cast<unsigned>(day)
+                }
+            };
+        }
 
 
-        static void InitMySql( Utils::CppMySQL3DB *mySql, std::string mysql_config) {
+        static void InitMySql(Utils::CppMySQL3DB *mySql, std::string mysql_config) {
             boost::property_tree::ptree pt;
             boost::property_tree::read_xml(mysql_config, pt);
             auto host = pt.get_child("mysql.host").get_value<std::string>();
@@ -387,8 +400,7 @@ namespace Cosmos {
                 if (nTried > 2 and retCode != 0) {
                     assert(false && "connect mysql failed");
                 }
-            }
-            catch (...) {
+            } catch (...) {
                 spdlog::error("got exception when opening the mysql db.");
             }
         }

@@ -134,7 +134,7 @@ namespace Cosmos {
             void _initVulture() {
                  for (auto i = 0; i < m_dayKSeries->m_seriesIndex; i++) {
                         auto dayBar = m_dayKSeries->m_KDataVecs[i];
-                        if (dayBar->m_tradingday < m_tradingDay) {
+                        if (dayBar->m_tradingDay < m_tradingDay) {
                             m_dayHighestVec.emplace_back(dayBar->m_high);
                             m_dayLowestVec.emplace_back(dayBar->m_low);
                             m_dayCloseVec.emplace_back(dayBar->m_close);
@@ -309,7 +309,7 @@ namespace Cosmos {
 
                 m_configLog->info("configIndex={}, instr={}, {}, {}, {}, {:03d}, close={:.3f}, mktPos={}, preMktPos={}, sgnPrice={:.3f}, "
                                   "minsMA={:.3f}, upBand={:.3f}, downBand={:.3f}",
-                                  m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
+                                  m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                                   lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice,
                                   m_minsMA, m_upBand, m_downBand);
@@ -319,11 +319,11 @@ namespace Cosmos {
 
 
             void _isCloseMarketPosition(const KData::KData *lastUnderlyBar) {
-                if (m_marketPosition > 0 && std::abs(lastUnderlyBar->delta) < m_closeAtDelta && std::abs(lastUnderlyBar->delta) > Types::g_epsilon  ) {  //long close
+                if (m_marketPosition > 0 && std::abs(lastUnderlyBar->m_greeks.delta) < m_closeAtDelta && std::abs(lastUnderlyBar->m_greeks.delta) > Types::g_epsilon  ) {  //long close
                     ++m_tradeNum;
                     m_preMarketPosition = 0;
                     m_signalPrice = lastUnderlyBar->m_close;
-                } else if (m_marketPosition < 0 && std::abs(lastUnderlyBar->delta) < m_closeAtDelta && std::abs(lastUnderlyBar->delta) > Types::g_epsilon ) {  //short close
+                } else if (m_marketPosition < 0 && std::abs(lastUnderlyBar->m_greeks.delta) < m_closeAtDelta && std::abs(lastUnderlyBar->m_greeks.delta) > Types::g_epsilon ) {  //short close
                     ++m_tradeNum;
                     m_preMarketPosition = 0;
                     m_signalPrice = lastUnderlyBar->m_close;
@@ -397,7 +397,7 @@ namespace Cosmos {
                 auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose);
                 if(openAtSymbol != nullptr){
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
-                    auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->delta;
+                    auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->m_greeks.delta;
                     addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps,
                                         symbolDelta, targetDelta);
                 }else {

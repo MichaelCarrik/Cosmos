@@ -12,8 +12,6 @@
 
 namespace Cosmos{
     namespace KData{
-
-
         class KSeriesTime{
 
         private:

@@ -107,8 +107,8 @@ namespace Cosmos {
 //                        marketData.updateTime.data(), marketData.milliSeconds);
                 this->onRtnQuote(&marketData);
             }
-        //     fprintf(stderr, "consume TIME = %d\n", std::chrono::duration_cast<std::chrono::seconds>(
-        // std::chrono::system_clock::now().time_since_epoch()).count()- log_epoch_time);
+         //    fprintf(stderr, "consume TIME = %d\n", std::chrono::duration_cast<std::chrono::seconds>(
+         // std::chrono::system_clock::now().time_since_epoch()).count()- log_epoch_time);
             allSymbolMarket.clear();
 
             return 0;
@@ -179,7 +179,7 @@ namespace Cosmos {
                         continue;
                     }
                     Types::MarketData marketData;
-                    line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
+               //     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
                     strcpy(marketData.instrumentID.data(), line_vector[1].c_str());
                     Utils::InstrumentToProduct(marketData.instrumentID, marketData.productID);
                     marketData.openPrice = atof(line_vector[8].c_str());

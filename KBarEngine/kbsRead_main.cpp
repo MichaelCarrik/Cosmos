@@ -83,17 +83,26 @@ void getInstruments(int tradingday, std::string &futureProductId, std::string &r
             } else if (line_vector.size() < 45 && (
                            atoi(line_vector[6].c_str()) == 2 || atoi(line_vector[6].c_str()) == 6)) {
                 Cosmos::Types::InstrumentInfo instrumentInfo;
+                strcpy(instrumentInfo.instrumentID.data(), line_vector[1].c_str());
                 //    fprintf(stderr, "%s\n", line_vector[1].c_str());
                 line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'),
                                      line_vector[1].end());
-                strcpy(instrumentInfo.instrumentID.data(), line_vector[1].c_str());
+
                 instrumentInfo.exchanges = Cosmos::Utils::getExchangeType(line_vector[2].c_str());
                 instrumentInfo.productIDClass = Cosmos::Types::ProductClass::option; // atoi(line_vector[6].c_str());
                 instrumentInfo.expireDate = atoi(line_vector[17].c_str());
 
+                Cosmos::Types::Instrument_t remove_Instrument{""};
+                strcpy(remove_Instrument.data(), line_vector[1].c_str());
+
+                if (remove_Instrument[5] == 'M' or remove_Instrument[6] == 'S' ) {
+                    continue;
+                }
+
+
 
                 Cosmos::Utils::InstrumentToProduct(instrumentInfo.instrumentID, instrumentInfo.productID);
-                Cosmos::Utils::parseInstruemnt(instrumentInfo.instrumentID, instrumentInfo.underly,
+                Cosmos::Utils::parseInstruemnt(remove_Instrument, instrumentInfo.underly,
                                                instrumentInfo.optionType, instrumentInfo.strikePrice);
                 if (strcmp(instrumentInfo.productID.data(), futureProductId.c_str()) == 0) {
                     optionSymbols.emplace_back(instrumentInfo);

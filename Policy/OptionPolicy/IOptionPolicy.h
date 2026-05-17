@@ -92,10 +92,10 @@ namespace Cosmos {
                         auto series = optionSymbol->m_kSeriesMap.at(m_kperiod);
                     //    auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
                         auto lastOptionK = series->m_KDataVecs[m_lastOptionIndex];
-                        if ( abs(lastOptionK->delta) < 0.00001 && optionSymbol->lastMD->askPrice[0] > 10* optionSymbol->instrumentInfo.tickSize) {
+                        if ( abs(lastOptionK->m_greeks.delta) < 0.00001 && optionSymbol->lastMD->askPrice[0] > 10* optionSymbol->instrumentInfo.tickSize) {
                             fprintf(stderr, "isHaveZeroDeltaPos policyName=%s, instrument=%s, updateTimeBegin=%s, pos=%d,  delta=%.3f\n",
                                 m_policyName.c_str(), optionSymbol->instrumentInfo.instrumentID.data(),
-                                lastOptionK->m_updateTimeBegin.data(), targetPosition, lastOptionK->delta);
+                                lastOptionK->m_updateTimeBegin.data(), targetPosition, lastOptionK->m_greeks.delta);
                             return true;
                         }
                     }
@@ -122,9 +122,9 @@ namespace Cosmos {
                         }
                         m_configLog->info(
                                 "configIndex={}, instr={}, {}, {}, {}, close={:.3f}({:.3f}, {:.3f}), sgnPrice={:.3f}, delta={:.3f}, "
-                                "targetPos={}, seriesIndex={}", configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingday,
+                                "targetPos={}, seriesIndex={}", configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingDay,
                                 lastOptionK->m_updateTimeBegin.data(), lastOptionK->m_endPsTime, lastOptionK->m_close, lastOptionK->m_bidPrice,
-                                lastOptionK->m_askPrice, midPrice, lastOptionK->delta, targetPosition,
+                                lastOptionK->m_askPrice, midPrice, lastOptionK->m_greeks.delta, targetPosition,
                                 m_lastOptionIndex);
                     }
                 }
@@ -175,8 +175,8 @@ namespace Cosmos {
                                                            auto kbar_a = symbol_a->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[this->m_lastOptionIndex];
                                                            auto kbar_b = symbol_b->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[this->m_lastOptionIndex];
                                                            return std::abs(
-                                                                   std::abs(kbar_a->delta) - std::abs(findAtDelta)) <
-                                                                  std::abs(std::abs(kbar_b->delta) -
+                                                                   std::abs(kbar_a->m_greeks.delta) - std::abs(findAtDelta)) <
+                                                                  std::abs(std::abs(kbar_b->m_greeks.delta) -
                                                                            std::abs(findAtDelta));
                                                        });
                     return *specialDeltaItr;

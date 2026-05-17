@@ -117,7 +117,7 @@ namespace Cosmos {
                                           "targetPosition={}, basePrice={:.3f}, seriesIndex={}, "
                                           "allCallDelta={:.3f}, allPutDelta={:.3f}",
                                           m_configIndex, lastUnderlyKB->m_instrument.data(),
-                                          lastUnderlyKB->m_tradingday,
+                                          lastUnderlyKB->m_tradingDay,
                                           lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime,
                                           lastUnderlyKB->m_close,
                                           0.0, 0, m_basePrice, m_underlyKseries->m_seriesIndex - 1, allCallDelta,
@@ -238,7 +238,7 @@ namespace Cosmos {
                                           "targetPos={}, basePrice={:.3f}, seriesIndex={}, "
                                           "callDelta={:.3f}, putDelta={:.3f}",
                                           m_configIndex, lastUnderlyKB->m_instrument.data(),
-                                          lastUnderlyKB->m_tradingday,
+                                          lastUnderlyKB->m_tradingDay,
                                           lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(),
                                           lastUnderlyKB->m_close,
                                           0.0, 0, m_basePrice, m_underlyKseries->m_seriesIndex - 1, allCallDelta,

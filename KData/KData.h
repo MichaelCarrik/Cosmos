@@ -5,7 +5,9 @@
 #ifndef OPTIONTRADING_V2_KDATA_H
 #define OPTIONTRADING_V2_KDATA_H
 
+#include "../Types/MarketData.h"
 #include "../Types/Type.h"
+#include "../Utils/Utils.h"
 #include "CallPutSeries.h"
 
 namespace Cosmos {
@@ -16,6 +18,26 @@ namespace Cosmos {
             Types::UpdateTime_t updateTime_begin{""};
             Types::UpdateTime_t updateTime_end{""};
         };
+
+        struct Greeks {
+            double IV{0.0};
+            //  double bidIV{0.0};
+            //  double askIV{0.0};
+            double delta{0.0};
+            double gamma{0.0};
+            double vega{0.0};
+            double theta{0.0};
+            double vanna{0.0};
+            double volga{0.0};
+
+        };
+
+        struct SabrPRMT {
+            double alpha{0.0};
+            double beta{0.0};
+            double rho{0.0};
+            double nu{0.0};
+        };
         class KData {
         public:
             Types::Instrument_t m_instrument{""};
@@ -23,7 +45,7 @@ namespace Cosmos {
             Types::UpdateTime_t m_updateTimeEnd{""};
             int m_beginPsTime{0};
             int m_endPsTime{0};
-            int m_tradingday{0};
+            int m_tradingDay{0};
             Types::Product_t m_productID{""};
             double m_open{0.0};
             double m_high{0.0};
@@ -40,13 +62,9 @@ namespace Cosmos {
             double m_forwardPrice{0.0};
             int m_bidVolume{0};
             int m_askVolume{0};
-            double IV{0.0};
-          //  double bidIV{0.0};
-          //  double askIV{0.0};
-            double delta{0.0};
-            double gamma{0.0};
-            double vega{0.0};
-            double theta{0.0};
+            Greeks m_greeks;
+            SabrPRMT m_sabrPRMT;
+
             int expireDay{0};
             bool isInsert{false};
 
@@ -88,7 +106,7 @@ namespace Cosmos {
                 Utils::ToUpdateTime(m_beginPsTime, m_updateTimeBegin);
                 Utils::ToUpdateTime(m_endPsTime, m_updateTimeEnd);
                 Utils::InstrumentToProduct(m_instrument, m_productID);
-                m_tradingday = tradingday;
+                m_tradingDay = tradingday;
                 m_open = lastPMD->lastPrice;
                 update(lastPMD);
             }
@@ -102,7 +120,7 @@ namespace Cosmos {
                 Utils::ToUpdateTime(m_beginPsTime, m_updateTimeBegin);
                 Utils::ToUpdateTime(m_endPsTime, m_updateTimeEnd);
                 Utils::InstrumentToProduct(m_instrument, m_productID);
-                m_tradingday = tradingday;
+                m_tradingDay = tradingday;
                 m_open = marketData->openPrice;
                 m_high = marketData->highestPrice;
                 m_low = marketData->lowestPrice;

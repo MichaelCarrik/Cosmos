@@ -43,11 +43,22 @@ namespace Cosmos {
 
                 if (strcmp(policyType.c_str(), "future") ==0) {
                     auto policy= this->createFuturePolicy(policyName, subPolicyParams);
-                    m_futurePolicyVec.emplace_back(policy);
+                    if (policy != nullptr) {
+                        m_futurePolicyVec.emplace_back(policy);
+                    }else {
+                        fprintf(stderr, "createFuturePolicy %s return nullptr\n", policyName.c_str());
+                    }
+
+
                 }
                 if (strcmp(policyType.c_str(), "option") ==0 ) {
                     auto policy= this->createOptionPolicy(policyName, subPolicyParams);
-                    m_optionPolicyVec.emplace_back(policy);
+                    if (policy != nullptr) {
+                        m_optionPolicyVec.emplace_back(policy);
+                    }else {
+                        fprintf(stderr, "createOptionPolicy %s return nullptr\n", policyName.c_str());
+                    }
+
                 }
             }
 
@@ -253,12 +264,15 @@ namespace Cosmos {
                  
                  Types::InstrumentInfo * optionInsInfo{nullptr};
                  getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
+                 if (optionInsInfo == nullptr) {
+                     return nullptr;
+                 }
                  return new  Policy::SellStrangleV2( policyName, m_engineName,
                            underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
                             m_tradingDay, optionInsInfo->expireDate,
                            m_engineParam.riskOptionMaxPosition,
                            isRefreshDelta, openAtDelta,baseRation, [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
-                              return  this->m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(instrument, period);
+                              return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
              }   else if (policyName.compare("CoveredVulture") == 0) {
 
@@ -275,14 +289,16 @@ namespace Cosmos {
 
                  Types::InstrumentInfo * optionInsInfo{nullptr};
                  getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
-
+                 if (optionInsInfo == nullptr) {
+                     return nullptr;
+                 }
                  //  auto underlyToTodayIndex =  m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(underlyInstrument, kPeriod);
 
                  return new Policy::CoveredVulture( policyName, m_engineName,
                            underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
                             m_tradingDay,optionInsInfo->expireDate,  m_engineParam.riskOptionMaxPosition, openAtDelta,
                            [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
-                              return  this->m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(instrument, period);
+                              return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
              } else if (policyName.compare("LongGammaVulture") == 0) {
 
@@ -299,14 +315,16 @@ namespace Cosmos {
 
                  Types::InstrumentInfo * optionInsInfo{nullptr};
                  getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
-
+                 if (optionInsInfo == nullptr) {
+                     return nullptr;
+                 }
                  //  auto underlyToTodayIndex =  m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(underlyInstrument, kPeriod);
 
                  return new Policy::LongGammaVulture( policyName, m_engineName,
                            underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
                             m_tradingDay,optionInsInfo->expireDate,  m_engineParam.riskOptionMaxPosition, openAtDelta,
                            [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
-                              return  this->m_kDataManager->m_updateGreeks->getUnderlyTodayBeginIndex(instrument, period);
+                              return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
              }
             //else if (policyName.compare("TestTrendOption") == 0){
@@ -386,7 +404,7 @@ namespace Cosmos {
             //                                                 m_engineName, m_underlyInsMap.nearInstrument,  m_multi,m_tradingDay, m_maxPosition,
             //                                                 openAtDelta, godDirection, closeExceedThresh);
             // }
-            assert(false);
+          //  assert(false);
             return nullptr;
         }
 
@@ -557,7 +575,8 @@ namespace Cosmos {
             }
 
             if (optionInsInfo == nullptr) {
-                assert(false);
+                fprintf(stderr, "getOptionInfoByUnderly not found underly %s\n", underlyID.data());
+               // assert(false);
             }
         }
 

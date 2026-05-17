@@ -110,7 +110,7 @@ namespace Cosmos {
             void _initVulture() {
                 for (auto i = 0; i < m_dayKSeries->m_seriesIndex; i++) {
                     auto dayBar = m_dayKSeries->m_KDataVecs[i];
-                    if (dayBar->m_tradingday < m_tradingDay) {
+                    if (dayBar->m_tradingDay < m_tradingDay) {
                         m_dayHighestVec.emplace_back(dayBar->m_high);
                         m_dayLowestVec.emplace_back(dayBar->m_low);
                         m_dayCloseVec.emplace_back(dayBar->m_close);
@@ -259,7 +259,7 @@ namespace Cosmos {
                     "upBand={:.3f}, downBand={:.3f}, minsMA={:.3f}, "
                     "onoff={}, mktPos={}, sgnPrice={:.3f}, "
                     "tgtPos={}, lots={}",
-                    lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
+                    lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                     lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds,
                     lastUnderlyKB->m_close, pMD->bidPrice[0], pMD->askPrice[0], lastUnderlyKB->m_open, m_band, m_upBand,
                     m_downBand, m_minsMA, m_onoff, m_trendSignal.marketPosition, m_trendSignal.signalPrice,
