@@ -131,7 +131,7 @@ namespace Cosmos {
                         marketData->productID, marketData->psSecond, m_isDay ) ||
                     Utils::FTTrait::FT_AUCTION == Utils::TradingHours::getProductTrait(
                         marketData->productID, marketData->psSecond, m_isDay ) ||
-                    (marketData->psSecond >= 15 * 3600  &&  marketData->psSecond <= 17 * 3600)) {
+                    (marketData->psSecond >= 15 * 3600  &&  marketData->psSecond <= 17 * 3600 && m_isDay ==true)) {
                     event->point = marketData;
                     event->eventType = Types::EventType::marketEvent;
                     for (auto i: itr->second->subscribePolicy) {

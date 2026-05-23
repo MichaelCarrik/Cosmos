@@ -2,8 +2,8 @@
 // Created by zhangyw on 1/9/21.
 //
 
-#ifndef TESTHFT3_KDATA_H
-#define TESTHFT3_KDATA_H
+#ifndef TESTHFT3_KDATAMANAGER_H
+#define TESTHFT3_KDATAMANAGER_H
 
 
 #include <array>
@@ -29,7 +29,7 @@ namespace Cosmos {
             Utils::CppMySQL3DB *m_mysql{nullptr};
             std::map<Types::Instrument_t, std::unordered_map<Types::KPeriod, KSeries *> *> m_allKLineSeries;
             //       std::map<std::tuple< Types::Instrument_t,  Types::KPeriod>, std::map<int, CalPutSeries *> *> m_underlyToOptionSeriesMap;
-            int m_tradingday{0};
+            int m_tradingDay{0};
             bool m_isUseUnderlyPrice{true};
             bool m_isDay{true};
             bool m_isGetHistory{false};
@@ -38,7 +38,7 @@ namespace Cosmos {
 
             KDataManager(int tradingDay, bool isDay, bool isUseUnderlyPrice,
                          Utils::CppMySQL3DB *mysql, int biasSeconds) :
-            m_tradingday(tradingDay), m_isDay(isDay), m_isUseUnderlyPrice(isUseUnderlyPrice),
+            m_tradingDay(tradingDay), m_isDay(isDay), m_isUseUnderlyPrice(isUseUnderlyPrice),
             m_mysql(mysql), m_biasSeconds(biasSeconds){
                 m_updateOptionModelPamt = new UpdateOptionModelPamt();
             }
@@ -60,4 +60,4 @@ namespace Cosmos {
         };
     }
 }
-#endif //TESTHFT3_KDATA_H
+#endif //TESTHFT3_KDATAMANAGER_H

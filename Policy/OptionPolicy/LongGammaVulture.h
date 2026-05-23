@@ -179,35 +179,47 @@ namespace Cosmos {
                     m_minsMA = Indicator::MA(m_fiveMinCloseVec, beginI, endI);
             }
 
-                  virtual void updateParam(const Types::NetModifyParam *netModifyParam) override {
-                if (strcmp(netModifyParam->paramName.c_str(), "targetPos") == 0) {
+            virtual void updateParam(const Types::NetModifyParam *netModifyParam) override {
+                if(strcmp(netModifyParam->paramName.c_str(), "openAtDelta") == 0) {
+                    m_openAtDelta = stof(netModifyParam->paramValue);
+                    fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, openAtDelta=%.3f\n",
+                     m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                 m_openAtDelta);
+                }else if(strcmp(netModifyParam->paramName.c_str(), "MV") == 0) {
+                    m_MV = stof(netModifyParam->paramValue);
+
+                    fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, MV=%.3f\n",
+                    m_policyName.c_str(),  m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                 m_MV);
+                }
+                else if (strcmp(netModifyParam->paramName.c_str(), "targetPos") == 0) {
                     bool isFind =false;
                     auto callItr = m_callPolicySymbols.targetSignal.targetPosMaps.find(netModifyParam->symbolName);
                     if (callItr != m_callPolicySymbols.targetSignal.targetPosMaps.end()) {
-                        fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
-                                m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                        fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
+                               m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), callItr->first.data(),
                                 netModifyParam->paramValue.c_str());
-                        m_callPolicySymbols.targetSignal.targetPosMaps[netModifyParam->symbolName] = stoi(netModifyParam->paramValue);
+                        callItr->second = stoi(netModifyParam->paramValue);
                         isFind = true;
 
                     }else {
                         auto putItr = m_putPolicySymbols.targetSignal.targetPosMaps.find(netModifyParam->symbolName);
                         if (putItr != m_putPolicySymbols.targetSignal.targetPosMaps.end()) {
-                            fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
-                                    m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                            fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
+                                       m_policyName.c_str(),  m_engineName.c_str(), m_policyName.c_str(), putItr->first.data(),
                                     netModifyParam->paramValue.c_str());
-                            m_putPolicySymbols.targetSignal.targetPosMaps[netModifyParam->symbolName] = stoi(netModifyParam->paramValue);
+                            putItr->second = stoi(netModifyParam->paramValue);
                             isFind = true;
                         }
+                    }
 
-                        if (isFind==true) {
-                            auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex - 1];
+                    if (isFind==true) {
+                        auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex - 1];
 
-                            _writePolicyLog(lastUnderlyKB, m_underlyKseries->m_lastPMD);
-                            m_configLog->flush();
-                            m_configIndex++;
+                        _writePolicyLog(lastUnderlyKB, m_underlyKseries->m_lastPMD);
+                        m_configLog->flush();
+                        m_configIndex++;
 
-                        }
                     }
                 }
             };

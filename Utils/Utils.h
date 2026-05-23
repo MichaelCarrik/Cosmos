@@ -70,7 +70,8 @@ namespace Cosmos {
                 (instrument[0] == 'S' && instrument[1] == 'P') ||
                 (instrument[0] == 'I' && instrument[1] == 'P') ||
                 (instrument[0] == 'B' && instrument[1] == 'E' && instrument[2] == 'S') ||
-                (instrument[0] == 'B' && instrument[1] == 'L' && instrument[2] == 'S')) {
+                (instrument[0] == 'B' && instrument[1] == 'L' && instrument[2] == 'S') ||
+                ( instrument[2] == 'e'&& instrument[3] == 'f' && instrument[4] == 'p')) {
                 return true;
             }
             return false;

@@ -60,12 +60,12 @@ namespace Cosmos {
                 }
             }
 
-            std::promise<int> m_loginPromise;
-            std::promise<int>  m_queryOrderPromise;
-            std::promise<int>  m_queryPositionPromise;
-            std::promise<int>  m_queryTraderPromise;
-            std::promise<int>  m_queryInstrumentPromise;
-            std::promise<int>  m_queryMarketDataPromise;
+            std::promise<int>* m_loginPromise{nullptr};
+            std::promise<int>*  m_queryOrderPromise{nullptr};
+            std::promise<int>* m_queryPositionPromise{nullptr};
+            std::promise<int> * m_queryTraderPromise{nullptr};
+            std::promise<int> * m_queryInstrumentPromise{nullptr};
+            std::promise<int> * m_queryMarketDataPromise{nullptr};
 
              Types::Instrument_t m_queryMarketInstrument{""};
             std::vector<Types::MarketData *> m_initMarketDataVector;
@@ -629,6 +629,8 @@ namespace Cosmos {
 
             void onUnderlyInfo(Types::UnderlyInfo const& underlyInfo);
             void onQuerySymbol( Types::QuerySymbol const & querySymbol);
+
+            std::promise<int>* createPromise(std::promise<int>*);
 
 
             const decltype(m_instrumentInfoMap)* getInstrumentInfoVec() {

@@ -55,7 +55,7 @@ namespace Cosmos {
             auto fttrait = Utils::TradingHours::getProductTrait(marketData->productID, marketData->psSecond, m_isDay);
             if (Utils::FTTrait::FT_TRADING == fttrait ||
                Utils::FTTrait::FT_AUCTION == fttrait ||
-                  ( marketData->psSecond >= 15 * 3600 && marketData->psSecond <= 17 * 3600)) {
+                  ( marketData->psSecond >= 15 * 3600 && marketData->psSecond <= 17 * 3600 && m_isDay ==true)) {
                 auto itr = m_subScribeInstruments.find(marketData->instrumentID);
                 if (itr != m_subScribeInstruments.end()) {
 

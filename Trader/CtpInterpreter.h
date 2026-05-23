@@ -139,7 +139,7 @@ namespace Cosmos {
                 fprintf(stderr,"sendOrder : instrument=%s, requestID=%d orderRef=%s, orderPrice=%.3f, orderVolume=%d\n",
                         orderField->instrumentID.data(), orderField->tOrderID, pCtpOrder->OrderRef, pCtpOrder->LimitPrice,
                         pCtpOrder->VolumeTotalOriginal);
-            //    nRetCode = m_pTradeApi->ReqOrderInsert(pCtpOrder, pCtpOrder->RequestID);
+                nRetCode = m_pTradeApi->ReqOrderInsert(pCtpOrder, pCtpOrder->RequestID);
                 m_sendOrderLock.unlock();
                 if (nRetCode != 0) {
                     orderField->orderStatus =  Types::OrderStatus::failed;

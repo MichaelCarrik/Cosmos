@@ -48,21 +48,21 @@ namespace Cosmos {
             virtual void updateParam(const Types::NetModifyParam *netModifyParam) override {
                 if(strcmp(netModifyParam->paramName.c_str(), "adjRiskTime") == 0) {
                     m_adjRiskTime = Utils::ToPsSeconds(netModifyParam->paramValue,false);
-                    fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, adjRiskTime=%d\n",
-                    m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                    fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, adjRiskTime=%d\n",
+                    m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
                     m_adjRiskTime);
                 }else if(strcmp(netModifyParam->paramName.c_str(), "MV") == 0) {
                     m_MV = stof(netModifyParam->paramValue);
 
-                    fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, MV=%.3f\n",
-                 m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                    fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, MV=%.3f\n",
+                    m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
                  m_MV);
                 }
                 else if (strcmp(netModifyParam->paramName.c_str(), "targetPos") == 0) {
                     auto itr = m_targetSignal.targetPosMaps.find(netModifyParam->symbolName);
                     if (itr != m_targetSignal.targetPosMaps.end()) {
-                        fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
-                                m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                        fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
+                                m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
                                 netModifyParam->paramValue.c_str());
                         m_targetSignal.targetPosMaps[netModifyParam->symbolName] = stoi(netModifyParam->paramValue);
 

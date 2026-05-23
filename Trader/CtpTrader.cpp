@@ -54,7 +54,7 @@ namespace Cosmos {
                     spdlog::error("ReqAuthenticate error : {}", retCode);
                 }
             } else {
-                m_loginPromise.set_value(3);
+                m_loginPromise->set_value(3);
                 spdlog::error("OnRspAuthenticate error : {} : {}", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
             }
         };
@@ -73,12 +73,12 @@ namespace Cosmos {
                     m_sessionID = pRspUserLogin->SessionID;
                     fprintf(stderr, "ctpTrade login ok user=%s m_maxOrderRef=%d, frontID=%d, sessionID=%d\n",
                         m_ctpConnection.username.c_str(), m_maxOrderRef,m_frontID, m_sessionID);
-                    m_loginPromise.set_value(0);
+                    m_loginPromise->set_value(0);
                 } catch (std::future_error const &e) {
                     spdlog::error("OnRspUserLogin Error");
                 }
             } else if (m_isLogin == false) {
-                m_loginPromise.set_value(4);
+                m_loginPromise->set_value(4);
                 fprintf(stderr, "trade login error : %d, %s\n", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
                 spdlog::error("trade login error : {} , {}", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
             }
@@ -249,11 +249,11 @@ namespace Cosmos {
                     itr->second.emplace_back(orderField);
                 }
             } else if (pRspInfo != nullptr && pRspInfo->ErrorID != 0) {
-                m_queryOrderPromise.set_value(pRspInfo->ErrorID);
+                m_queryOrderPromise->set_value(pRspInfo->ErrorID);
             }
 
             if (bIsLast == true) {
-                m_queryOrderPromise.set_value(0);
+                m_queryOrderPromise->set_value(0);
             }
         };
 
@@ -325,11 +325,11 @@ namespace Cosmos {
             } else if (pInvestorPosition != nullptr && pRspInfo != nullptr) {
                 spdlog::error("OnRspQryInvestorPosition : instrument={}, errorID={}, errorMsg={}",
                               pInvestorPosition->InstrumentID, pRspInfo->ErrorID, pRspInfo->ErrorMsg);
-                m_queryPositionPromise.set_value(pRspInfo->ErrorID);
+                m_queryPositionPromise->set_value(pRspInfo->ErrorID);
             }
 
             if (bIsLast == true) {
-                m_queryPositionPromise.set_value(0);
+                m_queryPositionPromise->set_value(0);
             }
         };
 
@@ -429,11 +429,11 @@ namespace Cosmos {
             }
 
             if (pRspInfo != nullptr) {
-                m_queryInstrumentPromise.set_value(std::max(pRspInfo->ErrorID, 1));
+                m_queryInstrumentPromise->set_value(std::max(pRspInfo->ErrorID, 1));
             }
 
             if (bIsLast == true) {
-                m_queryInstrumentPromise.set_value(0);
+                m_queryInstrumentPromise->set_value(0);
             }
         };
 
@@ -444,16 +444,26 @@ namespace Cosmos {
                 if (strcmp(pDepthMarketData->UpdateTime, "") == 0) {
                     return;
                 }
-                Types::MarketData *marketData = new Types::MarketData();
+                if (Utils::isSTGInstrument(pDepthMarketData->InstrumentID) == false) {
+                    Types::MarketData *marketData = new Types::MarketData();
 
-                marketData->epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
-                    std::chrono::high_resolution_clock::now().time_since_epoch()).count();
-                Utils::convertToMarketDaTa(pDepthMarketData, marketData);
-                marketData->isInit = true;
-                m_initMarketDataVector.emplace_back(marketData);
+                    marketData->epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
+                        std::chrono::high_resolution_clock::now().time_since_epoch()).count();
+                    Utils::convertToMarketDaTa(pDepthMarketData, marketData);
+                    marketData->isInit = true;
+
+                    Types::Product_t productID{""};
+                    Utils::InstrumentToProduct(marketData->instrumentID, productID);
+
+                    auto tradingSession = Utils::TradingHours::getTradingSession( productID);
+                    if (tradingSession->isHaveNight ==false && m_isDay ==false) {  //night time , no night product not get
+                        return;
+                    }
+                    m_initMarketDataVector.emplace_back(marketData);
+                }
             }
             if (bIsLast == true) {
-                m_queryMarketDataPromise.set_value(0);
+                m_queryMarketDataPromise->set_value(0);
             }
         };
 
@@ -567,7 +577,7 @@ namespace Cosmos {
             CThostFtdcQryInstrumentField req;
             memset(&req, 0, sizeof(req));
             int iResult = m_pTradeApi->ReqQryInstrument(&req, ++m_requestID);
-            auto reqInstrumentFuture = m_queryInstrumentPromise.get_future();
+            auto reqInstrumentFuture = m_queryInstrumentPromise->get_future();
             auto status = reqInstrumentFuture.wait_for(std::chrono::seconds(30));
             if (status == std::future_status::deferred) {
                 spdlog::error("trade login deferred");
@@ -590,7 +600,7 @@ namespace Cosmos {
             memset(&qryDepthMarketDataField, 0, sizeof(CThostFtdcQryDepthMarketDataField));
             auto reqRet = m_pTradeApi->ReqQryDepthMarketData(&qryDepthMarketDataField, m_requestID++);
 
-            auto reqInstrumentFuture = m_queryMarketDataPromise.get_future();
+            auto reqInstrumentFuture = m_queryMarketDataPromise->get_future();
             auto status = reqInstrumentFuture.wait_for(std::chrono::seconds(30));
             if (status == std::future_status::deferred) {
                 spdlog::error("trade _queryMarketData deferred");
@@ -630,6 +640,16 @@ namespace Cosmos {
 
             auto prefixOrder = pt.get_child("ThostUser2.ConnectConfig.OrderPrefix").get<std::string>("<xmlattr>.value");
             std::copy(std::begin(prefixOrder), std::end(prefixOrder), std::begin(m_ctpConnection.OrderPrefix));
+
+
+
+            m_loginPromise = createPromise(m_loginPromise);
+            m_queryOrderPromise = createPromise(m_queryOrderPromise);
+            m_queryPositionPromise = createPromise(m_queryPositionPromise);
+            m_queryTraderPromise = createPromise(m_queryTraderPromise);
+            m_queryInstrumentPromise = createPromise(m_queryInstrumentPromise);
+            m_queryMarketDataPromise = createPromise(m_queryMarketDataPromise);
+
             m_pTradeApi = CThostFtdcTraderApi::CreateFtdcTraderApi("./logs/");
             m_pTradeApi->RegisterSpi(this);
 
@@ -643,7 +663,7 @@ namespace Cosmos {
             m_pTradeApi->RegisterFront(frontAddress.data());
             m_pTradeApi->Init();
 
-            auto loginFuture = m_loginPromise.get_future();
+            auto loginFuture = m_loginPromise->get_future();
             auto status = loginFuture.wait_for(std::chrono::seconds(30));
             if (status == std::future_status::deferred) {
                 fprintf(stderr, "trade login deferred\n");
@@ -720,6 +740,15 @@ namespace Cosmos {
             }
             return 0;
         }
+
+        std::promise<int>* CtpTrader::createPromise(std::promise<int>* promise) {
+            if (promise != nullptr) {
+                delete promise;
+            }
+            promise = new std::promise<int>();
+            return promise;
+
+        };
 
         Types::OnQuerySymbol * CtpTrader::getOnQuerySymbol(Types::Instrument_t const& instrumentID) {
             auto itr = m_onQuerySymbolMap.find(instrumentID);
@@ -819,12 +848,12 @@ namespace Cosmos {
             strcpy(qryTradeField.BrokerID, m_ctpConnection.brokerId.c_str());
             strcpy(qryTradeField.InvestorID, m_ctpConnection.username.c_str());
             strcpy(qryTradeField.InstrumentID, queyInstrument.data());
-            std::promise<int> traderPromise;
-            m_queryTraderPromise.swap(traderPromise);
+            // std::promise<int> traderPromise;
+            // m_queryTraderPromise->swap(traderPromise);
             //   m_QryRspTradeVec.clear();
             auto reqRet = m_pTradeApi->ReqQryTrade(&qryTradeField, 0);
 
-            auto traderFuture = m_queryTraderPromise.get_future();
+            auto traderFuture = m_queryTraderPromise->get_future();
             auto status = traderFuture.wait_for(std::chrono::seconds(20));
             if (status == std::future_status::timeout) {
                 spdlog::error("query trade {} timeout reqRet={}", qryTradeField.InstrumentID, reqRet);
@@ -853,8 +882,8 @@ namespace Cosmos {
             strcpy(qryOrder.InvestorID, m_ctpConnection.username.c_str());
 
             //         std::copy(std::begin(param.value), std::end(param.value), std::begin(symbol->tradePosition.instrument));
-            std::promise<int> positionPromise;
-            m_queryOrderPromise.swap(positionPromise);
+            // std::promise<int> positionPromise;
+            // m_queryOrderPromise.swap(positionPromise);
 
 
             int reqCount{0};
@@ -869,7 +898,7 @@ namespace Cosmos {
             if (retCode != 0) {
                 spdlog::error("ReqQryInvestorOrder  error retcode : {}", retCode);
             }
-            auto positionFuture = m_queryOrderPromise.get_future();
+            auto positionFuture = m_queryOrderPromise->get_future();
             auto status = positionFuture.wait_for(std::chrono::seconds(10));
             if (status == std::future_status::deferred) {
                 spdlog::error("deferred");
@@ -897,8 +926,8 @@ namespace Cosmos {
             strcpy(qryPosition.InvestorID, m_ctpConnection.username.c_str());
 
             //         std::copy(std::begin(param.value), std::end(param.value), std::begin(symbol->tradePosition.instrument));
-            std::promise<int> positionPromise;
-            m_queryPositionPromise.swap(positionPromise);
+            // std::promise<int> positionPromise;
+            // m_queryPositionPromise.swap(positionPromise);
 
             int reqCount{0};
             int retCode = -1;
@@ -912,7 +941,7 @@ namespace Cosmos {
             if (retCode != 0) {
                 spdlog::error("ReqQryInvestorPosition  error retcode : {}", retCode);
             }
-            auto positionFuture = m_queryPositionPromise.get_future();
+            auto positionFuture = m_queryPositionPromise->get_future();
             auto status = positionFuture.wait_for(std::chrono::seconds(10));
             if (status == std::future_status::deferred) {
                 spdlog::error("deferred");

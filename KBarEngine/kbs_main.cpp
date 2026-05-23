@@ -88,11 +88,15 @@ int main() {
     Cosmos::Utils::CppMySQL3DB *mySql = new Cosmos::Utils::CppMySQL3DB();
     InitMySql(mySql, store_config);
 
-    int tradingday = 0;
-    if (trader.start(tradingday, Cosmos::Utils::is_day()) != 0) {
-        fprintf(stderr, "trade error\n");
-        spdlog::error("trader start error, program terminal");
-        return -1;
+    int tradingDay = 0;
+    int retry =0 ;
+    while (trader.start(tradingDay, Cosmos::Utils::is_day()) != 0) {
+        fprintf(stderr, "trade error %d\n", retry);
+        spdlog::error("trader start error {}, program terminal", retry);
+        if (retry++ >= 3) {
+            return -1;
+        }
+        sleep(90);
     };
     spdlog::info("trader login successfully");
 
@@ -110,7 +114,7 @@ int main() {
     for (auto & params : configParamMap) {
 
         auto saveEngine = new Cosmos::KBarEngine::KBarSaverEngine(&driver, params.first ,   mySql,
-                             tradeInsInfoMap,  tradingday , Cosmos::Utils::is_day());
+                             tradeInsInfoMap,  tradingDay , Cosmos::Utils::is_day());
         saveEngine->m_policyID = policyID++;
     //    underlyngine->m_tradingDay = tradingday;
         engines_map[params.first] = saveEngine;
@@ -122,7 +126,18 @@ int main() {
     }
 
     auto initMarketVec = trader.getInitMarketVec();
-    market.start(*initMarketVec, Cosmos::Utils::is_day());
+
+    retry = 0 ;
+    while (0 != market.start(*initMarketVec, Cosmos::Utils::is_day())) {
+        fprintf(stderr, "trade error retry=%d\n", retry);
+        spdlog::error("trader start error retry={}, program terminal", retry);
+        if (retry++ >= 3) {
+            return -1;
+        }
+        sleep(90);
+    }
+
+
     driver.onStart();
 
 

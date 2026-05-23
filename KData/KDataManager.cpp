@@ -4,6 +4,7 @@
 
 #include "KDataManager.h"
 
+
 namespace Cosmos {
     namespace KData {
         KSeries *KDataManager::KMAddTick(const Types::MarketData *pMD, Types::KPeriod period) {
@@ -16,17 +17,26 @@ namespace Cosmos {
 
             auto series = this->getSeries(pMD->instrumentID, period);
             int lastSeriesIndex = series->m_seriesIndex;
-            series->addTick(pMD, m_isDay);
+
             if (pMD->isInit == true) {
+                Types::Product_t product{""};
+                Utils::InstrumentToProduct(pMD->instrumentID, product);
+                auto fTTrait  = Utils::TradingHours::getProductTrait(product, pMD->psSecond, m_isDay);
+                if (fTTrait ==  Utils::FTTrait::FT_AUCTION || fTTrait ==  Utils::FTTrait::FT_TRADING) {
+                    series->addTick(pMD, m_isDay);
+                }
                 lastSeriesIndex = series->m_seriesIndex;
-                series->m_recordIndex = series->m_seriesIndex;
+                //  series->m_recordIndex = series->m_seriesIndex;
+            } else {
+                series->addTick(pMD, m_isDay);
+                if (lastSeriesIndex < series->m_seriesIndex or
+                    (series->m_Period == Types::KPeriod::D1 && pMD->settlementPrice > 0.0 && pMD->settlementPrice <
+                     99999999.0)) {
+                    this->checkSeriesRecord(series, lastSeriesIndex);
+                    return series;
+                }
             }
-            if (lastSeriesIndex < series->m_seriesIndex or
-                (series->m_Period == Types::KPeriod::D1 && pMD->settlementPrice > 0.0 && pMD->settlementPrice <
-                 99999999.0)) {
-                this->checkSeriesRecord(series, lastSeriesIndex);
-                return series;
-            }
+
             return nullptr;
         }
 
@@ -36,16 +46,24 @@ namespace Cosmos {
                 assert(false && "KLineManager addTick ");
             }
             for (auto &itrIns: *(itr->second)) {
-                auto period = itrIns.first;
                 auto series = itrIns.second;
                 int lastSeriesIndex = series->m_seriesIndex;
-                series->addTick(pMD, m_isDay);
+
                 if (pMD->isInit == true) {
+                    Types::Product_t product{""};
+                    Utils::InstrumentToProduct(pMD->instrumentID, product);
+                    auto fTTrait = Utils::TradingHours::getProductTrait(product, pMD->psSecond, m_isDay);
+                    if (fTTrait == Utils::FTTrait::FT_AUCTION || fTTrait == Utils::FTTrait::FT_TRADING) {
+                        series->addTick(pMD, m_isDay);
+                    }
+
                     lastSeriesIndex = series->m_seriesIndex;
-                    series->m_recordIndex = series->m_seriesIndex;
-                }
-                if (lastSeriesIndex < series->m_seriesIndex) {
-                    this->checkSeriesRecord(series, lastSeriesIndex);
+                    //   series->m_recordIndex = series->m_seriesIndex;
+                } else {
+                    series->addTick(pMD, m_isDay);
+                    if (lastSeriesIndex < series->m_seriesIndex) {
+                        this->checkSeriesRecord(series, lastSeriesIndex);
+                    }
                 }
             }
         }
@@ -156,6 +174,10 @@ namespace Cosmos {
                     kData->m_volume = rs.getIntField("volume");
                     kData->m_amount = rs.getFloatField("amount");
                     kData->m_oi = rs.getFloatField("position");
+                    kData->m_sabrPRMT.alpha = rs.getFloatField("alpha");
+                    kData->m_sabrPRMT.beta = rs.getFloatField("beta");
+                    kData->m_sabrPRMT.rho = rs.getFloatField("rho");
+                    kData->m_sabrPRMT.nu = rs.getFloatField("nu");
                     kData->m_bidPrice = rs.getFloatField("bidPrice");
                     kData->m_askPrice = rs.getFloatField("askPrice");
                     kData->m_bidVolume = rs.getIntField("bidVolume");
@@ -169,7 +191,7 @@ namespace Cosmos {
         }
 
         void KDataManager::initKSeries(Types::InstrumentInfo const &insInfo, Types::KPeriod period,
-                                       int tradingday, double riskFreeR, std::vector<KData *> &historyKline,
+                                       int tradingDay, double riskFreeR, std::vector<KData *> &historyKline,
                                        bool isDay) {
             // fprintf(stderr, "initKSeries instrument=%s, peroid=%d, historeKline length=%d, lastBar=%d-%s, firstBar=%d-%s\n",instrument.data(),
             //			                                       Types::KPeroidToIntervalMap[period], historyKline.size(), historyKline[0]->m_tradingday ,historyKline[0]->m_updateTime.data(),
@@ -185,8 +207,9 @@ namespace Cosmos {
                     historyKline[historyKline.size() - 1]->m_updateTimeBegin.data());
             }
 
-            m_tradingday = tradingday;
+            m_tradingDay = tradingDay;
             auto tradingSession = Utils::TradingHours::getTradingSession(insInfo.productID);
+
 
             auto itr = m_allKLineSeries.find(insInfo.instrumentID);
             if (itr == m_allKLineSeries.end()) {
@@ -198,7 +221,7 @@ namespace Cosmos {
 
             auto period_itr = itr->second->find(period);
             if (period_itr == itr->second->end()) {
-                KSeries *kSeries = new KSeries(insInfo, tradingday, riskFreeR, period, *tradingSession, isDay,
+                KSeries *kSeries = new KSeries(insInfo, tradingDay, riskFreeR, period, *tradingSession, isDay,
                                                m_biasSeconds);
 
                 kSeries->setHistoryKLine(historyKline);
@@ -217,13 +240,12 @@ namespace Cosmos {
                     }
                     kSeries->setUnderlySeries(itrUnderlySeries->second);
                     _initUnderlyToOptionSeriesMap(kSeries, period);
-                    m_updateOptionModelPamt->init(kSeries, period, m_tradingday, m_isDay);
+                    m_updateOptionModelPamt->init(kSeries, period, m_tradingDay, m_isDay);
                 }
             }
         }
 
         void KDataManager::_initUnderlyToOptionSeriesMap(KSeries *optionKSeries, Types::KPeriod const &kperiod) {
-
             if (optionKSeries->m_underlySeries->m_callPutSeriesMap == nullptr) {
                 optionKSeries->m_underlySeries->m_callPutSeriesMap = new std::map<int, CallPutSeries *>();
             }
@@ -244,7 +266,8 @@ namespace Cosmos {
 
         double KDataManager::_calForwardPrice(const KSeries *underlySeries) {
             auto calPutMap = underlySeries->m_callPutSeriesMap;
-            if (m_isUseUnderlyPrice == true && underlySeries->m_lastPMD->bidVolume[0] > 0 && underlySeries->m_lastPMD->askVolume[0] > 0) {
+            if (m_isUseUnderlyPrice == true && underlySeries->m_lastPMD->bidVolume[0] > 0 && underlySeries->m_lastPMD->
+                askVolume[0] > 0) {
                 return underlySeries->m_lastPMD->midPrice;
             } else {
                 double minSpread = 9999;
@@ -253,10 +276,12 @@ namespace Cosmos {
                 for (auto &optionSeriesItr: *calPutMap) {
                     auto callSeries = optionSeriesItr.second->callSeries;
                     auto putSeries = optionSeriesItr.second->putSeries;
-                    if (callSeries->m_lastPMD == nullptr || callSeries->m_lastPMD->bidVolume[0] == 0 || callSeries->m_lastPMD->askVolume[0] == 0 ||
-                        putSeries->m_lastPMD == nullptr || putSeries->m_lastPMD->bidVolume[0] == 0 || putSeries->m_lastPMD->askVolume[0] == 0) {
+                    if (callSeries->m_lastPMD == nullptr || callSeries->m_lastPMD->bidVolume[0] == 0 || callSeries->
+                        m_lastPMD->askVolume[0] == 0 ||
+                        putSeries->m_lastPMD == nullptr || putSeries->m_lastPMD->bidVolume[0] == 0 || putSeries->
+                        m_lastPMD->askVolume[0] == 0) {
                         continue;
-                        }
+                    }
                     double spread = (callSeries->m_lastPMD->askPrice[0] - callSeries->m_lastPMD->bidPrice[0]) +
                                     (putSeries->m_lastPMD->askPrice[0] - putSeries->m_lastPMD->bidPrice[0]);
                     if (spread < minSpread) {
@@ -266,7 +291,8 @@ namespace Cosmos {
                     }
                 }
 
-                if (minSpread > underlySeries->m_insInfo.tickSize * 5 && underlySeries->m_lastPMD->bidVolume[0] > 0 && underlySeries->m_lastPMD->askVolume[0] > 0) {
+                if (minSpread > underlySeries->m_insInfo.tickSize * 5 && underlySeries->m_lastPMD->bidVolume[0] > 0 &&
+                    underlySeries->m_lastPMD->askVolume[0] > 0) {
                     forwardPrice = underlySeries->m_lastPMD->lastPrice;
                 }
 
@@ -274,21 +300,19 @@ namespace Cosmos {
             }
         };
 
-        void KDataManager::checkSeriesRecord(KSeries *series,  int lastSeriesIndex) {
+        void KDataManager::checkSeriesRecord(KSeries *series, int lastSeriesIndex) {
             if (series->m_insInfo.productIDClass == Types::ProductClass::future && series->m_callPutSeriesMap !=
                 nullptr) {
                 auto underlySeries = series;
 
                 while (lastSeriesIndex < underlySeries->m_seriesIndex) {
-
                     double forwardPrice = _calForwardPrice(underlySeries);
-                    m_updateOptionModelPamt->updateGreeks(underlySeries, forwardPrice,  lastSeriesIndex);
+                    m_updateOptionModelPamt->updateGreeks(underlySeries, forwardPrice, lastSeriesIndex);
                     m_updateOptionModelPamt->updateSabr(underlySeries, forwardPrice, lastSeriesIndex);
                     lastSeriesIndex++;
                     //     underlySeries->m_recordIndex += 1;
                 }
-                }
+            }
         }
-
     }
 }

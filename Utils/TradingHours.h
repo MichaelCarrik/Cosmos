@@ -24,8 +24,7 @@ namespace Cosmos {
             FT_TRADING,
             FT_AUCTION,
             FT_SETTLEMENT,
-            FT_NOT_TRADING
-        };
+            FT_NOT_TRADING};
 
         struct Duration{
             int beginTime{0};
@@ -40,7 +39,6 @@ namespace Cosmos {
             int closeTodaySeconds;
              Types::ExchangeType exchangeId;
             bool isHaveNight{false};
-
         };
           class TradingHours {
           private:

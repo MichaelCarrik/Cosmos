@@ -248,25 +248,6 @@ namespace Cosmos {
                 }
             }
 
-            // void refreshSeries(int tradingday,  Utils::TradingSession &tradingSession, bool isDay) {
-            //
-            //     m_kseriesTime->initKTime(tradingSession, isDay);
-            //
-            //     m_tradingday = tradingday;
-            //     int remainK = 0;
-            //
-            //     m_kTime = m_kseriesTime->getCurrent(remainK);
-            //     for (auto i = 0; i < remainK; i++) {
-            //         KData *kline = new KData();
-            //         m_KDataVecs.emplace_back(kline);
-            //         //   m_seriesIndex++;
-            //     }
-            //     if (m_Period == Types::KPeriod::D1 and m_KDataVecs[m_seriesIndex]->m_tradingday == m_tradingday) {
-            //         m_seriesIndex = m_seriesIndex;
-            //     } else {
-            //         m_seriesIndex += 1;
-            //     }
-            // }
         };
 
 

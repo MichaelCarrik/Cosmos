@@ -73,61 +73,60 @@ namespace Cosmos {
             virtual void updateParam(const Types::NetModifyParam *netModifyParam) override {
                 if(strcmp(netModifyParam->paramName.c_str(), "isRefreshDelta") == 0) {
                     m_isRefreshDelta = stoi(netModifyParam->paramValue);
-                    fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, isRefreshDelta=%d\n",
-                    m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                    fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, isRefreshDelta=%d\n",
+                    m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
                     m_isRefreshDelta);
                 }else if(strcmp(netModifyParam->paramName.c_str(), "openAtDelta") == 0) {
                     m_openAtDelta = stof(netModifyParam->paramValue);
-                    fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, openAtDelta=%.3f\n",
-                 m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
-                 m_openAtDelta);
+                    fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, openAtDelta=%.3f\n",
+                    m_policyName.c_str(),m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                     m_openAtDelta);
                 }else if(strcmp(netModifyParam->paramName.c_str(), "MV") == 0) {
                     m_MV = stof(netModifyParam->paramValue);
 
-                    fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, MV=%.3f\n",
-                 m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
-                 m_MV);
+                    fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, MV=%.3f\n",
+                    m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                     m_MV);
                 }
                 else if (strcmp(netModifyParam->paramName.c_str(), "targetPos") == 0) {
                     bool isFind =false;
                     auto callItr = m_callPolicySymbols.targetSignal.targetPosMaps.find(netModifyParam->symbolName);
                     if (callItr != m_callPolicySymbols.targetSignal.targetPosMaps.end()) {
-                        fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
-                                m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                        fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
+                                m_policyName.c_str(), m_engineName.c_str(), m_policyName.c_str(), callItr->first.data(),
                                 netModifyParam->paramValue.c_str());
-                        m_callPolicySymbols.targetSignal.targetPosMaps[netModifyParam->symbolName] = stoi(netModifyParam->paramValue);
+                        callItr->second = stoi(netModifyParam->paramValue);
                         isFind = true;
 
                     }else {
                         auto putItr = m_putPolicySymbols.targetSignal.targetPosMaps.find(netModifyParam->symbolName);
                         if (putItr != m_putPolicySymbols.targetSignal.targetPosMaps.end()) {
-                            fprintf(stderr, "updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
-                                    m_engineName.c_str(), m_policyName.c_str(), m_underlyInstrument.data(),
+                            fprintf(stderr, "[%s] updateParam engineName=%s, policyName=%s, instrument=%s, targetPosition=%s\n",
+                                    m_policyName.c_str(),m_engineName.c_str(), m_policyName.c_str(), putItr->first.data(),
                                     netModifyParam->paramValue.c_str());
-                            m_putPolicySymbols.targetSignal.targetPosMaps[netModifyParam->symbolName] = stoi(netModifyParam->paramValue);
+                            putItr->second = stoi(netModifyParam->paramValue);
                             isFind = true;
                         }
+                    }
+                    if (isFind==true) {
+                        auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_lastUnderlyBarIndex];
 
-                        if (isFind==true) {
-                            auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_lastUnderlyBarIndex];
-
-                            double allCallDelta = getAllHoldDelta(m_callPolicySymbols);
-                            double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
-                              m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
-                                          "targetPosition={}, basePrice={:.3f}, seriesIndex={}, "
-                                          "allCallDelta={:.3f}, allPutDelta={:.3f}",
-                                          m_configIndex, lastUnderlyKB->m_instrument.data(),
-                                          lastUnderlyKB->m_tradingDay,
-                                          lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime,
-                                          lastUnderlyKB->m_close,
-                                          0.0, 0, m_basePrice, m_underlyKseries->m_seriesIndex - 1, allCallDelta,
-                                          allPutDelta);
+                        double allCallDelta = getAllHoldDelta(m_callPolicySymbols);
+                        double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
+                        m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
+                                    "targetPosition={}, basePrice={:.3f}, seriesIndex={}, "
+                                    "allCallDelta={:.3f}, allPutDelta={:.3f}",
+                                    m_configIndex, lastUnderlyKB->m_instrument.data(),
+                                    lastUnderlyKB->m_tradingDay,
+                                    lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime,
+                                    lastUnderlyKB->m_close,
+                                    0.0, 0, m_basePrice, m_underlyKseries->m_seriesIndex - 1, allCallDelta,
+                                    allPutDelta);
                         _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
                         _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
 
                         m_configLog->flush();
                         m_configIndex++;
-                        }
                     }
                 }
             };

@@ -2,15 +2,15 @@
 // Created by zhangyw on 4/17/20.
 //
 
-#ifndef HFT_MM_OPENENGINE_H
-#define HFT_MM_OPENENGINE_H
+#ifndef HFT_KBARSAVEENGINE_H
+#define HFT_KBARSAVEENGINE_H
 
 
 #include "../Utils/MemoryList.h"
 #include "../Driver/RealtimeDriver.h"
 #include "../Types/Param.h"
 #include "../Types/KPeriod.h"
-#include "../KData/KDataManager.h"
+#include "KDataManager.h"
 #include "../Utils/cppmysql.h"
 #include <set>
 
@@ -99,4 +99,4 @@ namespace Cosmos{
 
 
 
-#endif //HFT_MM_OPENENGINE_H
+#endif //HFT_KBARSAVEENGINE_H

@@ -61,39 +61,39 @@ namespace Cosmos {
             }
 
             sprintf(m_TableInsertBufferVec[0].insertHead.data(), "%s",
-                "REPLACE INTO futureDay_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,upperLimit,lowerLimit,settlement) "
-                        "VALUES");
+                "REPLACE INTO futureDay_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,"
+                "upperLimit,lowerLimit,settlement) VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[0]);
 
             sprintf(m_TableInsertBufferVec[1].insertHead.data(), "%s",
-                "INSERT INTO futureMinutes_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume) "
-                        "VALUES");
+                "INSERT INTO futureMinutes_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,alpha,beta,rho,nu,"
+                "bidPrice,askPrice,bidVolume,askVolume) VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[1]);
 
 
             sprintf(m_TableInsertBufferVec[2].insertHead.data(), "%s",
-                "INSERT INTO futureOneMinute_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume) "
-                        "VALUES");
+                "INSERT INTO futureOneMinute_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,alpha,beta,rho,nu,"
+                "bidPrice,askPrice,bidVolume,askVolume) VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[2]);
 
 
             sprintf(m_TableInsertBufferVec[3].insertHead.data(), "%s",
               "REPLACE INTO optionDay_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
-              "open,high,low,close,forwardPrice,volume,amount,position,settlement,IV,delta,gamma,vega,theta) "
+              "open,high,low,close,forwardPrice,volume,amount,position,settlement,IV,delta,gamma,vega,theta,vanna,volga) "
                       "VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[3]);
 
 
             sprintf(m_TableInsertBufferVec[4].insertHead.data(), "%s",
               "INSERT INTO optionMinutes_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
-              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta) "
+              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta,vanna,volga) "
                       "VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[4]);
 
 
             sprintf(m_TableInsertBufferVec[5].insertHead.data(), "%s",
               "INSERT INTO optionOneMinute_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
-              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta) "
+              "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta,vanna,volga) "
                       "VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[5]);
 
@@ -163,10 +163,13 @@ namespace Cosmos {
                     if (retCode < 0) {
                         const char *errorMsg = mysql_error(m_mysql->getMysql());
                         int errorNo = mysql_errno(m_mysql->getMysql());
-                     //   fprintf(stderr,"insert/update bar into mysql faield, sql:%s, error_no:%d, error_msg:%s\n", insertSql.data(), errorNo, errorMsg);
-                        fprintf(stderr,"insert/update bar into mysql faield, sql size:%d, error_no:%d, error_msg:%s\n", insertSql.size(), errorNo, errorMsg);
-                        spdlog::error("mysql execise failed, sql size:{}, error_no:{}, error_msg:{}",
+                        if (errorNo != 1062) {
+                            fprintf(stderr,"insert/update bar into mysql faield, sql size:%d, error_no:%d, error_msg:%s\n", insertSql.size(), errorNo, errorMsg);
+                            spdlog::error("mysql execise failed, sql size:{}, error_no:{}, error_msg:{}",
                                       insertSql.size(), errorNo, errorMsg);
+                        }
+                     //   fprintf(stderr,"insert/update bar into mysql faield, sql:%s, error_no:%d, error_msg:%s\n", insertSql.data(), errorNo, errorMsg);
+
                         if (errorNo == 2006 && !bRetried && m_mysql->reopen() == 0) {
                             bRetried = true;
                         }
@@ -214,7 +217,7 @@ namespace Cosmos {
         void KBarSaverEngine::onEventData(Types::EventData const &eventData) {
             if (eventData.eventType == Types::EventType::marketEvent) {
                 auto pMD = (const Types::MarketData *) eventData.point;
-                // if (strcmp(pMD->instrumentID.data(), "lc2605") !=0 ) {
+                // if (strcmp(pMD->instrumentID.data(), "pg2607") !=0 ) {
                 //     return;
                 // }
                 // fprintf(stderr, "onEventData instrumentid=%s, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
@@ -274,7 +277,7 @@ namespace Cosmos {
                 if(period == Types::KPeriod::D1) {
                     auto kbarsRows = m_kbarRowsPool.getNewMemory();
                     sprintf(kbarsRows->sql.data(),"(\'%s\',%d,%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%.3f)",
-                        kline->m_instrument.data(), kline->m_tradingday,
+                        kline->m_instrument.data(), kline->m_tradingDay,
                         Cosmos::Types::KPeroidToIntervalVec[static_cast<int>(period)],
                         kline->m_updateTimeBegin.data(),
                         kline->m_updateTimeEnd.data(),
@@ -287,14 +290,16 @@ namespace Cosmos {
                     kline->isInsert = true;
                 }else  {
                     auto kbarsRows = m_kbarRowsPool.getNewMemory();
-                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%d\',%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d)",
-                    kline->m_instrument.data(), kline->m_tradingday,
+                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%d\',%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,"
+                                                  "%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%d,%d)",
+                    kline->m_instrument.data(), kline->m_tradingDay,
                          Cosmos::Types::KPeroidToIntervalVec[static_cast<int>(period)],
                          kline->m_updateTimeBegin.data(),
                          kline->m_updateTimeEnd.data(),
                          kline->m_productID.data(), kline->m_open,
                          kline->m_high, kline->m_low,
                          kline->m_close, (double) kline->m_volume, kline->m_amount, kline->m_oi,
+                         kline->m_sabrPRMT.alpha, kline->m_sabrPRMT.beta,kline->m_sabrPRMT.rho, kline->m_sabrPRMT.nu,
                          kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume);
                     kbarsRows->table =  period == Types::KPeriod::Min1 ? KBars_T::futureOneMinute : KBars_T::futureMinutes;
                     m_sqlThreadQueue.write(*kbarsRows);
@@ -304,28 +309,27 @@ namespace Cosmos {
             }else if (series->m_insInfo.productIDClass == Types::ProductClass::option) {
                 if(period == Types::KPeriod::D1) {
                     auto kbarsRows = m_kbarRowsPool.getNewMemory();
-                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%s\',\'%c\',%.1f,%d,%d,%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f)",
-                    kline->m_instrument.data(), series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice,
-                         kline->m_tradingday,series->m_insInfo.expireDate,Types::KPeroidToIntervalVec[static_cast<int>(period)],
-                         kline->m_updateTimeBegin.data(),   kline->m_updateTimeEnd.data(), kline->m_productID.data(),
-                         kline->m_open, kline->m_high, kline->m_low,
-                         kline->m_close, kline->m_forwardPrice,  (double) kline->m_volume, kline->m_amount, kline->m_oi,
-                          kline->m_settlement, kline->IV,
-                          kline->delta, kline->gamma, kline->vega, kline->theta);
+                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%s\',\'%c\',%.1f,%d,%d,%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,"
+                                                  "%.1f,%.1f,%.3f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f)",
+                    kline->m_instrument.data(), series->m_insInfo.underly.data(), series->m_insInfo.optionType,series->m_insInfo.strikePrice,
+                    kline->m_tradingDay,series->m_insInfo.expireDate,Types::KPeroidToIntervalVec[static_cast<int>(period)],
+                    kline->m_updateTimeBegin.data(),   kline->m_updateTimeEnd.data(), kline->m_productID.data(),
+                    kline->m_open, kline->m_high, kline->m_low,kline->m_close, kline->m_forwardPrice,  (double) kline->m_volume,
+                    kline->m_amount, kline->m_oi,kline->m_settlement, kline->m_greeks.IV,kline->m_greeks.delta, kline->m_greeks.gamma,
+                    kline->m_greeks.vega, kline->m_greeks.theta,kline->m_greeks.vanna, kline->m_greeks.volga);
                     kbarsRows->table = KBars_T::optionDay;
                     m_sqlThreadQueue.write(*kbarsRows);
                     kline->isInsert = true;
                 }else  {
                     auto kbarsRows = m_kbarRowsPool.getNewMemory();
-                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%s\',\'%c\',%.1f,%d,%d,%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f)",
-                    kline->m_instrument.data(),series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice, kline->m_tradingday,
-                                  series->m_insInfo.expireDate,
-                                  Types::KPeroidToIntervalVec[static_cast<int>(period)],
-                                       kline->m_updateTimeBegin.data(), kline->m_updateTimeEnd.data(), kline->m_productID.data(),
-                                  kline->m_open, kline->m_high, kline->m_low,
-                                  kline->m_close,  kline->m_forwardPrice,(double) kline->m_volume, kline->m_amount, kline->m_oi,
-                                  kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume,
-                                  kline->IV,  kline->delta, kline->gamma, kline->vega, kline->theta);
+                    sprintf(kbarsRows->sql.data(),"(\'%s\',\'%s\',\'%c\',%.1f,%d,%d,%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,"
+                                                  "%.1f,%.3f,%.3f,%d,%d,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f,%.5f)",
+                    kline->m_instrument.data(),series->m_insInfo.underly.data(), series->m_insInfo.optionType, series->m_insInfo.strikePrice,
+                    kline->m_tradingDay,series->m_insInfo.expireDate,Types::KPeroidToIntervalVec[static_cast<int>(period)],kline->m_updateTimeBegin.data(),
+                    kline->m_updateTimeEnd.data(), kline->m_productID.data(),kline->m_open, kline->m_high, kline->m_low,kline->m_close,  kline->m_forwardPrice,
+                    (double) kline->m_volume, kline->m_amount, kline->m_oi,kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume,
+                    kline->m_greeks.IV,  kline->m_greeks.delta, kline->m_greeks.gamma, kline->m_greeks.vega, kline->m_greeks.theta, kline->m_greeks.vanna,
+                    kline->m_greeks.volga);
                     kbarsRows->table =  period == Types::KPeriod::Min1 ? KBars_T::optionOneMinute : KBars_T::optionMinutes;
                   //  if (kbarsRows->table == KBars_T::optionOneMinute) {
                         m_sqlThreadQueue.write(*kbarsRows);

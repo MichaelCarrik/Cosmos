@@ -105,19 +105,21 @@ namespace Cosmos {
                     (putOptionKData->m_tradingDay != 0 && (underlyKData->m_tradingDay != putOptionKData->m_tradingDay ||
                                                            strcmp(underlyKData->m_updateTimeBegin.data(),
                                                                   putOptionKData->m_updateTimeBegin.data()) != 0))) {
-                    assert(false);
+                   // assert(false);
 
-                    // fprintf(stderr, "calGreeks error : underly=%s(%d, %s) , optionKD=%s(%d, %s), period=%d\n",
-                    //         underlyKData->m_instrument.data(),
-                    //         underlyKData->m_tradingday, underlyKData->m_updateTimeBegin.data(),
-                    //         this->m_insInfo.instrumentID.data(),
-                    //         callOptionKData->m_tradingday, callOptionKData->m_updateTimeBegin.data(),
-                    //         Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)]);
+                    fprintf(stderr, "calGreeks error : underly=%s(%d, %s), callOptionKD=%s(%d, %s), putOptionKD=%s(%d, %s), period=%d\n",
+                            underlyKData->m_instrument.data(),
+                            underlyKData->m_tradingDay, underlyKData->m_updateTimeBegin.data(),
+                            callOptionKData->m_instrument.data(),
+                            callOptionKData->m_tradingDay, callOptionKData->m_updateTimeBegin.data(),
+                            putOptionKData->m_instrument.data(),
+                            putOptionKData->m_tradingDay, putOptionKData->m_updateTimeBegin.data(),
+                            Types::KPeroidToIntervalVec[static_cast<int>(underlySeries->m_Period)]);
                     // if (strcmp(this->m_insInfo.productID.data(),"MO")!=0 &&
                     //   strcmp(this->m_insInfo.productID.data(),"HO")!=0 &&
                     //   strcmp(this->m_insInfo.productID.data(),"IO")!=0 ) {
                     //     assert(false);
-                    //   }
+                    //    }
                 }
 
 

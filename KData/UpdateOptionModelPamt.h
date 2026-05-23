@@ -16,6 +16,7 @@ namespace Cosmos {
             std::map<std::tuple< Types::Instrument_t,  Types::KPeriod>, std::vector<KSeries *> *> m_underlyToOptionSeriesMap;
             std::map< std::tuple< Types::Instrument_t,  Types::KPeriod>, int> m_underlyTodayBeginIndexMap;
 
+
         public:
             UpdateOptionModelPamt() {
 
@@ -37,6 +38,7 @@ namespace Cosmos {
 
             void updateGreeks(KSeries* underlySeries, double forwardPrice,  int lastSeriesIndex);
             void updateSabr(KSeries* underlySeries, double forwardPrice, int);
+
         };
 
     }

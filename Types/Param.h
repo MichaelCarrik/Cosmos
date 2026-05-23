@@ -19,9 +19,11 @@ namespace Cosmos{
 
 
         struct NetModifyParam {
+            std::string time{""};
             std::string engineName{""};
             std::string subPolicyName{""};
             std::string paramName{""};
+            Types::Instrument_t underlyInstrument{""};
             Types::Instrument_t symbolName{""};
             std::string paramValue{""};
         };

@@ -531,10 +531,13 @@ namespace Cosmos {
             }else if (eventData.eventType == Types::EventType::paramsEvent) {
                 auto netModifyParam = (const Types::NetModifyParam *) eventData.point;
                 if (strcmp(netModifyParam->engineName.data(), m_engineName.c_str()) == 0) {
+                    fprintf(stderr, "[%s] receive netModifyParam time=%s, engineName=%s, subPolicyName=%s, symbolName=%s, paramName=%s, paramValue=%s\n",
+                  m_engineName.c_str(), netModifyParam->time.c_str(), netModifyParam->engineName.c_str(), netModifyParam->subPolicyName.c_str(), netModifyParam->symbolName.data(),
+                  netModifyParam->paramName.c_str(), netModifyParam->paramValue.data());
                     bool isFindPolicy = false;
                     for (auto & futurePolicy :    m_futurePolicyVec) {
                         if (strcmp(netModifyParam->subPolicyName.c_str(), futurePolicy->m_policyName.c_str()) ==0 &&
-                            strcmp(netModifyParam->symbolName.data(), futurePolicy->m_underlyInstrument.data()) ==0) {
+                            strcmp(netModifyParam->underlyInstrument.data(), futurePolicy->m_underlyInstrument.data()) ==0) {
                             isFindPolicy = true;
                             futurePolicy->updateParam(netModifyParam);
                             break;
@@ -542,8 +545,9 @@ namespace Cosmos {
                     }
                     if (isFindPolicy == false) {
                         for (auto & optionPolicy :    m_optionPolicyVec) {
+                          //  fprintf(stderr, "optionPolicy strcmp(%s, %s)\n", netModifyParam->subPolicyName.c_str(), optionPolicy->m_policyName.c_str() );
                             if (strcmp(netModifyParam->subPolicyName.c_str(), optionPolicy->m_policyName.c_str()) ==0 &&
-                                strcmp(netModifyParam->symbolName.data(), optionPolicy->m_underlyInstrument.data()) ==0) {
+                                strcmp(netModifyParam->underlyInstrument.data(), optionPolicy->m_underlyInstrument.data()) ==0) {
                                 isFindPolicy = true;
                                 optionPolicy->updateParam(netModifyParam);
                                 break;
@@ -551,7 +555,10 @@ namespace Cosmos {
                         }
                     }
                     if (isFindPolicy == false) {
-                          assert(false);
+                        fprintf(stderr, "netModifyParam not find time=%s, engineName=%s, subPolicyName=%s, symbolName=%s, paramName=%s, paramValue=%s\n",
+                           netModifyParam->time.c_str(), netModifyParam->engineName.c_str(), netModifyParam->subPolicyName.c_str(), netModifyParam->symbolName.data(),
+                           netModifyParam->paramName.c_str(), netModifyParam->paramValue.data());
+                        //  assert(false);
                     }
                 }
             }
