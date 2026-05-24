@@ -37,6 +37,7 @@ namespace Cosmos {
             double beta{0.0};
             double rho{0.0};
             double nu{0.0};
+            double rmse{0.0};
         };
         class KData {
         public:

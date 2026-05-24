@@ -42,20 +42,20 @@ add_subdirectory(Trader)
 include_directories(./Market)
 add_subdirectory(Market)
 #
-#include_directories(./KBarEngine)
-#add_subdirectory(KBarEngine)
+include_directories(./KBarEngine)
+add_subdirectory(KBarEngine)
 
-include_directories(./UnderlyEngine)
-add_subdirectory(UnderlyEngine)
+#include_directories(./UnderlyEngine)
+#add_subdirectory(UnderlyEngine)
 
 include_directories(./Utils)
 add_subdirectory(Utils)
 
 
-#add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp)
-#target_link_libraries(CosmosKBReader KData Market Trader  Utils  OptionModel
-#	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}
-#		        ${LIB_MYSQL} Threads::Threads stdc++fs)
+add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp)
+target_link_libraries(CosmosKBReader KData Market Trader  Utils  OptionModel
+	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}
+		        ${LIB_MYSQL} Threads::Threads stdc++fs)
 #
 #add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
 #target_link_libraries(CosmosKBSaver KBarEngine KData  Market Trader Utils OptionModel
@@ -68,10 +68,10 @@ add_subdirectory(Utils)
 #		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 #		${LIB_MYSQL} Threads::Threads stdc++fs)
 #
-add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp)
-target_link_libraries(CosmosHedge UnderlyEngine Market Trader KData Utils OptionModel
-		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
-		${LIB_MYSQL} Threads::Threads stdc++fs)
+#add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp)
+#target_link_libraries(CosmosHedge UnderlyEngine Market Trader KData Utils OptionModel
+#		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
+#		${LIB_MYSQL} Threads::Threads stdc++fs)
 
 
 

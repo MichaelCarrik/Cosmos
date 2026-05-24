@@ -32,6 +32,7 @@ namespace Cosmos {
                 sabrPrmt.beta = m_beta;
                 sabrPrmt.rho = m_rho;
                 sabrPrmt.nu = m_nu;
+                sabrPrmt.rmse = m_rmse;
             }
 
       private:
@@ -44,6 +45,7 @@ namespace Cosmos {
             QuantLib::Real m_beta{0.99};
             QuantLib::Real m_rho{0.0};
             QuantLib::Real m_nu{0.4};
+            QuantLib::Real m_rmse{0.0};
 
             QuantLib::Real m_fowardPrice{0.0};
 

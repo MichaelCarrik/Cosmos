@@ -199,7 +199,7 @@ namespace Cosmos {
                             kline->m_upperLimit, kline->m_lowerLimit, kline->m_settlement);
                     m_futureDayQueue.emplace_back(saveK);
                 } else if (period == Cosmos::Types::KPeriod::Min1 and strcmp(saveK.instrument.data(), "") != 0) {
-                    sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%d,%d",
+                    sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.5f,%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%d,%d",
                             kline->m_instrument.data(), kline->m_tradingDay,
                           Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(),
@@ -208,12 +208,13 @@ namespace Cosmos {
                             kline->m_high, kline->m_low,
                             kline->m_close, (double) kline->m_volume, kline->m_amount, kline->m_oi,
                             kline->m_sabrPRMT.alpha, kline->m_sabrPRMT.beta, kline->m_sabrPRMT.rho , kline->m_sabrPRMT.nu,
+                            kline->m_sabrPRMT.rmse,
                             kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume);
                     m_futureOneMinuteQueue.emplace_back(saveK);
                 } else if (period == Cosmos::Types::KPeriod::Min5 ||
                            period == Cosmos::Types::KPeriod::Min15 ||
                            period == Cosmos::Types::KPeriod::Min30 ) {
-                    sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%d,%d",
+                    sprintf(saveK.sql.data(), "%s,%d,%d,%s,%s,%s,%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,%.5f,%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%d,%d",
                             kline->m_instrument.data(), kline->m_tradingDay,
                             Types::KPeroidToIntervalVec[static_cast<int>(period)],
                             kline->m_updateTimeBegin.data(),
@@ -222,6 +223,7 @@ namespace Cosmos {
                             kline->m_high, kline->m_low,
                             kline->m_close, (double) kline->m_volume, kline->m_amount, kline->m_oi,
                             kline->m_sabrPRMT.alpha, kline->m_sabrPRMT.beta, kline->m_sabrPRMT.rho , kline->m_sabrPRMT.nu,
+                            kline->m_sabrPRMT.rmse,
                             kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume);
                     m_futureMinutesQueue.emplace_back(saveK);
                 }

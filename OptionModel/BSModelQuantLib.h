@@ -75,14 +75,14 @@ namespace Cosmos {
                 return IV;
             };
 
-            void calGreeks(double underlyPrice, double IV, double&delta, double& gamma, double& theta, double& vega){
+            void calGreeks(double underlyPrice, KData::Greeks & greeks){
                 m_underlyPrice->setValue(underlyPrice);
-                m_IV->setValue(IV);
+                m_IV->setValue(greeks.IV);
                 //auto npv = m_europeanOption->NPV();
-                delta = m_europeanOption->delta();
-                gamma = m_europeanOption->gamma();
-                vega = m_europeanOption->vega() / 100;
-                theta = m_europeanOption->theta() / 365;
+                greeks.delta = m_europeanOption->delta();
+                greeks.gamma = m_europeanOption->gamma();
+                 greeks.vega = m_europeanOption->vega() / 100;
+                 greeks.theta = m_europeanOption->theta() / 365;
             };
 
         private:

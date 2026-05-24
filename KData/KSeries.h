@@ -32,7 +32,7 @@ namespace Cosmos {
             KSeries *m_underlySeries{nullptr};
             std::map<int, CallPutSeries *> * m_callPutSeriesMap{nullptr};
 
-         //   BSModelQuantLib *m_BSModelQuantLib{nullptr};
+         //   OptionModel::BSModelQuantLib *m_BSModelQuantLib{nullptr};
             OptionModel::LetsBeRationalModel *m_BSModelQuantLib{nullptr};
             OptionModel::SARBModelQuantLib * m_sabrModelQuantLib{nullptr};
 
@@ -43,10 +43,10 @@ namespace Cosmos {
                     m_insInfo(insInfo), m_tradingday(tradingday), m_Period(period), m_biasSeconds(biasSeconds){
 
                 if (m_insInfo.productIDClass == Types::ProductClass::option) {
-                    // m_BSModelQuantLib = new BSModelQuantLib(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
-                    //                                        m_insInfo.expireDate, r);
-                    m_BSModelQuantLib = new OptionModel::LetsBeRationalModel(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
-                                                            m_insInfo.expireDate, r);
+                     // m_BSModelQuantLib = new OptionModel::BSModelQuantLib(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
+                     //                                        m_insInfo.expireDate, r);
+                   m_BSModelQuantLib = new OptionModel::LetsBeRationalModel(m_insInfo.optionType, m_insInfo.strikePrice, tradingday,
+                                                           m_insInfo.expireDate, r);
 
                 }else if (m_insInfo.productIDClass == Types::ProductClass::future) {
                       m_sabrModelQuantLib = new OptionModel::SARBModelQuantLib( tradingday,

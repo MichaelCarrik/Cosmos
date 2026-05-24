@@ -112,6 +112,7 @@ namespace Cosmos {
             sabrPrmt.beta = m_beta;
             sabrPrmt.rho = m_rho;
             sabrPrmt.nu = m_nu;
+
         }
 
         void FastSabrModel::_prepareSliceData(std::vector<double> &strikes,

@@ -107,6 +107,7 @@ namespace Cosmos {
                     m_beta = m_sabrInterp->beta();
                     m_nu = m_sabrInterp->nu();
                     m_rho = m_sabrInterp->rho();
+                    m_rmse= m_sabrInterp->rmsError();
 
                  //   m_isInitialized = false;
                 }catch (std::exception &e) {
