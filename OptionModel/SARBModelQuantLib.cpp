@@ -55,26 +55,33 @@ namespace Cosmos {
 
             m_fowardPrice = forwardPrice;
 
+            // bool isStrikesSame = true;
+            // for (int i = 0; i < strikesTemp.size(); i++) {
+            //     if (std::abs(m_strikes[i] - strikesTemp[i]) > Types::g_epsilon) {
+            //         isStrikesSame = false;
+            //     }
+            // }
+
             if (m_sabrInterp == nullptr || m_strikes.size() != strikesTemp.size() ) {
                 if (m_sabrInterp != nullptr) {
                     delete m_sabrInterp;
                     m_sabrInterp = nullptr;
 
                 }
-
-                auto minIV = std::min_element(volatilitiesTemp.begin(), volatilitiesTemp.end());
-                m_alpha = std::max(*minIV, 0.15);
-
-                m_strikes.clear();
-                for (int i = 0; i < strikesTemp.size(); i++) {
-                    m_strikes.push_back(strikesTemp[i]);
-                }
-
-                m_volatilities.clear();
-                for (int i = 0; i < volatilitiesTemp.size(); i++) {
-                    m_volatilities.push_back(volatilitiesTemp[i]);
-                }
                 try {
+                    auto minIV = std::min_element(volatilitiesTemp.begin(), volatilitiesTemp.end());
+                    m_alpha = std::max(*minIV, 0.15);
+
+                    m_strikes.clear();
+                    for (int i = 0; i < strikesTemp.size(); i++) {
+                        m_strikes.push_back(strikesTemp[i]);
+                    }
+
+                    m_volatilities.clear();
+                    for (int i = 0; i < volatilitiesTemp.size(); i++) {
+                        m_volatilities.push_back(volatilitiesTemp[i]);
+                    }
+
                     m_sabrInterp = new QuantLib::SABRInterpolation(
                        m_strikes.begin(), m_strikes.end(),
                        m_volatilities.begin(),

@@ -66,13 +66,13 @@ namespace Cosmos {
             initTableInsertBuffer(m_TableInsertBufferVec[0]);
 
             sprintf(m_TableInsertBufferVec[1].insertHead.data(), "%s",
-                "INSERT INTO futureMinutes_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,alpha,beta,rho,nu,"
+                "INSERT INTO futureMinutes_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,alpha,beta,rho,nu,rmse,"
                 "bidPrice,askPrice,bidVolume,askVolume) VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[1]);
 
 
             sprintf(m_TableInsertBufferVec[2].insertHead.data(), "%s",
-                "INSERT INTO futureOneMinute_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,alpha,beta,rho,nu,"
+                "INSERT INTO futureOneMinute_bars (instrument,tradingDay,period,updateTimeBegin,updateTimeEnd,productId,open,high,low,close,volume,amount,position,alpha,beta,rho,nu,rmse,"
                 "bidPrice,askPrice,bidVolume,askVolume) VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[2]);
 
@@ -291,7 +291,7 @@ namespace Cosmos {
                 }else  {
                     auto kbarsRows = m_kbarRowsPool.getNewMemory();
                     sprintf(kbarsRows->sql.data(),"(\'%s\',\'%d\',%d,\'%s\',\'%s\',\'%s\',%.3f,%.3f,%.3f,%.3f,%.1f,%.1f,%.1f,"
-                                                  "%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%d,%d)",
+                                                  "%.5f,%.5f,%.5f,%.5f,%.5f,%.3f,%.3f,%d,%d)",
                     kline->m_instrument.data(), kline->m_tradingDay,
                          Cosmos::Types::KPeroidToIntervalVec[static_cast<int>(period)],
                          kline->m_updateTimeBegin.data(),
@@ -300,6 +300,7 @@ namespace Cosmos {
                          kline->m_high, kline->m_low,
                          kline->m_close, (double) kline->m_volume, kline->m_amount, kline->m_oi,
                          kline->m_sabrPRMT.alpha, kline->m_sabrPRMT.beta,kline->m_sabrPRMT.rho, kline->m_sabrPRMT.nu,
+                         kline->m_sabrPRMT.rmse,
                          kline->m_bidPrice, kline->m_askPrice, kline->m_bidVolume, kline->m_askVolume);
                     kbarsRows->table =  period == Types::KPeriod::Min1 ? KBars_T::futureOneMinute : KBars_T::futureMinutes;
                     m_sqlThreadQueue.write(*kbarsRows);

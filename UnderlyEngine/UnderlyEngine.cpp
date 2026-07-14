@@ -15,7 +15,7 @@
 #include "../Policy/OptionPolicy/SellStrangleV2.h"
 //#include "../Policy/FuturePolicy/TestTrend.h"
 #include "../Policy/FuturePolicy/VultureTrend.h"
-
+#include "../Policy/FuturePolicy/VultureFast.h"
 
 namespace Cosmos {
     namespace Engine {
@@ -216,7 +216,29 @@ namespace Cosmos {
                 return new Policy::VultureTrend(policyName, m_engineName, underlyInstrument, kPeriod,
                                                                            MV, futureInsInfo->multi,
                                                                            m_tradingDay, adjRiskTime, alpha, mark);
-             }
+            }else if  (policyName.compare("VultureFast") == 0) {
+                Types::Instrument_t underlyInstrument{""};
+                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+
+                auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
+                this->setKPtoHisSeriesMap(underlyInstrument, Types::KPeriod::D1, true);
+
+
+                double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
+                auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
+                double alpha = 0.35;
+                double mark = 3.0;
+                //  double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "adjRiskTime").c_str());
+
+                Types::InstrumentInfo * futureInsInfo{nullptr};
+                getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
+                return new Policy::VultureFast(policyName, m_engineName, underlyInstrument, kPeriod,
+                                                                           MV, futureInsInfo->multi,
+                                                                           m_tradingDay, adjRiskTime, alpha, mark);
+            }
           //  else if(policyName.compare("TestTrend") == 0) {
             //     Types::Instrument_t underlyInstrument{""};
             //     strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());

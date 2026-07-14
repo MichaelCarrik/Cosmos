@@ -71,11 +71,13 @@ namespace Cosmos {
         KSeries *KDataManager::getSeries(Types::Instrument_t const &instrument, Types::KPeriod period) {
             auto itr = m_allKLineSeries.find(instrument);
             if (itr == m_allKLineSeries.end()) {
+                fprintf(stderr, "KLineManager getSeries %s not find\n", instrument.data());
                 assert(false && "KLineManager getSeries");
             }
 
             auto peroid_itr = itr->second->find(period);
             if (peroid_itr == itr->second->end()) {
+                fprintf(stderr, "KLineManager getSeries period= %d not find\n", Types::KPeroidToIntervalVec[static_cast<int>(period)]);
                 assert(false && "KLineManager period getSeries");
             }
             return peroid_itr->second;
@@ -178,6 +180,7 @@ namespace Cosmos {
                     kData->m_sabrPRMT.beta = rs.getFloatField("beta");
                     kData->m_sabrPRMT.rho = rs.getFloatField("rho");
                     kData->m_sabrPRMT.nu = rs.getFloatField("nu");
+                    kData->m_sabrPRMT.rmse = rs.getFloatField("rmse");
                     kData->m_bidPrice = rs.getFloatField("bidPrice");
                     kData->m_askPrice = rs.getFloatField("askPrice");
                     kData->m_bidVolume = rs.getIntField("bidVolume");

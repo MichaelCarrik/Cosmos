@@ -186,8 +186,8 @@ namespace Cosmos {
 
             int readOptionIndex = lastSeriesIndex - underlyTodayBeginIndex;
 
-            underlySeries->m_sabrModelQuantLib->sarbFit( forwardPrice, underlySeries->m_callPutSeriesMap , readOptionIndex);
-            underlySeries->m_sabrModelQuantLib->getParameters(underlySeries->m_KDataVecs[lastSeriesIndex]->m_sabrPRMT);
+       //     underlySeries->m_sabrModelQuantLib->sarbFit( forwardPrice, underlySeries->m_callPutSeriesMap , readOptionIndex);
+        //    underlySeries->m_sabrModelQuantLib->getParameters(underlySeries->m_KDataVecs[lastSeriesIndex]->m_sabrPRMT);
         };
     }
 }

@@ -49,8 +49,8 @@ namespace Cosmos {
                                                            m_insInfo.expireDate, r);
 
                 }else if (m_insInfo.productIDClass == Types::ProductClass::future) {
-                      m_sabrModelQuantLib = new OptionModel::SARBModelQuantLib( tradingday,
-                                                          m_insInfo.expireDate);
+                    //  m_sabrModelQuantLib = new OptionModel::SARBModelQuantLib( tradingday,
+                     //                                    m_insInfo.expireDate);
                 }
 				
 				int secondsBias{0};

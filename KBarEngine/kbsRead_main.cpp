@@ -99,8 +99,6 @@ void getInstruments(int tradingday, std::string &futureProductId, std::string &r
                     continue;
                 }
 
-
-
                 Cosmos::Utils::InstrumentToProduct(instrumentInfo.instrumentID, instrumentInfo.productID);
                 Cosmos::Utils::parseInstruemnt(remove_Instrument, instrumentInfo.underly,
                                                instrumentInfo.optionType, instrumentInfo.strikePrice);

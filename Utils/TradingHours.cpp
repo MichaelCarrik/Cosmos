@@ -230,7 +230,8 @@ namespace Cosmos {
         FTTrait TradingHours::getProductTrait(Types::Product_t const &product, int psTime, bool isDay) {
             auto itr = TradingHours::m_productTradingSession.find(product);
             if (itr == TradingHours::m_productTradingSession.end()) {
-                assert(false && "cannot find in m_instrumentTradingSession");
+                fprintf(stderr, "getProductTrait cannot find %s in m_instrumentTradingSession \n", product.data());
+                assert(false);
             }
             for (auto &tradingPtr: itr->second.tradingVec) {
                 // fprintf(stderr, "getProductTrait instruemnt=%s, psTime=%d, beginTime=%d, endTime=%d\n",
