@@ -14,13 +14,12 @@
 #include "../Market/MockMarket.h"
 #include "../Market/Market.h"
 #include "../Utils/Utils.h"
-#include "KBarReadEngine.h"
+#include "KAmountBarReadEngine.h"
 #include <filesystem>
 #include <chrono>
 
 
 void getInstruments(int tradingday, std::string &futureProductId, std::string &rawPath,
-                    std::vector<Cosmos::Types::InstrumentInfo> &optionSymbols,
                     std::vector<Cosmos::Types::InstrumentInfo> &futureSymbols, int isDay) {
   // std::string optionProductId = futureProductId;
     // if (strcmp(futureProductId.c_str(), "IM") == 0) {
@@ -82,32 +81,6 @@ void getInstruments(int tradingday, std::string &futureProductId, std::string &r
                 if (strcmp(futureProductId.data(), instrumentInfo.productID.data()) == 0) {
                     futureSymbols.emplace_back(instrumentInfo);
                 }
-            } else if (line_vector.size() < 45 && (
-                           atoi(line_vector[6].c_str()) == 2 || atoi(line_vector[6].c_str()) == 6)) {
-                Cosmos::Types::InstrumentInfo instrumentInfo;
-                strcpy(instrumentInfo.instrumentID.data(), line_vector[1].c_str());
-                //    fprintf(stderr, "%s\n", line_vector[1].c_str());
-                line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'),
-                                     line_vector[1].end());
-
-                instrumentInfo.exchanges = Cosmos::Utils::getExchangeType(line_vector[2].c_str());
-                instrumentInfo.productIDClass = Cosmos::Types::ProductClass::option; // atoi(line_vector[6].c_str());
-                instrumentInfo.expireDate = atoi(line_vector[17].c_str());
-                instrumentInfo.multi = atof(line_vector[13].c_str());
-                instrumentInfo.tickSize = atof(line_vector[14].c_str());
-                Cosmos::Types::Instrument_t remove_Instrument{""};
-                strcpy(remove_Instrument.data(), line_vector[1].c_str());
-
-                if (remove_Instrument[5] == 'M' or remove_Instrument[6] == 'S' ) {
-                    continue;
-                }
-
-                Cosmos::Utils::InstrumentToProduct(instrumentInfo.instrumentID, instrumentInfo.productID);
-                Cosmos::Utils::parseInstruemnt(remove_Instrument, instrumentInfo.underly,
-                                               instrumentInfo.optionType, instrumentInfo.strikePrice);
-                if (strcmp(instrumentInfo.productID.data(), futureProductId.c_str()) == 0) {
-                    optionSymbols.emplace_back(instrumentInfo);
-                }
             }
         }
         i++;
@@ -146,6 +119,10 @@ int main(int argc, char *argv[]) {
     std::string savePath = pt.get_child("Cosmos").get_child("params").get_child("savePath").get<std::string>(
         "<xmlattr>.value");
 
+    std::string store_config = "mysql.xml";
+    Cosmos::Utils::CppMySQL3DB *mySql = new Cosmos::Utils::CppMySQL3DB();
+    InitMySql(mySql, store_config);
+
     std::string engineName{"KBarReadEngine"};
 
     std::array<bool, 2> isDayArray{false, true};
@@ -162,14 +139,13 @@ int main(int argc, char *argv[]) {
 
         Cosmos::Driver::TestDriver driver;
         //    fprintf(stderr,"%d_%s\n",tradingday, isDay== false ? "ngt":"day");
-        std::vector<Cosmos::Types::InstrumentInfo> queryOptionInstruments;
+
         std::vector<Cosmos::Types::InstrumentInfo> queryFutureInstruments;
         // std::set< Types::Instrument_t> queryInstruments{ Types::Instrument_t {"au2108"}} ;
-        getInstruments(tradingDay, productid, rawTickPath, queryOptionInstruments, queryFutureInstruments, isDay);
+        getInstruments(tradingDay, productid, rawTickPath, queryFutureInstruments, isDay);
         Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath);
 
-        Cosmos::KBarSaverEngine::KBarReadEngine saveEngine(&driver, engineName, queryOptionInstruments,
-                                                           queryFutureInstruments, tradingDay, isDay, savePath);
+        Cosmos::KAmountBarEngine::KAmountBarReadEngine saveEngine(&driver, engineName, queryFutureInstruments, tradingDay, isDay, savePath, mySql);
         driver.setPolicySize(2);
         saveEngine.m_policyID = 0;
         saveEngine.onStart();

@@ -9,10 +9,9 @@
 #include "Type.h"
 #include "../Types/MarketData.h"
 #include "../Types/OrderField.h"
-#include "OrderField.h"
 #include "../Types/KPeriod.h"
 #include "../KData/KSeries.h"
-#include "../Types/Signal.h"
+
 
 namespace Cosmos
 {

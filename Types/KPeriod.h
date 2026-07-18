@@ -42,8 +42,9 @@ namespace Cosmos{
 
         static std::vector< Types::KPeriod> m_kperoidVec{
               Types::KPeriod::Min1 , Types::KPeriod::Min5,
-              Types::KPeriod::Min15 , Types::KPeriod::Min30,
-              Types::KPeriod::D1 ,
+              Types::KPeriod::Min15
+            //  Types::KPeriod::Min30,
+            //  Types::KPeriod::D1 ,
         };
 
         static const std::unordered_map<std::string, KPeriod> configParamToKPeriodMap{

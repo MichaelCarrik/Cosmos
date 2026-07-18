@@ -6,13 +6,11 @@
 #define HFT_MM_OPENENGINE_H
 
 
-#include "../Utils/MemoryList.h"
+
 #include "../Driver/RealtimeDriver.h"
 #include "../Types/Param.h"
-#include "../Types/KPeriod.h"
 #include "../KData/KDataManager.h"
 #include "../Utils/cppmysql.h"
-#include <set>
 #include <fstream>
 #include <algorithm>
 
@@ -83,6 +81,7 @@ namespace Cosmos {
             void onStart() {
 
                 m_kDataManager = new  KData::KDataManager(m_tradingDay, m_isDay, m_isUseUnderlyPrice, nullptr, 0);
+
                 for (auto &ins: *m_futureInstruments) {
                   //  fprintf(stderr, "KBarReadEngine::onStart futureInstruments : instrument=%s\n", ins.instrumentID.data());
                     Types::SubScribeQuote subScribeQuote;

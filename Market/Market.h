@@ -8,7 +8,7 @@
 #include <utility>
 #include "../Driver/RealtimeDriver.h"
 #include "../Types/SubScribeQuote.h"
-#include "../KData/KDataManager.h"
+
 
 
 namespace Cosmos{
@@ -43,10 +43,7 @@ namespace Cosmos{
                 return _marketSpi->start(std::forward<decltype(args)>(args)...);
             };
 
-//            template<typename ...Args>
-//            PairsTrading::KData::KDataManager* initKSeries(Args &&... args) {
-//                return   _marketSpi->initKSeries(std::forward<decltype(args)>(args)...);
-//            };
+
         };
     }
 }

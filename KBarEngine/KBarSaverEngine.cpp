@@ -226,6 +226,7 @@ namespace Cosmos {
                 auto startTime = std::chrono::duration_cast<std::chrono::microseconds>(
                std::chrono::high_resolution_clock::now().time_since_epoch()).count();
                 for (auto period: Types::m_kperoidVec) {
+
                     auto updateSeries = m_kDataManager->KMAddTick(pMD, period);
                     if (updateSeries != nullptr) {
                         if (updateSeries->m_insInfo.productIDClass == Types::ProductClass::future) {

@@ -13,16 +13,14 @@
 #ifndef TRADEBOTS_SIMCTPMARKET_H
 #define TRADEBOTS_SIMCTPMARKET_H
 
-#include <fstream>
+
 #include "../Driver/TestDriver.h"
 #include "../Types/SubScribeQuote.h"
-#include "Market.h"
 #include "../Types/MarketData.h"
-#include "../Types/Param.h"
 #include "../Utils/TradingHours.h"
 #include "../Utils/MemoryList.h"
-#include "set"
-#include "../KData/KDataManager.h"
+
+
 
 namespace Cosmos{
     namespace Market {

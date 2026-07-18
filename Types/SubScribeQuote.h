@@ -8,8 +8,7 @@
 #include "Type.h"
 #include "MarketData.h"
 #include "../Utils/MemoryList.h"
-#include "../Types/KPeriod.h"
-#include "../KData/KSeries.h"
+
 
 namespace Cosmos{
     namespace Types{

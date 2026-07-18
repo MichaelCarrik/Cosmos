@@ -5,9 +5,9 @@ cmake_minimum_required(VERSION 3.14)
 project(Cosmos)
 
 set(CMAKE_CXX_STANDARD 20)
-set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
-set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
-#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
+#set(CMAKE_C_FLAGS "${CMAKE_C_FLAGS} -O3")
+#set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O3")
+set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -O0  -g -ggdb")
 
 INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIRS})
 
@@ -33,17 +33,20 @@ include_directories(dependencies/sdk/LetsBeRational)
 include_directories(./KData)
 add_subdirectory(KData)
 
-include_directories(./OptionModel)
-add_subdirectory(OptionModel)
+#include_directories(./OptionModel)
+#add_subdirectory(OptionModel)
 
 include_directories(./Trader)
 add_subdirectory(Trader)
 
 include_directories(./Market)
 add_subdirectory(Market)
-#
-include_directories(./KBarEngine)
-add_subdirectory(KBarEngine)
+
+include_directories(./KAmountBarEngine)
+add_subdirectory(KAmountBarEngine)
+
+#include_directories(./KBarEngine)
+#add_subdirectory(KBarEngine)
 
 #include_directories(./UnderlyEngine)
 #add_subdirectory(UnderlyEngine)
@@ -52,15 +55,20 @@ include_directories(./Utils)
 add_subdirectory(Utils)
 
 
+add_executable(CosmosKAmountBReader KAmountBarEngine/kAmountRead_main.cpp)
+target_link_libraries(CosmosKAmountBReader KData  Market Trader KAmountBarEngine  Utils
+		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}
+		${LIB_MYSQL} Threads::Threads stdc++fs)
+
 #add_executable(CosmosKBReader KBarEngine/KBarReadEngine.h KBarEngine/kbsRead_main.cpp)
 #target_link_libraries(CosmosKBReader KData Market Trader  Utils  OptionModel
 #	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}
 #		        ${LIB_MYSQL} Threads::Threads stdc++fs)
-#
-add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
-target_link_libraries(CosmosKBSaver KBarEngine KData  Market Trader Utils OptionModel
-		${LIB_CTPMD} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
-		${LIB_CTPTRADE} ${LIB_MYSQL} Threads::Threads stdc++fs)
+
+#add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
+#target_link_libraries(CosmosKBSaver KBarEngine KData  Market Trader Utils OptionModel
+#		${LIB_CTPMD} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
+#		${LIB_CTPTRADE} ${LIB_MYSQL} Threads::Threads stdc++fs)
 
 ##
 #add_executable(CosmosHedge_Test UnderlyEngine/UOTradingTest_main.cpp)
