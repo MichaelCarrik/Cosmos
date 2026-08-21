@@ -274,6 +274,7 @@ namespace Cosmos {
             OnRspQryInstrument(CThostFtdcInstrumentField *pInstrument, CThostFtdcRspInfoField *pRspInfo, int nRequestID,
                                bool bIsLast);
 
+
             ///???��?��?????��?��??
             virtual void
             OnRspQryDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData, CThostFtdcRspInfoField *pRspInfo,

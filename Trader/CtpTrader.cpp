@@ -71,8 +71,8 @@ namespace Cosmos {
 
                     m_frontID = pRspUserLogin->FrontID;
                     m_sessionID = pRspUserLogin->SessionID;
-                    fprintf(stderr, "ctpTrade login ok user=%s m_maxOrderRef=%d, frontID=%d, sessionID=%d\n",
-                        m_ctpConnection.username.c_str(), m_maxOrderRef,m_frontID, m_sessionID);
+                    fprintf(stderr, "ctpTrade login ok user=%s m_maxOrderRef=%d, frontID=%d, sessionID=%d, tradingDay=%d\n",
+                        m_ctpConnection.username.c_str(), m_maxOrderRef,m_frontID, m_sessionID, m_tradingDay);
                     m_loginPromise->set_value(0);
                 } catch (std::future_error const &e) {
                     spdlog::error("OnRspUserLogin Error");
@@ -138,9 +138,7 @@ namespace Cosmos {
                                                  CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
         };
 
-        void CtpTrader::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm,
-                                                   CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
-        };
+
 
         void CtpTrader::OnRspRemoveParkedOrder(CThostFtdcRemoveParkedOrderField *pRemoveParkedOrder,
                                                CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
@@ -439,10 +437,15 @@ namespace Cosmos {
 
         void CtpTrader::OnRspQryDepthMarketData(CThostFtdcDepthMarketDataField *pDepthMarketData,
                                                 CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
-            // fprintf(stderr, "OnRspQryDepthMarketData %s %.3f\n", pDepthMarketData->InstrumentID, pDepthMarketData->LastPrice);
+            //fprintf(stderr, "OnRspQryDepthMarketData %s %.3f %d\n", pDepthMarketData->InstrumentID, pDepthMarketData->LastPrice, bIsLast);
             if (pDepthMarketData != nullptr) {
                 if (strcmp(pDepthMarketData->UpdateTime, "") == 0) {
-                    return;
+                    if (bIsLast == true) {
+                  //      fprintf(stderr, "OnRspQryDepthMarketData 1 %s %.3f %d\n", pDepthMarketData->InstrumentID, pDepthMarketData->LastPrice, 1);
+                        m_queryMarketDataPromise->set_value(0);
+                   }
+
+		    	return;
                 }
                 if (Utils::isSTGInstrument(pDepthMarketData->InstrumentID) == false) {
                     Types::MarketData *marketData = new Types::MarketData();
@@ -457,7 +460,11 @@ namespace Cosmos {
 
                     auto tradingSession = Utils::TradingHours::getTradingSession( productID);
                     if (tradingSession->isHaveNight ==false && m_isDay ==false) {  //night time , no night product not get
-                        return;
+                           if (bIsLast == true) {                                      
+                           //   fprintf(stderr, "OnRspQryDepthMarketData 1 %s %.3f %d\n", pDepthMarketData->InstrumentID, pDepthMarketData->LastPrice, 1);
+                               m_queryMarketDataPromise->set_value(0);
+                             }
+			    return;
                     }
                     m_initMarketDataVector.emplace_back(marketData);
                 }
@@ -633,8 +640,7 @@ namespace Cosmos {
                 "<xmlattr>.address");
             m_ctpConnection.brokerId = pt.get_child("ThostUser2.ConnectConfig.BrokerID").get<std::string>(
                 "<xmlattr>.name");
-            m_ctpConnection.interpreterConfig = pt.get_child(
-                "ThostUser2.ConnectConfig.InterpreterConfig").get<std::string>("<xmlattr>.value");
+
 
             //   m_interpreter = new NetRootInterpreter(m_pTradeApi,  m_ctpConnection.interpreterConfig,  m_maxOrderRef);
 
@@ -684,6 +690,7 @@ namespace Cosmos {
 
             tradingday = m_tradingDay;
             m_interpreter = new CtpInterpreter(m_pTradeApi, m_ctpConnection, m_frontID, m_sessionID, m_maxOrderRef);
+	    sleep(1);
             int marketRetcode = this->_queryMarketData();
             sleep(1);
             auto insRetcode = this->queryTradeInstrument();
@@ -738,6 +745,14 @@ namespace Cosmos {
                     }
                 }
             }
+            CThostFtdcSettlementInfoConfirmField  settlementInfoConfirmField;
+            memset(&settlementInfoConfirmField, 0, sizeof(CThostFtdcSettlementInfoConfirmField));
+            strcpy(settlementInfoConfirmField.BrokerID,  m_ctpConnection.brokerId.c_str());
+            strcpy(settlementInfoConfirmField.InvestorID, m_ctpConnection.username.c_str());
+            auto ret = m_pTradeApi->ReqSettlementInfoConfirm(&settlementInfoConfirmField, m_requestID++);
+            fprintf(stderr, "ReqSettlementInfoConfirm %d\n", ret);
+
+
             return 0;
         }
 
@@ -992,6 +1007,16 @@ namespace Cosmos {
         };
 
         void CtpTrader::OnRspError(CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
+        };
+
+	void CtpTrader::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
+            if (pSettlementInfoConfirm != nullptr) {
+                fprintf(stderr,"OnRspSettlementInfoConfirm BrokerId=%s, investId=%s， ConfirmDate=%s, ConfirmTime=%s, SettlementID=%s\n", pSettlementInfoConfirm->BrokerID, pSettlementInfoConfirm->InvestorID, pSettlementInfoConfirm->ConfirmDate,
+                    pSettlementInfoConfirm->ConfirmTime,pSettlementInfoConfirm->SettlementID );
+            }
+            if (pRspInfo != nullptr) {
+                fprintf(stderr,"OnRspSettlementInfoConfirm ErrorID=%d, ErrorMsg=%s\n", pRspInfo->ErrorID, pRspInfo->ErrorMsg);
+            }
         };
 
         void CtpTrader::OnRtnOrder(CThostFtdcOrderField *ctpOrder) {

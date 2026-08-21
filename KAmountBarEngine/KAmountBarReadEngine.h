@@ -118,7 +118,7 @@ namespace Cosmos {
                 for (const auto &hisKdata : hisKline ) {
                     allHisAmount += hisKdata->m_amount;
                     index++;
-                    if (index > 5) {
+                    if (index > 20) {
                         break;
                     }
                 }
@@ -137,13 +137,21 @@ namespace Cosmos {
                 }
 
                 for (auto period: Types::m_kperoidVec) {
-                    double perBarAmountThresh = perDayHisAmount * 0.2 * Types::KPeroidToIntervalVec[static_cast<int>(period)] / tradingMinutes;
+                    double coef = 0.3;
+                    // if (period == Types::KPeriod::Min1 ) {
+                    //     coef = 0.3;
+                    // }else if (period == Types::KPeriod::Min5 ) {
+                    //     coef = 0.3;
+                    // }else if (period == Types::KPeriod::Min15 ) {
+                    //     coef = 0.3;
+                    // }else {
+                    //     assert(false);
+                    // }
 
+                    double perBarAmountThresh = perDayHisAmount * coef * sqrt(Types::KPeroidToIntervalVec[static_cast<int>(period)]) / tradingMinutes;
 
                     m_kDataManager->initKSeries(insInfo, period, tradingday, m_riskFreeR,
                      hisKline, isDay, perBarAmountThresh);
-
-
 
                 }
             }
@@ -246,27 +254,27 @@ namespace Cosmos {
                 std::ofstream outDayfile;
                 sprintf(savePath, "%s/%s_%s.txt", m_savePath.c_str(), name.c_str(), fileName.c_str());
                 outDayfile.open(savePath, std::ios::out | std::ios::app);
-                std::sort(std::begin(klineQueue), std::end(klineQueue),
-                          [](auto &a, auto &b) {
-                              if (strcmp(a.instrument.data(), b.instrument.data()) == 0) {
-                                  if (a.period == b.period) {
-                                      return strcmp(a.updateTimeBegin.data(), b.updateTimeBegin.data()) > 0 ? false : true;
-                                  } else {
-                                      return a.period < b.period;
-                                  }
-                              } else {
-                                   Types::Instrument_t tempa{""};
-                                  for (auto i = 0; i < tempa.size(); i++) {
-                                      tempa[i] = std::tolower(a.instrument[i]);
-                                  }
-
-                                   Types::Instrument_t tempb{""};
-                                  for (auto i = 0; i < tempb.size(); i++) {
-                                      tempb[i] = std::tolower(b.instrument[i]);
-                                  }
-                                  return strcmp(tempa.data(), tempb.data()) > 0 ? false : true;
-                              }
-                          });
+                // std::sort(std::begin(klineQueue), std::end(klineQueue),
+                //           [](auto &a, auto &b) {
+                //               if (strcmp(a.instrument.data(), b.instrument.data()) == 0) {
+                //                   if (a.period == b.period) {
+                //                       return strcmp(a.updateTimeBegin.data(), b.updateTimeBegin.data()) > 0 ? false : true;
+                //                   } else {
+                //                       return a.period < b.period;
+                //                   }
+                //               } else {
+                //                    Types::Instrument_t tempa{""};
+                //                   for (auto i = 0; i < tempa.size(); i++) {
+                //                       tempa[i] = std::tolower(a.instrument[i]);
+                //                   }
+                //
+                //                    Types::Instrument_t tempb{""};
+                //                   for (auto i = 0; i < tempb.size(); i++) {
+                //                       tempb[i] = std::tolower(b.instrument[i]);
+                //                   }
+                //                   return strcmp(tempa.data(), tempb.data()) > 0 ? false : true;
+                //               }
+                //           });
                 for (auto &kline: klineQueue) {
                     outDayfile << kline.sql.data() << "\n";
                 }

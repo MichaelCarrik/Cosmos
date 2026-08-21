@@ -7,7 +7,7 @@
 // //#include "../Policy/SellStrangle.h"
 // #include "../Policy/BuyStrangle.h"
 // #include "../Policy/LongGammaSAR.h"
-// #include "../Policy/LongGammaGod.h"
+#include "../Policy/OptionPolicy/LongGammaGod.h"
 #include "../Policy/OptionPolicy/LongGammaVulture.h"
 #include "../Policy/OptionPolicy/CoveredVulture.h"
 //#include "../Policy/OptionPolicy/TestTrendOption.h"
@@ -308,6 +308,7 @@ namespace Cosmos {
 
                  double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
                  double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "openAtDelta").c_str());
+                 int isRefresh = std::stoi(Utils::getParamMapValue(paramMap, "isRefresh").c_str());
 
                  Types::InstrumentInfo * optionInsInfo{nullptr};
                  getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
@@ -318,7 +319,7 @@ namespace Cosmos {
 
                  return new Policy::CoveredVulture( policyName, m_engineName,
                            underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
-                            m_tradingDay,optionInsInfo->expireDate,  m_engineParam.riskOptionMaxPosition, openAtDelta,
+                            m_tradingDay,optionInsInfo->expireDate,  m_engineParam.riskOptionMaxPosition, openAtDelta, isRefresh,
                            [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
                               return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
@@ -335,6 +336,7 @@ namespace Cosmos {
                  double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
                  double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "openAtDelta").c_str());
 
+
                  Types::InstrumentInfo * optionInsInfo{nullptr};
                  getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
                  if (optionInsInfo == nullptr) {
@@ -344,11 +346,39 @@ namespace Cosmos {
 
                  return new Policy::LongGammaVulture( policyName, m_engineName,
                            underlyInstrument, kPeriod, MV,  optionInsInfo->multi,
-                            m_tradingDay,optionInsInfo->expireDate,  m_engineParam.riskOptionMaxPosition, openAtDelta,
+                            m_tradingDay,optionInsInfo->expireDate,  m_engineParam.riskOptionMaxPosition,  openAtDelta,
                            [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
                               return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
              }
+             else if (policyName.compare("LongGammaGod") == 0) {
+
+                 Types::Instrument_t underlyInstrument{""};
+                 strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+                 auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                 Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                 this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, false);
+
+                 double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                 double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "openAtDelta").c_str());
+                 int godDirection = std::stoi(Utils::getParamMapValue(paramMap, "godDirection").c_str());
+                 double closeExceedThresh = std::stof(Utils::getParamMapValue(paramMap, "closeExceedThresh").c_str());
+                 int isRefresh = std::stoi(Utils::getParamMapValue(paramMap, "isRefresh").c_str());
+
+                 Types::InstrumentInfo * optionInsInfo{nullptr};
+                 getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
+                 if (optionInsInfo == nullptr) {
+                     return nullptr;
+                 }
+
+                 return new  Policy::LongGammaGod(kPeriod, policyName,
+                                                             m_engineName, underlyInstrument, MV,   optionInsInfo->multi,  m_tradingDay, optionInsInfo->expireDate,
+                                                             m_engineParam.riskOptionMaxPosition, isRefresh, openAtDelta, godDirection, closeExceedThresh,
+                                                             [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
+                              return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
+                           });
+             }
+
             //else if (policyName.compare("TestTrendOption") == 0){
              //
              //    Types::Instrument_t underlyInstrument{""};
@@ -414,18 +444,7 @@ namespace Cosmos {
             //                                                 m_engineName, m_underlyInsMap.nearInstrument,  m_multi,m_tradingDay, m_maxPosition,
             //                                                 openAtDelta);
             // }
-        //else if (policyName.compare("LongGammaGod") == 0) {
-            //     auto kpstr = Types::Param::getValue(paramMap, "period");
-            //     Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
-            //     m_policyKPMap[kPeriod] = false;
-            //     double MV = std::stof(Types::Param::getValue(paramMap, "MV").c_str());
-            //     double openAtDelta = std::stof(Types::Param::getValue(paramMap, "openAtDelta").c_str());
-            //     int godDirection = std::stoi(Types::Param::getValue(paramMap, "godDirection").c_str());
-            //     double closeExceedThresh = std::stof(Types::Param::getValue(paramMap, "closeExceedThresh").c_str());
-            //     return new  Policy::LongGammaGod(kPeriod, MV * 10000, policyName,
-            //                                                 m_engineName, m_underlyInsMap.nearInstrument,  m_multi,m_tradingDay, m_maxPosition,
-            //                                                 openAtDelta, godDirection, closeExceedThresh);
-            // }
+
           //  assert(false);
             return nullptr;
         }

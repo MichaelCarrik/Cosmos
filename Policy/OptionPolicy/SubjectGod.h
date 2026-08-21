@@ -11,47 +11,42 @@
 namespace Cosmos {
     namespace Policy {
 
-        class LongGammaGod : public IOptionPolicy {
+        class SubjectGod : public IOptionPolicy {
         private:
             int m_configIndex{0};
-            bool m_isCheck{false};
+            double m_multi{1000.0};
+            int m_holdLots{1};
 
-            int m_lastPsTime{0};
-            int m_maxOptionPosition{0};
-            int m_godDirection{0};
-            double m_closeExceedThresh{0.0};
-            double m_openAtDelta{0.25};
-            int m_isRefresh{0};
-            int m_tradeNum{0};
-            int m_marketPosition{0};
-            int m_preMarketPosition{0};
-            double m_holdStrikePrice{0.0};
-            double m_signalPrice{0.0};
+
+            Types::Instrument_t m_holdInstrument{""};
+
+            const KData::KSeries *m_holdKseries{nullptr};
+
+
+
 
         public:
-            LongGammaGod( Types::KPeriod kperiod,  std::string const& policyName,
+            SubjectGod( Types::KPeriod kperiod,  std::string const& policyName,
                          std::string &engineName,
-                         Types::Instrument_t &instrument, double MV, double multi, int tradingDay, int expireDay, int maxOptionPosition , int isRefresh,
-                         double openAtDelta, int godDirection, double closeExceedThresh, decltype(m_getUnderlyToBeginIndexFunc) getUnderlyToBeginIndexFunc) : IOptionPolicy(policyName, engineName, instrument,
-                                                kperiod, MV, multi,  tradingDay, expireDay, getUnderlyToBeginIndexFunc),
-                     m_openAtDelta(openAtDelta), m_maxOptionPosition(maxOptionPosition), m_godDirection(godDirection), m_closeExceedThresh(closeExceedThresh), m_isRefresh(isRefresh) {
+                         Types::Instrument_t &instrument,   double multi,  int holdLots,
+                         int tradingday) :
+                    m_holdLots(holdLots), m_multi(multi) {
 
-                m_underlyInstrument = instrument;
+                m_holdInstrument = instrument;
 
-                if (m_openAtDelta < 0.1 || m_openAtDelta > 0.5) {
-                    assert(false);
-                }
-                // m_kperiod = kperiod;
-                // m_policyName = policyName;
-                // m_engineName = engineName;
-                // spdlog::info("createPolicy engineName={}, policyName={}, kperiod={}  mv={}, tradingday={}, "
-                //              "underly={}, , maxPosition={}, openAtDelta={}, godDirection={}, closeExceedThresh={}",
-                //              engineName, policyName, (int) kperiod, m_MV, m_tradingDay, m_underlyInstrument.data(),
-                //              m_maxPosition, m_openAtDelta, m_godDirection, m_closeExceedThresh);
+
+                m_kperiod = kperiod;
+                m_policyName = policyName;
+                m_engineName = engineName;
+                m_tradingday = tradingday;
+                spdlog::info("createPolicy engineName={}, policyName={}, kperiod={}  holdLots={}, tradingday={}, "
+                             "underly={},",
+                             engineName, policyName, (int) kperiod, m_holdLots, m_tradingday, m_holdInstrument.data(),
+                             m_maxPosition, m_openAtDelta, m_godDirection, m_closeExceedThresh);
                 _initPolicyLogger();
             }
 
-            ~LongGammaGod() {}
+            ~SubjectGod() {}
 
             void _GetValueFromFileByConfigIndex(char *filename, Types::Instrument_t const& underlyInstrument,
                                                 int inputConfigIndex, std::vector<FileRead> &fileReadVecs) {
@@ -85,8 +80,6 @@ namespace Cosmos {
                                 char sgnname[56]{"signalPrice"};
                                 _getValueInLine(buf, sgnname, fileRead.signalPriceStr);
 
-                                char stpname[56]{"holdStrikePrice"};
-                                _getValueInLine(buf, stpname, fileRead.holdStrikePriceStr);
 
                             }
                             fileReadVecs.emplace_back(fileRead);
@@ -103,30 +96,22 @@ namespace Cosmos {
             virtual void start(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &inputSymbolMap) override {
                 char configPath[256]{""};
                 sprintf(configPath, "./logs/policy/%s_%s_%s.txt", m_engineName.c_str(), m_policyName.c_str(),
-                        m_underlyInstrument.data());
+                        m_holdInstrument.data());
                 m_configIndex = atoi(this->GetLastValueFromFile(configPath, "configIndex").c_str());
                 std::vector<FileRead> fileReadVecs;
-                _GetValueFromFileByConfigIndex(configPath, m_underlyInstrument, m_configIndex, fileReadVecs);
+                _GetValueFromFileByConfigIndex(configPath, m_holdInstrument, m_configIndex, fileReadVecs);
 
-                _initOptionPolicySymbolVecs(inputSymbolMap, m_underlyInstrument, m_callPolicySymbols, fileReadVecs, 'C' );
-                _initOptionPolicySymbolVecs(inputSymbolMap, m_underlyInstrument, m_putPolicySymbols, fileReadVecs, 'P' );
+                m_expireday = _initOptionPolicySymbolVecs(inputSymbolMap, m_holdInstrument, m_callPolicySymbols, fileReadVecs, 'C' );
+                _initOptionPolicySymbolVecs(inputSymbolMap, m_holdInstrument, m_putPolicySymbols, fileReadVecs, 'P' );
 
-                auto symbolItr = inputSymbolMap.find(m_underlyInstrument);
+                auto symbolItr = inputSymbolMap.find(m_holdInstrument);
                 if(symbolItr == inputSymbolMap.end()){
                     assert(false);
                 }
-                m_underlyKseries = symbolItr->second->m_kSeriesMap.at(m_kperiod);
-                m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
+                m_holdKseries = symbolItr->second->m_kSeriesMap.at(m_kperiod);
+                m_lastUnderlyBarIndex = m_holdKseries->m_seriesIndex;
 
-                for(auto fileReadItr : fileReadVecs){
-                    if(strcmp(fileReadItr.instrumentStr.c_str(), symbolItr->second->instrumentInfo.instrumentID.data())==0){
-                        m_marketPosition = std::stoi(fileReadItr.marketPositionStr.c_str());
-                        m_preMarketPosition = std::stoi(fileReadItr.preMarketPositionStr.c_str());
-                        m_signalPrice = std::stof(fileReadItr.signalPriceStr.c_str());
-                        m_holdStrikePrice = std::stof(fileReadItr.holdStrikePriceStr.c_str());
-                  //      fprintf(stderr, "%s, %.3f, %s\n",m_engineName.c_str(), m_holdStrikePrice, fileReadItr.holdStrikePriceStr.c_str());
-                    }
-                }
+
                 m_configIndex++;
                 initIndicator();
                 auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
@@ -134,12 +119,12 @@ namespace Cosmos {
             //    _writePolicyLog(lastUnderlyBar,lastSAR);
 
                 fprintf(stderr,
-                        "[%s_%s] start, m_kperiod=%d, m_MV=%.3f, m_multi=%.3f, m_maxOptionPosition=%d, "
-                        "openAtDelta=%.3f, godDirection=%d, closeExceedThresh=%.3f, expireday=%d, "
-                        "marketPosition=%d, preMarketPosition=%d, signalPrice=%.3f, holdStrikePrice=%.3f, isRefresh=%d, "
-                        "configIndex=%d\n", m_engineName.c_str(), m_policyName.c_str(), static_cast<int>(m_kperiod),
-                        m_MV, m_multi, m_maxOptionPosition, m_openAtDelta, m_godDirection, m_closeExceedThresh, m_expireDay, m_marketPosition,
-                        m_preMarketPosition,m_signalPrice, m_holdStrikePrice, m_isRefresh, m_configIndex);
+                        "[%s_%s] start, m_kperiod=%dMins, m_MV=%.3f, m_multi=%.3f, maxPosition=%d, "
+                        "openAtDelta=%.3f, godDirection=%.3f, closeExceedThresh=%.3f, expireday=%d, "
+                        "marketPosition=%d, preMarketPostion=%d, signalPrice=%.3f, holdStrikePrice=%.3f, "
+                        "configIndex=%d\n", m_engineName.c_str(), m_policyName.c_str(), Types::KPeroidToIntervalMap[m_kperiod],
+                        m_MV, m_multi,m_maxPosition, m_openAtDelta, m_godDirection, m_closeExceedThresh, m_expireday, m_marketPosition,
+                        m_preMarketPosition,m_signalPrice, m_holdStrikePrice ,m_configIndex);
                 m_configIndex++;
             };
 
@@ -147,38 +132,26 @@ namespace Cosmos {
 
                 if (strcmp(pMD->instrumentID.data(), m_underlyInstrument.data()) == 0) {
 
-                    if (m_lastUnderlyBarIndex==0 && m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {
-                        //   auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
-
-                        //    _writePolicyLog(lastUnderlyBar, pMD);
+                    if (m_lastUnderlyBarIndex <
+                               m_underlyKseries->m_seriesIndex) {  //waiting all instrtuments finish KData
+                        m_isCheck = true;
                         m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
-                    }        
-					 else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {
+                        m_lastPsTime = pMD->psSecond;
+                    } else if (m_isCheck == true && pMD->psSecond - m_lastPsTime > 10 && m_lastUnderlyBarIndex > 0 ) {
                         auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
-                        m_lastOptionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
 
-                        if(m_tradingDay  != m_expireDay){
 
-                         //   fprintf(stderr, "%s, 1 m_isRefresh=%d\n",m_engineName.c_str(), m_isRefresh);
-                            if (m_isRefresh == 0) {
-                                _isCloseMarketPosition(lastUnderlyBar);
-                                _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
-                                m_preMarketPosition = m_marketPosition;
+                        if(m_tradingday  != m_expireday){
+                            _isCloseMarketPosition(lastUnderlyBar);
+                            _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
+                            m_preMarketPosition = m_marketPosition;
 
-                                _isOpenMarketPosition(lastUnderlyBar);
-                                _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
-                                m_preMarketPosition = m_marketPosition;
+                            _isOpenMarketPosition(lastUnderlyBar);
+                            _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
+                            m_preMarketPosition = m_marketPosition;
 
-                                _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, 1, m_maxOptionPosition);
-                                _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, 1, m_maxOptionPosition);
-                            }else if(m_isRefresh == 1) {
-                                m_preMarketPosition = 0;
-                           //     fprintf(stderr, "%s, 2 m_isRefresh=%d, preMarketPos=%d, marketPos=%d\n",m_engineName.c_str(), m_isRefresh,
-                          //          m_preMarketPosition, m_marketPosition);
-                                _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
-                                m_preMarketPosition = m_marketPosition;
-                                m_isRefresh = 0;
-                            }
+                            _checkMaxPositionRisk(m_callPolicySymbols.optionTargetPosMaps, 1, m_maxPosition);
+                            _checkMaxPositionRisk(m_putPolicySymbols.optionTargetPosMaps, 1, m_maxPosition);
 
                         }
 
@@ -186,20 +159,17 @@ namespace Cosmos {
                         m_configLog->flush();
                         m_configIndex++;
                         m_isCheck = false;
-                  //      m_preMarketPosition = m_marketPosition;
+                        m_preMarketPosition = m_marketPosition;
                     }
-                    m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
                 }
             };
-
-            virtual void updateParam(const Types::NetModifyParam *netModifyParam) override {};
 
             void _writePolicyLog(const KData::KData *lastUnderlyKB) {
 
                 m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, "
                                   "marketPosition={}, preMarketPosition={}, signalPrice={:.3f}, "
                                   "holdStrikePrice={:.3f}, godDirection={}, closeExceedThresh={:.3f}",
-                                  m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
+                                  m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingday,
                                   lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice, m_godDirection,
                                   m_closeExceedThresh);
@@ -227,7 +197,6 @@ namespace Cosmos {
 
                 //if (m_tradeNum < 10 && m_marketPosition == 0) {
                 if (m_tradeNum < 10 ) {
-                 //   m_marketPosition = m_godDirection;
                     if ( m_marketPosition != 1 and m_godDirection ==1 ) //long open
                     {
                         ++m_tradeNum;
@@ -247,22 +216,20 @@ namespace Cosmos {
                     return;
                 } else if (marketPosition == 1 && preMarketPosition != marketPosition) {
 
-                    _setTargetAllTargetPosZero(m_callPolicySymbols.targetSignal.targetPosMaps);
-                    _setTargetAllTargetPosZero(m_putPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putPolicySymbols.optionTargetPosMaps);
 
-                    double targetDelta=  m_MV * 10000 / (lastUnderlyBar->m_close * m_multi);
+                    double targetDelta=  m_MV / (lastUnderlyBar->m_close * m_multi);
                     _setOpenPostion(m_callPolicySymbols, targetDelta, 'C',lastUnderlyBar->m_close);
                 } else if (marketPosition == -1 && preMarketPosition != marketPosition) {
 
-                    _setTargetAllTargetPosZero(m_callPolicySymbols.targetSignal.targetPosMaps);
-                    _setTargetAllTargetPosZero(m_putPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_callPolicySymbols.optionTargetPosMaps);
 
-                    double targetDelta=  -m_MV * 10000 / (lastUnderlyBar->m_close * m_multi);
+                    double targetDelta=  -m_MV / (lastUnderlyBar->m_close * m_multi);
                     _setOpenPostion(m_putPolicySymbols, targetDelta,  'P',lastUnderlyBar->m_close);
                 } else if (marketPosition == 0 && preMarketPosition != marketPosition) {// minus delta
 
-                    _setTargetAllTargetPosZero(m_callPolicySymbols.targetSignal.targetPosMaps);
-                    _setTargetAllTargetPosZero(m_putPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_callPolicySymbols.optionTargetPosMaps);
+                    _setTargetAllTargetPosZero(m_putPolicySymbols.optionTargetPosMaps);
 
                 }
             }
@@ -272,9 +239,9 @@ namespace Cosmos {
                 auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose);
                 if(openAtSymbol != nullptr){
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
-                    auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->m_greeks.delta;
+                    auto symbolDelta = (openAtSeries->m_KDataVecs[openAtSeries->m_seriesIndex - 1])->delta;
 
-                    addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps,
+                    addPositionByGreeks(openAtSymbol->instrumentInfo.instrumentID, policySymbols.optionTargetPosMaps,
                                         symbolDelta, targetDelta);
                     m_holdStrikePrice =  openAtSymbol->instrumentInfo.strikePrice;
 
@@ -287,7 +254,7 @@ namespace Cosmos {
                 }
             }
 
-            void _setTargetAllTargetPosZero(decltype(m_callPolicySymbols.targetSignal.targetPosMaps) & optionTargetPosMaps){
+            void _setTargetAllTargetPosZero(decltype(m_callPolicySymbols.optionTargetPosMaps) & optionTargetPosMaps){
                 for (auto itr = optionTargetPosMaps.begin(); itr != optionTargetPosMaps.end(); itr++) {
                     itr->second = 0;
                 }

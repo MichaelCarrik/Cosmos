@@ -20,6 +20,7 @@ namespace Cosmos {
             int m_lastPsTime{0};
             int m_maxOptionPosition{0};
             double m_openAtDelta{0.25};
+            int m_isRefresh{0};
             int m_tradeNum{0};
             int m_marketPosition{0};
             int m_preMarketPosition{0};
@@ -47,12 +48,12 @@ namespace Cosmos {
             CoveredVulture(std::string const &policyName, std::string const &engineName,
                            Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
                            int tradingDay, int expireDay, int maxOptionPosition,
-                           double openAtDelta,
+                           double openAtDelta, int isRefresh,
                            decltype(m_getUnderlyToBeginIndexFunc) getUnderlyToBeginIndexFunc) : IOptionPolicy(
                     policyName, engineName, instrument,
                     kperiod, mv, multi, tradingDay, expireDay, getUnderlyToBeginIndexFunc),
                 m_maxOptionPosition(maxOptionPosition),
-                m_openAtDelta(openAtDelta) {
+                m_openAtDelta(openAtDelta), m_isRefresh(isRefresh) {
                 if (m_openAtDelta < 0.1 || m_openAtDelta > 0.5) {
                     assert(false);
                 }
@@ -259,22 +260,22 @@ namespace Cosmos {
                 initIndicator();
                 fprintf(
                     stderr,
-                    "[%s_%s] start, underlyInstrument=%s, kperiod=%d, MV=%.3f, multi=%.3f, tradingDay=%d, expireDay=%d, "
+                    "[%s_%s] start, underlyInstrument=%s, kperiod=%d, MV=%.3f, multi=%.3f, tradingDay=%d, expireDay=%d, isRefresh=%d, "
                     "openAtDelta=%.3f, length=%d, mark=%.3f, alpha=%.3f, minsMA=%.3f, upBand=%.3f, downBand=%.3f, maxOptionPosition=%d, "
                     "underlyToBeginIndex=%d, marketPosition=%d, preMarketPostion=%d, signalPrice=%.3f, closeAtDelta=%.3f, configIndex=%d\n",
                     m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(), static_cast<int>(m_kperiod),
-                    m_MV, m_multi,
-                    m_tradingDay, m_expireDay, m_openAtDelta, m_length, m_mark, m_alpha, m_minsMA,
+                    m_MV, m_multi, m_tradingDay, m_expireDay, m_isRefresh, m_openAtDelta, m_length, m_mark, m_alpha,
+                    m_minsMA,
                     m_upBand, m_downBand, m_maxOptionPosition, m_underlyToBeginIndex, m_marketPosition,
                     m_preMarketPosition, m_signalPrice,
                     m_closeAtDelta, m_configIndex);
                 spdlog::info(
-                    "[{}_{}] start, underlyInstrument={}, kperiod={}, MV={:.3f}, multi={:.3f}, tradingDay={}, expireDay={}, "
+                    "[{}_{}] start, underlyInstrument={}, kperiod={}, MV={:.3f}, multi={:.3f}, tradingDay={}, expireDay={}, isRefresh={}, "
                     "openAtDelta={:.3f}, length={}, mark={:.3f}, alpha={:.3f}, minsMA={:.3f}, upBand={:.3f}, downBand={:.3f}, maxOptionPosition={}, "
                     "underlyToBeginIndex={}, marketPosition={}, preMarketPostion={}, signalPrice={:.3f}, closeAtDelta={:.3f}, configIndex={}\n",
                     m_policyName.c_str(), m_engineName.c_str(), m_underlyInstrument.data(), static_cast<int>(m_kperiod),
-                    m_MV, m_multi,
-                    m_tradingDay, m_expireDay, m_openAtDelta, m_length, m_mark, m_alpha, m_minsMA,
+                    m_MV, m_multi, m_tradingDay, m_expireDay, m_isRefresh, m_openAtDelta, m_length, m_mark, m_alpha,
+                    m_minsMA,
                     m_upBand, m_downBand, m_maxOptionPosition, m_underlyToBeginIndex, m_marketPosition,
                     m_preMarketPosition, m_signalPrice,
                     m_closeAtDelta, m_configIndex);
@@ -295,19 +296,26 @@ namespace Cosmos {
 
                         _updateVultureSignal(lastUnderlyBar);
                         if (m_tradingDay != m_expireDay) {
-                            _isCloseMarketPosition(lastUnderlyBar);
+                            if (m_isRefresh == 0) {
+                                _isCloseMarketPosition(lastUnderlyBar);
 
-                            _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
+                                _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
 
 
-                            _isOpenMarketPosition(lastUnderlyBar);
-                            _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
-                            m_preMarketPosition = m_marketPosition;
+                                _isOpenMarketPosition(lastUnderlyBar);
+                                _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
+                                m_preMarketPosition = m_marketPosition;
 
-                            _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, -1,
-                                                  m_maxOptionPosition);
-                            _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, -1,
-                                                  m_maxOptionPosition);
+                                _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, -1,
+                                                      m_maxOptionPosition);
+                                _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, -1,
+                                                      m_maxOptionPosition);
+                            }else if(m_isRefresh == 1) {
+                                m_preMarketPosition = 0;
+                                _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
+                                m_preMarketPosition = m_marketPosition;
+                                m_isRefresh = 0;
+                            }
                         }
 
                         _writePolicyLog(lastUnderlyBar, pMD);

@@ -14,7 +14,6 @@ namespace Cosmos {
             //     assert(false);
             // }
 
-
             auto series = this->getSeries(pMD->instrumentID, period);
             int lastSeriesIndex = series->m_seriesIndex;
 

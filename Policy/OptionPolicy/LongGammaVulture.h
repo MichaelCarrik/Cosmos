@@ -294,7 +294,7 @@ namespace Cosmos {
 
                         if(m_tradingDay  != m_expireDay){
                             _isCloseMarketPosition(lastUnderlyBar);
-                            int optionKBarIndex = m_underlyKseries->m_seriesIndex-1 - m_underlyToBeginIndex ;
+                          //  int optionKBarIndex = m_underlyKseries->m_seriesIndex-1 - m_underlyToBeginIndex ;
                             _marketPosToOptionPos(lastUnderlyBar, m_marketPosition, m_preMarketPosition);
 
 

@@ -15,7 +15,6 @@ namespace Cosmos{
             std::string appId;
             std::array<char,3> OrderPrefix;
             std::string tradeFront;
-            std::string interpreterConfig;
         };
     }
 }
