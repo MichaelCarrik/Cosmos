@@ -16,6 +16,7 @@
 //#include "../Policy/FuturePolicy/TestTrend.h"
 #include "../Policy/FuturePolicy/VultureTrend.h"
 #include "../Policy/FuturePolicy/VultureFast.h"
+#include "../Policy/FuturePolicy/FutureGodPolicy.h"
 
 namespace Cosmos {
     namespace Engine {
@@ -238,6 +239,30 @@ namespace Cosmos {
                 return new Policy::VultureFast(policyName, m_engineName, underlyInstrument, kPeriod,
                                                                            MV, futureInsInfo->multi,
                                                                            m_tradingDay, adjRiskTime, alpha, mark);
+            }else if (policyName.compare("FutureGod") == 0) {
+                Types::Instrument_t underlyInstrument{""};
+                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+
+                Types::Instrument_t instrumentB{""};
+                strcpy(instrumentB.data(), Utils::getParamMapValue(paramMap, "underlyB").c_str());
+
+                auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, false);
+                this->setKPtoHisSeriesMap(instrumentB, kPeriod, false);
+
+                double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
+                auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
+
+                int targetPosA = std::stoi(Utils::getParamMapValue(paramMap, "targetPosA").c_str());
+                int targetPosB = std::stoi(Utils::getParamMapValue(paramMap, "targetPosB").c_str());
+
+                Types::InstrumentInfo * futureInsInfo{nullptr};
+                getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
+
+                return new Policy::FutureGodPolicy(policyName, m_engineName, underlyInstrument,instrumentB,
+                    targetPosA, targetPosB, kPeriod, MV, futureInsInfo->multi, m_tradingDay, adjRiskTime);
             }
           //  else if(policyName.compare("TestTrend") == 0) {
             //     Types::Instrument_t underlyInstrument{""};

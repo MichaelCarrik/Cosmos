@@ -27,7 +27,7 @@ namespace Cosmos {
         struct PolicySymbolStruct{
             std::vector<const Types::Symbol *> optionSymbolVecs;
             TargetSignal targetSignal;
-            std::map<Types::Instrument_t, TargetSignal> targetSignalMap;
+       //     std::map<Types::Instrument_t, TargetSignal> targetSignalMap;
         };
 
         class IOptionPolicy  :  public IPolicy{

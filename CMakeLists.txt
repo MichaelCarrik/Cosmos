@@ -73,7 +73,8 @@ add_subdirectory(Utils)
 #		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 #		${LIB_MYSQL} Threads::Threads stdc++fs)
 #
-add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp)
+add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp
+		Policy/FuturePolicy/FutureGodPolicy.h)
 target_link_libraries(CosmosHedge UnderlyEngine Market Trader KData Utils OptionModel
 		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
 		${LIB_MYSQL} Threads::Threads stdc++fs)
