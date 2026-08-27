@@ -22,6 +22,7 @@ namespace Cosmos {
         class IFuturePolicy : public IPolicy {
         public:
             TrendSignal m_trendSignal;
+         //   std::map<Types::Instrument_t, TargetSignal> targetSignalMap;
             TargetSignal m_targetSignal;
             int m_adjRiskTime{-1};
             int m_lots{0};

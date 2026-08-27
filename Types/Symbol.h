@@ -114,7 +114,7 @@ namespace Cosmos
             int optionFilledOrderNumb{0};
             int lastSendOrderTime{0};
 
-            void updateRiskIndicator(const Types::OrderField* orderField, bool isOption)
+            void updateRiskIndicator(const Types::OrderField* orderField, bool isOption, const Types::MarketData * lastMD)
             {
                 if (isOption == false)
                 {
@@ -142,6 +142,8 @@ namespace Cosmos
                         {
                             openSellVolume += orderField->lastFilledVolume;
                         }
+
+
                     }
                 }else
                 {
@@ -152,11 +154,20 @@ namespace Cosmos
                     else if (orderField->orderStatus == OrderStatus::allTraded)
                     {
                         optionFilledOrderNumb += 1;
+
                     }
                     else if (orderField->orderStatus == OrderStatus::canceled)
                     {
                         optionCancelOrderNumb += 1;
                     }
+
+                    if (orderField->orderStatus == OrderStatus::allTraded || orderField->orderStatus ==OrderStatus::partTraded) {
+                        if (lastMD!=nullptr) {
+                            lastSendOrderTime = lastMD->psSecond;
+                        }
+                    }
+
+
                 }
 
             }

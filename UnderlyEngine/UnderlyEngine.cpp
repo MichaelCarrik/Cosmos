@@ -16,6 +16,7 @@
 //#include "../Policy/FuturePolicy/TestTrend.h"
 #include "../Policy/FuturePolicy/VultureTrend.h"
 #include "../Policy/FuturePolicy/VultureFast.h"
+#include "../Policy/FuturePolicy/FutureGodPolicy.h"
 
 namespace Cosmos {
     namespace Engine {
@@ -154,7 +155,7 @@ namespace Cosmos {
             m_engineParam.riskFutureMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "riskFutureMaxPosition"));
             m_engineParam.riskOptionMaxPosition = stoi(Utils::getParamMapValue(initParamMap.paramMap, "riskOptionMaxPosition"));
 
-            fprintf(stderr, "[%s_%d]， affiThreadId=%d, putResendTimeout=%d, hitResendTimeout=%d, futurePreCloseToday=%d, futureMinVolume=%d, optionMinVolume=%d, "
+            fprintf(stderr, "[%s_%d], affiThreadId=%d, putResendTimeout=%d, hitResendTimeout=%d, futurePreCloseToday=%d, futureMinVolume=%d, optionMinVolume=%d, "
                             "futureMinOV=%d, futureEI=%s, optionEI=%s, kbarBiasSeconds=%d, hedgeType=%s, riskInformVolume=%d, riskOpenVolume=%d, riskMaxOrderRatio=%d, "
                             "riskFutureMaxPosition=%d, riskOptionMaxPosition=%d\n",
                             m_engineName.c_str(), m_policyID,  m_engineParam.affiThreadId,
@@ -162,7 +163,7 @@ namespace Cosmos {
                             m_engineParam.optionMinVolume, m_engineParam.futureMinOV, Types::EIMap[m_engineParam.futureEI].data(), Types::EIMap[m_engineParam.optionEI].data(),
                             m_engineParam.kbarBiasSeconds, Types::hedgeMap[m_engineParam.hedgeType].data(), m_engineParam.riskInformVolume, m_engineParam.riskOpenVolume,
                             m_engineParam.riskMaxOrderRatio, m_engineParam.riskFutureMaxPosition, m_engineParam.riskOptionMaxPosition);
-            spdlog::info("[{}_{}]， affiThreadId={}, putResendTimeout={}, hitResendTimeout={}, "
+            spdlog::info("[{}_{}], affiThreadId={}, putResendTimeout={}, hitResendTimeout={}, "
                             "futurePreCloseToday={}, futureMinVolume={}, optionMinVolume={}, futureEI={}, optionEI={}, kbarBiasSeconds={}, "
                             "hedgeType={}, riskInformVolume={}, riskOpenVolume={}, riskMaxOrderRatio={}, riskFutureMaxPosition={}, riskOptionMaxPosition={}",
                             m_engineName.c_str(), m_policyID,  m_engineParam.affiThreadId,
@@ -238,6 +239,30 @@ namespace Cosmos {
                 return new Policy::VultureFast(policyName, m_engineName, underlyInstrument, kPeriod,
                                                                            MV, futureInsInfo->multi,
                                                                            m_tradingDay, adjRiskTime, alpha, mark);
+            }else if (policyName.compare("FutureGod") == 0) {
+                Types::Instrument_t underlyInstrument{""};
+                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+
+                Types::Instrument_t instrumentB{""};
+                strcpy(instrumentB.data(), Utils::getParamMapValue(paramMap, "underlyB").c_str());
+
+                auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, false);
+                this->setKPtoHisSeriesMap(instrumentB, kPeriod, false);
+
+                double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                auto adjRiskTimeStr = Utils::getParamMapValue(paramMap, "adjRiskTime");
+                auto adjRiskTime = Utils::ToPsSeconds(adjRiskTimeStr, true);
+
+                int targetPosA = std::stoi(Utils::getParamMapValue(paramMap, "targetPosA").c_str());
+                int targetPosB = std::stoi(Utils::getParamMapValue(paramMap, "targetPosB").c_str());
+
+                Types::InstrumentInfo * futureInsInfo{nullptr};
+                getFutureInfoByInstrumentID(underlyInstrument, futureInsInfo);
+
+                return new Policy::FutureGodPolicy(policyName, m_engineName, underlyInstrument,instrumentB,
+                    targetPosA, targetPosB, kPeriod, MV, futureInsInfo->multi, m_tradingDay, adjRiskTime);
             }
           //  else if(policyName.compare("TestTrend") == 0) {
             //     Types::Instrument_t underlyInstrument{""};
@@ -641,12 +666,11 @@ namespace Cosmos {
 
             std::map<Types::Instrument_t, int> targetMap;
 
-
-            for (auto i = 0; i < m_futurePolicyVec.size(); i++) {
+            for(auto i = 0; i < m_futurePolicyVec.size(); i++) {
                 _syncTargetMap(m_futurePolicyVec[i]->m_targetSignal.targetPosMaps, targetMap);
             }
 
-            for (auto i = 0; i < m_optionPolicyVec.size(); i++) {
+            for(auto i = 0; i < m_optionPolicyVec.size(); i++) {
                 //call target
                 _syncTargetMap(m_optionPolicyVec[i]->m_callPolicySymbols.targetSignal.targetPosMaps, targetMap);
                 _syncTargetMap(m_optionPolicyVec[i]->m_putPolicySymbols.targetSignal.targetPosMaps, targetMap);
@@ -655,6 +679,9 @@ namespace Cosmos {
             for (auto &symbolItr: m_symbolMap) {
                if (Utils::TradingHours::getProductTrait(symbolItr.second->instrumentInfo.productID, pMD->psSecond, m_isDay) == Utils::FTTrait::FT_TRADING)
                {
+                   if (symbolItr.second->underlySymbol->lastMD->isInit == true && strcmp(pMD->instrumentID.data(), symbolItr.first.data()) ==0 ) {
+                       continue;
+                   }
 
                     auto targetItr = targetMap.find(symbolItr.first);
                     symbolItr.second->targetPosition = 0;
@@ -662,7 +689,7 @@ namespace Cosmos {
                         symbolItr.second->targetPosition = targetItr->second;
                     }
                     m_executor->syncPosition(symbolItr.second, epoch_time);
-                }
+               }
             }
         }
 

@@ -53,7 +53,7 @@ namespace Cosmos {
 
             ~LongGammaGod() {}
 
-            void _GetValueFromFileByConfigIndex(char *filename, Types::Instrument_t const& underlyInstrument,
+     void _GetValueFromFileByConfigIndex(char *filename, Types::Instrument_t const& underlyInstrument,
                                                 int inputConfigIndex, std::vector<FileRead> &fileReadVecs) {
                 char buf[BUFSIZ], *field;
 
@@ -70,22 +70,22 @@ namespace Cosmos {
                         _getValueInLine(buf, ciname, configIndexStr);
                         if (std::stoi(configIndexStr.c_str()) == inputConfigIndex) {
                             FileRead fileRead;
-                            char insname[56]{"instrument"};
+                            char insname[56]{"instr"};
                             _getValueInLine(buf, insname, fileRead.instrumentStr);
-                            char tagname[56]{"targetPosition"};
+                            char tagname[56]{"targetPos"};
                             _getValueInLine(buf, tagname, fileRead.targetPositionStr);
 
                             if(strcmp(fileRead.instrumentStr.c_str(), underlyInstrument.data())==0){
-                                char mpname[56]{"marketPosition"};
+                                char mpname[56]{"mktPos"};
                                 _getValueInLine(buf, mpname, fileRead.marketPositionStr);
 
-                                char preMpname[56]{"preMarketPosition"};
+                                char preMpname[56]{"preMktPos"};
                                 _getValueInLine(buf, preMpname, fileRead.preMarketPositionStr);
 
-                                char sgnname[56]{"signalPrice"};
+                                char sgnname[56]{"sgnPrice"};
                                 _getValueInLine(buf, sgnname, fileRead.signalPriceStr);
 
-                                char stpname[56]{"holdStrikePrice"};
+                                char stpname[56]{"strikePrice"};
                                 _getValueInLine(buf, stpname, fileRead.holdStrikePriceStr);
 
                             }
@@ -95,6 +95,7 @@ namespace Cosmos {
                 }
                 fclose(fp);
             }
+
 
             void initIndicator() {
 
@@ -107,6 +108,10 @@ namespace Cosmos {
                 m_configIndex = atoi(this->GetLastValueFromFile(configPath, "configIndex").c_str());
                 std::vector<FileRead> fileReadVecs;
                 _GetValueFromFileByConfigIndex(configPath, m_underlyInstrument, m_configIndex, fileReadVecs);
+                for(auto fileReadItr : fileReadVecs) {
+                    fprintf(stderr, "LongGammaGod %s, targetPos=%s\n", fileReadItr.instrumentStr.c_str(), fileReadItr.targetPositionStr.c_str());
+                }
+
 
                 _initOptionPolicySymbolVecs(inputSymbolMap, m_underlyInstrument, m_callPolicySymbols, fileReadVecs, 'C' );
                 _initOptionPolicySymbolVecs(inputSymbolMap, m_underlyInstrument, m_putPolicySymbols, fileReadVecs, 'P' );
@@ -124,6 +129,7 @@ namespace Cosmos {
                         m_preMarketPosition = std::stoi(fileReadItr.preMarketPositionStr.c_str());
                         m_signalPrice = std::stof(fileReadItr.signalPriceStr.c_str());
                         m_holdStrikePrice = std::stof(fileReadItr.holdStrikePriceStr.c_str());
+
                   //      fprintf(stderr, "%s, %.3f, %s\n",m_engineName.c_str(), m_holdStrikePrice, fileReadItr.holdStrikePriceStr.c_str());
                     }
                 }
@@ -196,9 +202,9 @@ namespace Cosmos {
 
             void _writePolicyLog(const KData::KData *lastUnderlyKB) {
 
-                m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, "
-                                  "marketPosition={}, preMarketPosition={}, signalPrice={:.3f}, "
-                                  "holdStrikePrice={:.3f}, godDirection={}, closeExceedThresh={:.3f}",
+                m_configLog->info("configIndex={}, instr={}, {}, {}, {}, close={:.3f}, "
+                                  "mktPos={}, preMktPos={}, sgnPrice={:.3f}, "
+                                  "strikePrice={:.3f}, godDirection={}, closeExceedThresh={:.3f}",
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                                   lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice, m_godDirection,

@@ -15,6 +15,12 @@ namespace Cosmos {
             std::map<Types::Instrument_t, int> targetPosMaps;
             std::map<Types::Instrument_t, int> lastTargetPosMaps;
         };
+        //
+        // struct TargetSignal {
+        //     int lastTargetPos{0};
+        //     int targetPos{0};
+        //     double signalPrice{0.0};
+        // };
 
         class IPolicy {
         public:

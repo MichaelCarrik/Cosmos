@@ -730,7 +730,7 @@ namespace Cosmos {
                         this->cancelOrder(*orderField, orderField->epoch_time);
                     }
                     if (isOption == false) {
-                        onQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption);
+                        onQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption, nullptr);
                     }else {
                         if (strcmp(onQuerySymbol->instrumentInfo->underly.data(), "i2605")==0) {
 
@@ -741,7 +741,7 @@ namespace Cosmos {
                                           Types::orderStatusMap[orderField->orderStatus].data());
                         }
                         auto underlyOnQuerySymbol = getOnQuerySymbol(onQuerySymbol->instrumentInfo->underly);
-                        underlyOnQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption);
+                        underlyOnQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption, nullptr);
                     }
                 }
             }
@@ -1011,7 +1011,7 @@ namespace Cosmos {
 
 	void CtpTrader::OnRspSettlementInfoConfirm(CThostFtdcSettlementInfoConfirmField *pSettlementInfoConfirm, CThostFtdcRspInfoField *pRspInfo, int nRequestID, bool bIsLast) {
             if (pSettlementInfoConfirm != nullptr) {
-                fprintf(stderr,"OnRspSettlementInfoConfirm BrokerId=%s, investId=%s， ConfirmDate=%s, ConfirmTime=%s, SettlementID=%s\n", pSettlementInfoConfirm->BrokerID, pSettlementInfoConfirm->InvestorID, pSettlementInfoConfirm->ConfirmDate,
+                fprintf(stderr,"OnRspSettlementInfoConfirm BrokerId=%s, investId=%s, ConfirmDate=%s, ConfirmTime=%s, SettlementID=%s\n", pSettlementInfoConfirm->BrokerID, pSettlementInfoConfirm->InvestorID, pSettlementInfoConfirm->ConfirmDate,
                     pSettlementInfoConfirm->ConfirmTime,pSettlementInfoConfirm->SettlementID );
             }
             if (pRspInfo != nullptr) {

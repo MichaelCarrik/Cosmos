@@ -27,6 +27,7 @@ namespace Cosmos {
         struct PolicySymbolStruct{
             std::vector<const Types::Symbol *> optionSymbolVecs;
             TargetSignal targetSignal;
+       //     std::map<Types::Instrument_t, TargetSignal> targetSignalMap;
         };
 
         class IOptionPolicy  :  public IPolicy{
@@ -47,6 +48,7 @@ namespace Cosmos {
             {
 
             }
+
 
 
             void _initOptionPolicySymbolVecs(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &inputSymbolMap,

@@ -355,6 +355,9 @@ namespace Cosmos {
                 symbol->riskIndicator.lastSendOrderTime = symbol->underlySymbol->lastMD->psSecond;
                 m_riskMonitor->onOrderField(order, symbol);
                 m_driver->sendOrder(*order);
+                spdlog::info("[{}_{}], Executor::_sendSignal  instrumentID={}, updateTime={}, lastSendOrderTime={}",m_engineName,
+                    symbol->underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data(),symbol->lastMD->updateTime.data(),
+                        symbol->riskIndicator.lastSendOrderTime);
             } else {
                 order->orderStatus = Types::OrderStatus::failed;
                 order->isTerminal = Utils::checkTerminal(order);
@@ -453,12 +456,14 @@ namespace Cosmos {
             order->orderTimeType = signal.orderTimeType;
             order->insertPSTimes = symbol->underlySymbol->lastMD->psSecond;
             order->hedgeType = m_engineParam.hedgeType;
+            auto preCloseToday =  symbol->instrumentInfo.productIDClass == Types::ProductClass::future ? m_engineParam.futurePreCloseToday : 1;
             if (order->orderSide == Types::OrderSide::buy) {
+
                 order->pet = this->_getPet(order->orderVolume, symbol->tradePosition.T_sellHold,
-                                           symbol->tradePosition.Y_sellHold, 0, m_engineParam.futurePreCloseToday);
+                                           symbol->tradePosition.Y_sellHold, 0, preCloseToday);
             } else {
                 order->pet = this->_getPet(order->orderVolume, symbol->tradePosition.T_buyHold,
-                                           symbol->tradePosition.Y_buyHold, 0, m_engineParam.futurePreCloseToday);
+                                           symbol->tradePosition.Y_buyHold, 0, preCloseToday);
             }
             order->instrumentID = symbol->instrumentInfo.instrumentID;
             //   order->exchangeId = symbol->exchangeId;

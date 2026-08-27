@@ -19,7 +19,8 @@ namespace Cosmos {
                           inputOrder->orderRef.data(), Types::orderSideMap[inputOrder->orderSide].data(),  inputOrder->orderPrice, inputOrder->orderVolume,
                           Types::orderStatusMap[inputOrder->orderStatus].data());
 
-            symbol->underlySymbol->riskIndicator.updateRiskIndicator(inputOrder, symbol->instrumentInfo.productIDClass == Types::ProductClass::option);
+            symbol->underlySymbol->riskIndicator.updateRiskIndicator(inputOrder, symbol->instrumentInfo.productIDClass == Types::ProductClass::option, symbol->underlySymbol->lastMD);
+
         }
 
             bool RiskMonitor::isRiskForNoTrade(const Types::Symbol * underlySymbol, bool isOption) {
@@ -95,7 +96,7 @@ namespace Cosmos {
                         return true;
                     }
 
-                    if (underlySymbol->lastMD->psSecond - symbol->riskIndicator.lastSendOrderTime < 15  ) {
+                    if (underlySymbol->lastMD->psSecond - symbol->riskIndicator.lastSendOrderTime < 5  ) {
                         spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder symbolLastSendTooClose , instrumentID={}",
                         m_engineName, underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data());
                         return true;
