@@ -2,8 +2,8 @@
 // Created by zhangyingwei on 2024/10/29.
 //
 
-#ifndef OPTIONTRADING_LONGGAMMAGOD_H
-#define OPTIONTRADING_LONGGAMMAGOD_H
+#ifndef OPTIONTRADING_OPTIONGOD_H
+#define OPTIONTRADING_OPTIONGOD_H
 
 #include "IOptionPolicy.h"
 #include "../Types/Type.h"
@@ -31,6 +31,9 @@ namespace Cosmos {
             double m_holdStrikePrice{0.0};
             double m_signalPrice{0.0};
 
+            char optionTypeA{'N'};
+            char optionTypeB{'N'};
+
         public:
             OptionGod( Types::KPeriod kperiod,  std::string const& policyName,
                          std::string &engineName,
@@ -40,7 +43,6 @@ namespace Cosmos {
                                                 kperiod, MV, multi,  tradingDay, expireDay, getUnderlyToBeginIndexFunc),
                      m_maxOptionPosition(maxOptionPosition), m_optionInstrumentA(optionInstrumentA), m_optionInstrumentB(optionInstrumentB),
                      m_optionTargetPosA(optionTargetPosA), m_optionTargetPosB(optionTargetPosB){
-
 
                 _initPolicyLogger();
             }
@@ -64,35 +66,22 @@ namespace Cosmos {
                         _getValueInLine(buf, ciname, configIndexStr);
                         if (std::stoi(configIndexStr.c_str()) == inputConfigIndex) {
                             FileRead fileRead;
-                            char insname[56]{"instrument"};
+                            char insname[56]{"instr"};
                             _getValueInLine(buf, insname, fileRead.instrumentStr);
-                            char tagname[56]{"targetPosition"};
-                            _getValueInLine(buf, tagname, fileRead.targetPositionStr);
-
-                            if(strcmp(fileRead.instrumentStr.c_str(), underlyInstrument.data())==0){
-                                char mpname[56]{"marketPosition"};
-                                _getValueInLine(buf, mpname, fileRead.marketPositionStr);
-
-                                char preMpname[56]{"preMarketPosition"};
-                                _getValueInLine(buf, preMpname, fileRead.preMarketPositionStr);
-
-                                char sgnname[56]{"signalPrice"};
+                            if(strcmp(fileRead.instrumentStr.c_str(), underlyInstrument.data())!=0){
+                                char tagname[56]{"targetPos"};
+                                _getValueInLine(buf, tagname, fileRead.targetPositionStr);
+                                char sgnname[56]{"sgnPrice"};
                                 _getValueInLine(buf, sgnname, fileRead.signalPriceStr);
-
-                                char stpname[56]{"holdStrikePrice"};
-                                _getValueInLine(buf, stpname, fileRead.holdStrikePriceStr);
-
+                                fileReadVecs.emplace_back(fileRead);
                             }
-                            fileReadVecs.emplace_back(fileRead);
                         }
                     }
                 }
                 fclose(fp);
             }
 
-            void initIndicator() {
 
-            }
 
             virtual void start(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &inputSymbolMap) override {
                 char configPath[256]{""};
@@ -112,28 +101,25 @@ namespace Cosmos {
                 m_underlyKseries = symbolItr->second->m_kSeriesMap.at(m_kperiod);
                 m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
 
-                for(auto fileReadItr : fileReadVecs){
-                    if(strcmp(fileReadItr.instrumentStr.c_str(), symbolItr->second->instrumentInfo.instrumentID.data())==0){
-                        m_marketPosition = std::stoi(fileReadItr.marketPositionStr.c_str());
-                        m_preMarketPosition = std::stoi(fileReadItr.preMarketPositionStr.c_str());
-                        m_signalPrice = std::stof(fileReadItr.signalPriceStr.c_str());
-                        m_holdStrikePrice = std::stof(fileReadItr.holdStrikePriceStr.c_str());
-                  //      fprintf(stderr, "%s, %.3f, %s\n",m_engineName.c_str(), m_holdStrikePrice, fileReadItr.holdStrikePriceStr.c_str());
-                    }
+                auto itrA = inputSymbolMap.find(m_optionInstrumentA);
+                if(itrA == inputSymbolMap.end()) {
+                    assert(false);
                 }
+                optionTypeA = itrA->second->instrumentInfo.optionType;
+
+                auto itrB = inputSymbolMap.find(m_optionInstrumentB);
+                if(itrB == inputSymbolMap.end()) {
+                    assert(false);
+                }
+                optionTypeB = itrB->second->instrumentInfo.optionType;
                 m_configIndex++;
-                initIndicator();
-                auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
-
-            //    _writePolicyLog(lastUnderlyBar,lastSAR);
-
                 fprintf(stderr,
                         "[%s_%s] start, m_kperiod=%d, m_MV=%.3f, m_multi=%.3f, m_maxOptionPosition=%d, "
                         "optionInstrumentA=%s, optionTargetLotsA=%d, optionInstrumentB=%s, optionTargetLotsB=%d,"
                         "expireday=%d, marketPosition=%d, preMarketPosition=%d, signalPrice=%.3f, holdStrikePrice=%.3f, "
                         "configIndex=%d\n", m_engineName.c_str(), m_policyName.c_str(), static_cast<int>(m_kperiod),
-                        m_MV, m_multi, m_maxOptionPosition, m_optionInstrumentA.data(), m_optionTargetLotsA,
-                        m_optionInstrumentB.data(),  m_optionTargetLotsB, m_expireDay, m_marketPosition,
+                        m_MV, m_multi, m_maxOptionPosition, m_optionInstrumentA.data(), m_optionTargetPosA,
+                        m_optionInstrumentB.data(),  m_optionTargetPosB, m_expireDay, m_marketPosition,
                         m_preMarketPosition,m_signalPrice, m_holdStrikePrice, m_configIndex);
                 m_configIndex++;
             };
@@ -156,16 +142,21 @@ namespace Cosmos {
                         _setTargetAllTargetPosZero(m_callPolicySymbols.targetSignal.targetPosMaps);
                         _setTargetAllTargetPosZero(m_putPolicySymbols.targetSignal.targetPosMaps);
 
-                        _setGodOptionTarget(m_callPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentA, m_optionTargetPosA);
-                        _setGodOptionTarget(m_callPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentB, m_optionTargetPosB);
-                        _setGodOptionTarget(m_putPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentA, m_optionTargetPosA);
-                        _setGodOptionTarget(m_putPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentB, m_optionTargetPosB);
+					     if (optionTypeA == 'C') {
+					         _setGodOptionTarget(m_callPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentA, m_optionTargetPosA);
+					     }else if (optionTypeA == 'P') {
+					         _setGodOptionTarget(m_putPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentA, m_optionTargetPosA);
+					     }
+
+					     if (optionTypeB == 'C') {
+					         _setGodOptionTarget(m_callPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentB, m_optionTargetPosB);
+					     }else if (optionTypeB == 'P') {
+					         _setGodOptionTarget(m_putPolicySymbols.targetSignal.targetPosMaps, m_optionInstrumentB, m_optionTargetPosB);
+					     }
+					     ;
 
                         _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, 0, m_maxOptionPosition);
                         _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, 0, m_maxOptionPosition);
-
-
-
 
                         _writePolicyLog(lastUnderlyBar);
                         m_configLog->flush();
@@ -181,9 +172,8 @@ namespace Cosmos {
 
             void _writePolicyLog(const KData::KData *lastUnderlyKB) {
 
-                m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, "
-                                  "marketPosition={}, preMarketPosition={}, signalPrice={:.3f}, "
-                                  "holdStrikePrice={:.3f}",
+                m_configLog->info("configIndex={}, instr={}, {}, {}, {}, close={:.3f}, "
+                                  "mktPos={}, preMktPos={}, sgnPrice={:.3f}, holdStrikePrice={:.3f}",
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                                   lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice);
@@ -206,17 +196,17 @@ namespace Cosmos {
                     targetPosMaps[optionInstrumentID] = 0;
                     itrTGPos = targetPosMaps.find(optionInstrumentID);
                 }
-                int preT =     itrTGPos->second;
+                int preT = itrTGPos->second;
+                itrTGPos->second = targetLots;
+
                 if (preT != targetLots) {
                      fprintf(stderr, "setGodOptionTarget optionInstrumentID=%s, diffGreeks=%.3f, preT=%d, greeks=%.3f,targetLots=%d, targetPos=%d\n",
                         optionInstrumentID.data(),  preT, targetLots, itrTGPos->second);
                 }
                 return 1;
             }
-
-
         };
     }
 }
 
-#endif //OPTIONTRADING_LONGGAMMAGOD_H
+#endif //OPTIONTRADING_OPTIONGOD_H

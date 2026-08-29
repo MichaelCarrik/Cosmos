@@ -10,6 +10,7 @@
 #include "../Policy/OptionPolicy/LongGammaGod.h"
 #include "../Policy/OptionPolicy/LongGammaVulture.h"
 #include "../Policy/OptionPolicy/CoveredVulture.h"
+#include "../Policy/OptionPolicy/OptionGod.h"
 //#include "../Policy/OptionPolicy/TestTrendOption.h"
 // #include "../Policy/Calendar.h"
 #include "../Policy/OptionPolicy/SellStrangleV2.h"
@@ -402,6 +403,41 @@ namespace Cosmos {
                                                              [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
                               return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
+             }else if (policyName.compare("OptionGod") == 0) {
+
+
+                 Types::Instrument_t underlyInstrument{""};
+                 strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+
+
+                 Types::Instrument_t optionInstrumentA{""};
+                 strcpy(optionInstrumentA.data(), Utils::getParamMapValue(paramMap, "optionInstrumentA").c_str());
+
+                 Types::Instrument_t optionInstrumentB{""};
+                 strcpy(optionInstrumentB.data(), Utils::getParamMapValue(paramMap, "optionInstrumentB").c_str());
+
+                 auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                 Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                 this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, false);
+
+                 double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                 int targetPosA = std::stoi(Utils::getParamMapValue(paramMap, "targetPosA").c_str());
+                 int targetPosB = std::stoi(Utils::getParamMapValue(paramMap, "targetPosB").c_str());
+
+
+                 Types::InstrumentInfo * optionInsInfo{nullptr};
+                 getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
+                 if (optionInsInfo == nullptr) {
+                     return nullptr;
+                 }
+
+                 return new  Policy::OptionGod(kPeriod, policyName,
+                                                             m_engineName, underlyInstrument, optionInstrumentA, optionInstrumentB, targetPosA, targetPosB,
+                                                             MV,   optionInsInfo->multi,  m_tradingDay, optionInsInfo->expireDate,
+                                                             m_engineParam.riskOptionMaxPosition,
+                                                             [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
+                              return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
+                           });
              }
 
             //else if (policyName.compare("TestTrendOption") == 0){
@@ -679,7 +715,9 @@ namespace Cosmos {
             for (auto &symbolItr: m_symbolMap) {
                if (Utils::TradingHours::getProductTrait(symbolItr.second->instrumentInfo.productID, pMD->psSecond, m_isDay) == Utils::FTTrait::FT_TRADING)
                {
-                   if (symbolItr.second->underlySymbol->lastMD->isInit == true && strcmp(pMD->instrumentID.data(), symbolItr.first.data()) ==0 ) {
+                 //  if (symbolItr.second->underlySymbol->lastMD->isInit == true || strcmp(pMD->instrumentID.data(), symbolItr.first.data()) !=0 )
+                   if (symbolItr.second->underlySymbol->lastMD->isInit == true )
+                       {
                        continue;
                    }
 

@@ -19,7 +19,8 @@ namespace Cosmos {
                           inputOrder->orderRef.data(), Types::orderSideMap[inputOrder->orderSide].data(),  inputOrder->orderPrice, inputOrder->orderVolume,
                           Types::orderStatusMap[inputOrder->orderStatus].data());
 
-            symbol->underlySymbol->riskIndicator.updateRiskIndicator(inputOrder, symbol->instrumentInfo.productIDClass == Types::ProductClass::option, symbol->underlySymbol->lastMD);
+            symbol->underlySymbol->riskIndicator.updateRiskIndicator(inputOrder, symbol->instrumentInfo.productIDClass == Types::ProductClass::option,
+                symbol->underlySymbol->lastMD, symbol->riskIndicator.lastSendOrderTime);
 
         }
 

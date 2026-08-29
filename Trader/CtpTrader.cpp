@@ -730,7 +730,8 @@ namespace Cosmos {
                         this->cancelOrder(*orderField, orderField->epoch_time);
                     }
                     if (isOption == false) {
-                        onQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption, nullptr);
+                        int temp{0};
+                        onQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption, nullptr, temp);
                     }else {
                         if (strcmp(onQuerySymbol->instrumentInfo->underly.data(), "i2605")==0) {
 
@@ -741,7 +742,8 @@ namespace Cosmos {
                                           Types::orderStatusMap[orderField->orderStatus].data());
                         }
                         auto underlyOnQuerySymbol = getOnQuerySymbol(onQuerySymbol->instrumentInfo->underly);
-                        underlyOnQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption, nullptr);
+                        int temp{0};
+                        underlyOnQuerySymbol->riskIndicator->updateRiskIndicator(orderField, isOption, nullptr, temp);
                     }
                 }
             }

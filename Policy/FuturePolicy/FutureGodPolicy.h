@@ -48,9 +48,10 @@ namespace Cosmos {
 
 
                 m_underlyKseries = getSeries(inputSymbolMap, m_kperiod, m_underlyInstrument);
-                m_instrumentBKseries = getSeries(inputSymbolMap, m_kperiod, m_underlyInstrument);
+                m_instrumentBKseries = getSeries(inputSymbolMap, m_kperiod, m_instrumentB);
 
                 initGodSignalPos(inputSymbolMap, m_engineName, m_policyName, m_underlyInstrument);
+
 
 
                 fprintf(
@@ -82,30 +83,26 @@ namespace Cosmos {
                 char configPath[256]{""};
                 sprintf(configPath, "./logs/policy/%s_%s_%s.txt", m_engineName.c_str(), m_policyName.c_str(),
                         underlyInstrument.data());
-                // m_trendSignal.signalPrice = atof(this->GetLastValueFromFile(configPath, "sgnPrice").c_str());
-                // m_trendSignal.marketPosition = atoi(this->GetLastValueFromFile(configPath, "mktPos").c_str());
-                // m_targetSignal.targetPosMaps[m_underlyInstrument] = atoi(this->GetLastValueFromFile(configPath, "tgtPos").c_str());
-                // m_targetSignal.lastTargetPosMaps[m_underlyInstrument] =  atoi(this->GetLastValueFromFile(configPath, "tgtPos").c_str());
+
                 m_configIndex = atoi(this->GetLastValueFromFile(configPath, "configIndex").c_str());
+
                 std::vector<FileRead> fileReadVecs;
                 _GetValueFromFileByConfigIndex(configPath, m_underlyInstrument, m_configIndex, fileReadVecs);
 
-                for (auto symbolItr: inputSymbolMap) {
-                    if (symbolItr.second->instrumentInfo.productIDClass == Types::ProductClass::future &&
-                        (strcmp(symbolItr.second->instrumentInfo.underly.data(), underlyInstrument.data()) == 0 ||
-                         strcmp(symbolItr.second->instrumentInfo.underly.data(), m_instrumentB.data()) == 0
-                        )) {
-                        for (auto fileReadItr: fileReadVecs) {
-                            if (strcmp(fileReadItr.instrumentStr.c_str(),
-                                       symbolItr.second->instrumentInfo.instrumentID.data()) == 0) {
-                                m_targetSignal.targetPosMaps[symbolItr.second->instrumentInfo.instrumentID] = std::stoi(
-                                    fileReadItr.targetPositionStr.c_str());
-                                m_targetSignal.lastTargetPosMaps[symbolItr.second->instrumentInfo.instrumentID] =
-                                        std::stoi(fileReadItr.targetPositionStr.c_str());
-                            }
+                for (auto fileReadItr: fileReadVecs) {
+                        if (strcmp(fileReadItr.instrumentStr.c_str(), m_underlyInstrument.data()) == 0) {
+                            m_targetSignal.targetPosMaps[m_underlyInstrument] = std::stoi(
+                                fileReadItr.targetPositionStr.c_str());
+                            m_targetSignal.lastTargetPosMaps[m_underlyInstrument] =
+                                    std::stoi(fileReadItr.targetPositionStr.c_str());
+                        }else if (strcmp(fileReadItr.instrumentStr.c_str(), m_instrumentB.data()) == 0) {
+                            m_targetSignal.targetPosMaps[m_instrumentB] = std::stoi(
+                                fileReadItr.targetPositionStr.c_str());
+                            m_targetSignal.lastTargetPosMaps[m_instrumentB] =
+                                    std::stoi(fileReadItr.targetPositionStr.c_str());
                         }
                     }
-                }
+                m_configIndex++;
             }
 
 
@@ -131,10 +128,10 @@ namespace Cosmos {
                             char tagname[56]{"targetPos"};
                             _getValueInLine(buf, tagname, fileRead.targetPositionStr);
 
-                            if (strcmp(fileRead.instrumentStr.c_str(), underlyInstrument.data()) == 0) {
-                                char stpname[56]{"basePrice"};
-                                _getValueInLine(buf, stpname, fileRead.basePriceStr);
-                            }
+                            // if (strcmp(fileRead.instrumentStr.c_str(), underlyInstrument.data()) == 0) {
+                            //     char stpname[56]{"basePrice"};
+                            //     _getValueInLine(buf, stpname, fileRead.basePriceStr);
+                            // }
                             fileReadVecs.emplace_back(fileRead);
                         }
                     }
@@ -149,10 +146,18 @@ namespace Cosmos {
                         m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex - 1;
 
                         auto lastBarA = m_underlyKseries->m_KDataVecs[m_lastUnderlyBarIndex];
-                        auto lastBarB = m_instrumentBKseries->m_KDataVecs[m_instrumentBKseries->m_seriesIndex - 1];
+                        auto lastBarB = m_instrumentBKseries->m_KDataVecs[m_lastUnderlyBarIndex ];
 
                         m_targetSignal.targetPosMaps[m_underlyInstrument] = m_targetPosA;
                         m_targetSignal.targetPosMaps[m_instrumentB] = m_targetPosB;
+
+                        // if ( m_targetSignal.lastTargetPosMaps[m_underlyInstrument] != m_targetSignal.targetPosMaps[m_underlyInstrument]) {
+                        //     m_trendSignal.signalPrice = lastBarA->m_close;
+                        // }
+                        //
+                        // if ( m_targetSignal.lastTargetPosMaps[m_instrumentB] != m_targetSignal.targetPosMaps[m_instrumentB]) {
+                        //     m_trendSignal.signalPrice = lastBarA->m_close;
+                        // }
 
 
                         writePolicyLog(lastBarA, m_underlyKseries->m_lastPMD);
@@ -161,18 +166,19 @@ namespace Cosmos {
                         std::copy(m_targetSignal.targetPosMaps.begin(), m_targetSignal.targetPosMaps.end(),
                                   std::inserter(m_targetSignal.lastTargetPosMaps,
                                                 m_targetSignal.lastTargetPosMaps.begin()));
+                        m_configIndex++;
                     }
                     m_lastUnderlyBarIndex = m_underlyKseries->m_seriesIndex;
                 }
             };
 
             virtual void writePolicyLog(const KData::KData *lastUnderlyKB, const Types::MarketData *pMD) override {
-                m_configLog->info("configIndex={}, {}, {}, {}, {}, {:03d}, close={:.3f}({:.3f}, {:.3f}), "
-                                  "sgnPrice={:.3f}, tgtPos={}",
+                m_configLog->info("configIndex={}, instr={}, {}, {}, {}, {:03d}, close={:.3f}({:.3f}, {:.3f}), "
+                                  "sgnPrice={:.3f}, targetPos={}",
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                                   lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds,
-                                  lastUnderlyKB->m_close, pMD->bidPrice[0], pMD->askPrice[0], m_trendSignal.signalPrice,
-                                  m_targetSignal.targetPosMaps[m_underlyInstrument]
+                                  lastUnderlyKB->m_close, pMD->bidPrice[0], pMD->askPrice[0], lastUnderlyKB->m_close,
+                                  m_targetSignal.targetPosMaps[lastUnderlyKB->m_instrument]
                 );
                 m_configLog->flush();
             }

@@ -258,7 +258,7 @@ int main(int argc, char *argv[]) {
 
     driver.onStart();
 
-    unsigned short port = 25000;
+    unsigned short port = 25001;
     boost::asio::io_context ioc;
     boost::asio::ip::tcp::acceptor acceptor(
         ioc, boost::asio::ip::tcp::endpoint(boost::asio::ip::tcp::v4(), port));

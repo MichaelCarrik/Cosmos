@@ -352,12 +352,14 @@ namespace Cosmos {
             if (order->OI != Types::OrderIntension::OINoT) {
                 Utils::logOrder(order, m_orderLog, symbol,  m_tradingDay, signal.epoch_time);
                 symbol->order = order;
-                symbol->riskIndicator.lastSendOrderTime = symbol->underlySymbol->lastMD->psSecond;
                 m_riskMonitor->onOrderField(order, symbol);
                 m_driver->sendOrder(*order);
-                spdlog::info("[{}_{}], Executor::_sendSignal  instrumentID={}, updateTime={}, lastSendOrderTime={}",m_engineName,
+                spdlog::info("[{}_{}], Executor::_sendSignal  instrumentID={}, updateTime={}, underlyPsTime={}, lastSendOrderTime={}",m_engineName,
                     symbol->underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data(),symbol->lastMD->updateTime.data(),
+                    symbol->underlySymbol->lastMD->psSecond,
                         symbol->riskIndicator.lastSendOrderTime);
+                
+                symbol->riskIndicator.lastSendOrderTime = symbol->underlySymbol->lastMD->psSecond;
             } else {
                 order->orderStatus = Types::OrderStatus::failed;
                 order->isTerminal = Utils::checkTerminal(order);

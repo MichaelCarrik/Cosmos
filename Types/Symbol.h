@@ -114,7 +114,7 @@ namespace Cosmos
             int optionFilledOrderNumb{0};
             int lastSendOrderTime{0};
 
-            void updateRiskIndicator(const Types::OrderField* orderField, bool isOption, const Types::MarketData * lastMD)
+            void updateRiskIndicator(const Types::OrderField* orderField, bool isOption, const Types::MarketData * lastMD, int& optionlastSendOrderTime)
             {
                 if (isOption == false)
                 {
@@ -163,7 +163,9 @@ namespace Cosmos
 
                     if (orderField->orderStatus == OrderStatus::allTraded || orderField->orderStatus ==OrderStatus::partTraded) {
                         if (lastMD!=nullptr) {
-                            lastSendOrderTime = lastMD->psSecond;
+                            spdlog::info(" update option lastSendOrderTime instrumentID={}, orderSysId={}, updateTime={}, psSecond={}",
+                               orderField->instrumentID.data(), orderField->orderRef.data(), lastMD->updateTime.data(),lastMD->psSecond );
+                            optionlastSendOrderTime = lastMD->psSecond;
                         }
                     }
 
