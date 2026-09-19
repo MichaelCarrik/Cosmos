@@ -6,6 +6,7 @@
 #define Cosmos_CTPINTERPRETER_H
 
 #include "../Types/CtpTradeConnection.h"
+#include <boost/smart_ptr/detail/spinlock.hpp>
 
 namespace Cosmos {
     namespace Trader {

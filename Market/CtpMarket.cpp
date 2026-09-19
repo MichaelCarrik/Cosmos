@@ -6,6 +6,7 @@
 #include <boost/property_tree/ptree.hpp>
 #include <boost/property_tree/xml_parser.hpp>
 #include "../Utils/TradingHours.h"
+#include <limits>
 #include <../Utils/Utils.h>
 #include "iostream"
 

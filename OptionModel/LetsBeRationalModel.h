@@ -32,6 +32,9 @@ namespace Cosmos {
                 }  ;
 
                 double calImpliedVol(double underlyPrice, double optionPrice) {
+                    if (underlyPrice < 0.0) {
+                        throw std::runtime_error("underlyPrice is negetive value ");
+                    }
                     auto iv = LetsBeRational::ImpliedBlackVolatility(optionPrice, underlyPrice, m_strikePrice, m_T, m_optionTypeDouble);
                     if (std::isinf(iv) == true ) {
                         throw std::runtime_error("ImpliedVolatility is infinity ");

@@ -19,9 +19,9 @@ namespace Cosmos {
             int lastSeriesIndex = series->m_seriesIndex;
 
             if (pMD->isInit == true) {
-                Types::Product_t product{""};
-                Utils::InstrumentToProduct(pMD->instrumentID, product);
-                auto fTTrait  = Utils::TradingHours::getProductTrait(product, pMD->psSecond, m_isDay);
+            //    Types::Product_t product{""};
+            //    Utils::InstrumentToProduct(pMD->instrumentID, product);
+                auto fTTrait  = Utils::TradingHours::getProductTrait(pMD->productID, pMD->psSecond, m_isDay);
                 if (fTTrait ==  Utils::FTTrait::FT_AUCTION || fTTrait ==  Utils::FTTrait::FT_TRADING) {
                     series->addTick(pMD, m_isDay);
                 }
@@ -43,6 +43,8 @@ namespace Cosmos {
         void KDataManager::KMAddTick(const Types::MarketData *pMD) {
             auto itr = m_allKLineSeries.find(pMD->instrumentID);
             if (itr == m_allKLineSeries.end()) {
+                fprintf(stderr, "KDataManager::KMAddTick : updateTime=%s, millisec=%d, instrument=%s\n",
+                    pMD->updateTime.data(), pMD->milliSeconds, pMD->instrumentID.data());
                 assert(false && "KLineManager addTick ");
             }
             for (auto &itrIns: *(itr->second)) {
@@ -307,7 +309,6 @@ namespace Cosmos {
             if (series->m_insInfo.productIDClass == Types::ProductClass::future && series->m_callPutSeriesMap !=
                 nullptr) {
                 auto underlySeries = series;
-
                 while (lastSeriesIndex < underlySeries->m_seriesIndex) {
                     double forwardPrice = _calForwardPrice(underlySeries);
                     m_updateOptionModelPamt->updateGreeks(underlySeries, forwardPrice, lastSeriesIndex);

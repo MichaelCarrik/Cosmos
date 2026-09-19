@@ -52,7 +52,7 @@ namespace Cosmos {
             double m_high{0.0};
             double m_low{999999.9};
             double m_close{0.0};
-            int m_volume{0L};
+            int64_t m_volume{0L};
             double m_amount{0.0};
             double m_oi{0.0};
             double m_upperLimit{99999.0};

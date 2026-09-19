@@ -14,14 +14,13 @@ INCLUDE_DIRECTORIES(${BOOST_INCLUDE_DIRS})
 find_package(Boost )
 find_package(Threads REQUIRED)
 
-
 set(LIB_MYSQL /usr/lib64/mysql/libmysqlclient.so)
 set(LIB_CTPMD ${PROJECT_SOURCE_DIR}/dependencies/sdk/ctp/v6.6.9/libthostmduserapi_se.so)
 set(LIB_CTPTRADE ${PROJECT_SOURCE_DIR}/dependencies/sdk/ctp/v6.6.9/libthosttraderapi_se.so)
 set(LIB_LETSBERATIONAL ${PROJECT_SOURCE_DIR}/dependencies/sdk/LetsBeRational/libletsberational.a)
-set(LIB_QUANTLIB /usr/local/lib/libQuantLib.so)
+#set(LIB_QUANTLIB /usr/local/lib/libQuantLib.so)
 
-include_directories(/usr/local/include/ql)
+#include_directories(/usr/local/include/ql)
 include_directories(dependencies/sdk/ctp/v6.6.9)
 include_directories(dependencies/sdk/LetsBeRational)
 #include_directories(dependencies/sdk/OST)
@@ -42,11 +41,11 @@ add_subdirectory(Market)
 #include_directories(./KAmountBarEngine)
 #add_subdirectory(KAmountBarEngine)
 
-#include_directories(./KBarEngine)
-#add_subdirectory(KBarEngine)
+include_directories(./KBarEngine)
+add_subdirectory(KBarEngine)
 
-include_directories(./UnderlyEngine)
-add_subdirectory(UnderlyEngine)
+#include_directories(./UnderlyEngine)
+#add_subdirectory(UnderlyEngine)
 
 include_directories(./Utils)
 add_subdirectory(Utils)
@@ -62,6 +61,13 @@ add_subdirectory(Utils)
 #	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}
 #		        ${LIB_MYSQL} Threads::Threads stdc++fs)
 
+
+add_executable(CosmosKBETFReader KBarEngine/KBarReadEngine.h KBarEngine/kbsETFRead_main.cpp)
+target_link_libraries(CosmosKBETFReader KData Market Trader  Utils  OptionModel
+		${LIB_CTPMD} ${LIB_CTPTRADE} #${LIB_QUANTLIB}
+		${LIB_LETSBERATIONAL}
+		${LIB_MYSQL} Threads::Threads stdc++fs)
+
 #add_executable(CosmosKBSaver KBarEngine/kbs_main.cpp)
 #target_link_libraries(CosmosKBSaver KBarEngine KData  Market Trader Utils OptionModel
 #		${LIB_CTPMD} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
@@ -73,11 +79,11 @@ add_subdirectory(Utils)
 #		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}
 #		${LIB_MYSQL} Threads::Threads stdc++fs)
 #
-add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp
-		Policy/FuturePolicy/FutureGodPolicy.h)
-target_link_libraries(CosmosHedge UnderlyEngine Market Trader KData Utils OptionModel
-		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
-		${LIB_MYSQL} Threads::Threads stdc++fs)
+#add_executable(CosmosHedge UnderlyEngine/UOTrading_main.cpp
+#		Policy/FuturePolicy/FutureGodPolicy.h)
+#target_link_libraries(CosmosHedge UnderlyEngine Market Trader KData Utils OptionModel
+#		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB} ${LIB_LETSBERATIONAL}
+#		${LIB_MYSQL} Threads::Threads stdc++fs)
 
 
 

@@ -1,36 +1,32 @@
 //
 // Created by zhangyw on 6/10/20.
 //
-//
-// Created by zhangyw on 6/13/19.
-//
 
 #include <boost/property_tree/xml_parser.hpp>
 #include <boost/property_tree/json_parser.hpp>
 #include "MockMarket.h"
 #include <algorithm>
-
+#include <limits>
 #include "../Utils/Utils.h"
 
 namespace Cosmos {
     namespace Market {
-        MockMarket::MockMarket(decltype(m_driver) driver,
-                               std::string &rawTickPath) :
-                m_driver(driver),   m_rawTickPath(rawTickPath) {
-
-        //    m_kDataManager.m_mysql = mySql;
+        MockMarket::MockMarket(decltype(m_driver) driver, std::string &rawTickPath, std::string & productId, bool isFuture) : m_driver(driver),
+            m_rawTickPath(rawTickPath), m_isFuture(isFuture) {
+            strcpy(m_productId.data(), productId.c_str());
+            //    m_kDataManager.m_mysql = mySql;
         }
 
 
-        void MockMarket::SubScribeQuote( Types::SubScribeQuote const &subScribeQuote) {
-//            fprintf(stderr, "MockMarket::SubScribeQuote %d %s\n", subScribeQuote.policyID,
-//                    subScribeQuote.instrumentID.data());
-             Types::Instrument_t instrument{""};
+        void MockMarket::SubScribeQuote(Types::SubScribeQuote const &subScribeQuote) {
+            //            fprintf(stderr, "MockMarket::SubScribeQuote %d %s\n", subScribeQuote.policyID,
+            //                    subScribeQuote.instrumentID.data());
+            Types::Instrument_t instrument{""};
             strcpy(instrument.data(), subScribeQuote.instrumentID.data());
 
             //    strcpy(instrument.data() , "ag2102");
 
-           //  Utils::TradingHours::initInstrumentTradingHours(instrument);
+            //  Utils::TradingHours::initInstrumentTradingHours(instrument);
             auto itr = m_subScribeInstruments.find(instrument);
             if (itr == m_subScribeInstruments.end()) {
                 Types::PushMarket *pushMarket = new Types::PushMarket(0);
@@ -43,37 +39,34 @@ namespace Cosmos {
             Types::OnSubScribeQuote onSubScribeQuote;
             strcpy(onSubScribeQuote.instrumentID.data(), subScribeQuote.instrumentID.data());
             onSubScribeQuote.policyID = subScribeQuote.policyID;
-//            auto itrSeries = m_kDataManager.m_allKLineSeries.find(onSubScribeQuote.instrumentID);
-//            if (itrSeries == m_kDataManager.m_allKLineSeries.end()) {
-//                assert(false);
-//            }
-//            onSubScribeQuote.m_kSeriesMap = itrSeries->second;
+            //            auto itrSeries = m_kDataManager.m_allKLineSeries.find(onSubScribeQuote.instrumentID);
+            //            if (itrSeries == m_kDataManager.m_allKLineSeries.end()) {
+            //                assert(false);
+            //            }
+            //            onSubScribeQuote.m_kSeriesMap = itrSeries->second;
             m_driver->send(onSubScribeQuote);
         };
 
         void MockMarket::onRtnQuote(const Types::MarketData *marketData) {
             auto fttrait = Utils::TradingHours::getProductTrait(marketData->productID, marketData->psSecond, m_isDay);
             if (Utils::FTTrait::FT_TRADING == fttrait ||
-               Utils::FTTrait::FT_AUCTION == fttrait ||
-                  ( marketData->psSecond >= 15 * 3600 && marketData->psSecond <= 17 * 3600 && m_isDay ==true)) {
+                Utils::FTTrait::FT_AUCTION == fttrait ||
+                (marketData->psSecond >= 15 * 3600 && marketData->psSecond <= 17 * 3600 && m_isDay == true)) {
                 auto itr = m_subScribeInstruments.find(marketData->instrumentID);
                 if (itr != m_subScribeInstruments.end()) {
-
                     auto event = itr->second->eventDataList.getNewMemory();
                     event->point = marketData;
                     event->eventType = Types::EventType::marketEvent;
-                    for (auto i : itr->second->subscribePolicy) {
+                    for (auto i: itr->second->subscribePolicy) {
                         if (marketData == nullptr) {
                             assert(false && "market is nullptr");
                         }
                         m_driver->callback_asyncEventData(event, i);
-                      //  m_driver->send(*marketData);
+                        //  m_driver->send(*marketData);
                     }
                 }
-
             }
-        //    fprintf(stderr,"MockMarket instrument=%s, updateTime=%s\n", marketData->instrumentID.data(), marketData->updateTime.data());
-
+            //    fprintf(stderr,"MockMarket instrument=%s, updateTime=%s\n", marketData->instrumentID.data(), marketData->updateTime.data());
         }
 
         int MockMarket::start(int tradingday, bool isDay) {
@@ -82,45 +75,51 @@ namespace Cosmos {
 
 
             std::vector<Types::MarketData> allSymbolMarket;
-            for (auto &itr : m_subScribeInstruments) {
-//                if (strcmp(instrument.data(), "ag2102") !=0){
-//                    continue;
-//                }
-                read_tick(itr.first, tradingday, dayOrNigh, allSymbolMarket);
-                //    read_tick(instrument, tradingday, "ngt", allSymbolMarket );
+            if (m_isFuture == true) {
+                for (auto &itr: m_subScribeInstruments) {
+                    read_tick(itr.first, tradingday, dayOrNigh, allSymbolMarket);
+                }
+            } else {
+                for (auto &itr: m_subScribeInstruments) {
+                    if (strcmp(itr.first.data(), m_productId.data()) != 0) {
+                        read_ETFOptionTick(itr.first, tradingday, dayOrNigh, allSymbolMarket);
+                    }else if (strcmp(m_productId.data(), "000016") != 0 && strcmp(m_productId.data(), "000300") != 0 &&
+                              strcmp(m_productId.data(), "000905") != 0 &&   strcmp(m_productId.data(), "000852") != 0) {
+                        read_ETFTick(itr.first, tradingday, dayOrNigh, allSymbolMarket);
+                    }else {
+                        read_IndexTick(itr.first, tradingday, dayOrNigh, allSymbolMarket);
+                    }
+
+                }
             }
+
             std::sort(std::begin(allSymbolMarket), std::end(allSymbolMarket),
                       [](auto &a, auto &b) {
-                          if (a.psSecond != b. psSecond){
-                              return  a.psSecond < b. psSecond;
-                          }
-
-                          else {
+                          if (a.psSecond != b.psSecond) {
+                              return a.psSecond < b.psSecond;
+                          } else {
                               return a.epoch_time < b.epoch_time;
                           }
-
                       });
             // auto log_epoch_time = std::chrono::duration_cast<std::chrono::seconds>(
             //       std::chrono::system_clock::now().time_since_epoch()).count();
-            for (auto &marketData : allSymbolMarket) {
-//                fprintf(stderr, "mockMarket sendMarket : %s %s %d\n", marketData.instrumentID.data(),
-//                        marketData.updateTime.data(), marketData.milliSeconds);
+            for (auto &marketData: allSymbolMarket) {
+                //                fprintf(stderr, "mockMarket sendMarket : %s %s %d\n", marketData.instrumentID.data(),
+                //                        marketData.updateTime.data(), marketData.milliSeconds);
                 this->onRtnQuote(&marketData);
             }
-         //    fprintf(stderr, "consume TIME = %d\n", std::chrono::duration_cast<std::chrono::seconds>(
-         // std::chrono::system_clock::now().time_since_epoch()).count()- log_epoch_time);
+            //    fprintf(stderr, "consume TIME = %d\n", std::chrono::duration_cast<std::chrono::seconds>(
+            // std::chrono::system_clock::now().time_since_epoch()).count()- log_epoch_time);
             allSymbolMarket.clear();
-
             return 0;
         }
 
         int MockMarket::read_tick(Types::Instrument_t const &instrument, int tradingday, std::string &dayOrNight,
                                   std::vector<Types::MarketData> &allSymbolMarket) {
-
             std::ifstream file;
             std::string strLine;
 
-            if (strcmp(instrument.data(),"MO2606P9600") ==0) {
+            if (strcmp(instrument.data(), "MO2606P9600") == 0) {
                 int a = 1;
             }
 
@@ -128,22 +127,23 @@ namespace Cosmos {
             sprintf(read_path, "%s/%d_%s/instruments/%s.txt", m_rawTickPath.c_str(), tradingday, dayOrNight.c_str(),
                     instrument.data());
             std::filesystem::path filePath(read_path);
-            if(!std::filesystem::exists(filePath)) {
+            if (!std::filesystem::exists(filePath)) {
                 memset(read_path, 256, sizeof(char));
                 Types::Instrument_t underly{""};
                 char optionType{'N'};
                 double strikePrice{0.0};
-                 Utils::parseInstruemnt(instrument, underly, optionType, strikePrice);
-                if(underly[0] == 'I' && underly[1] == 'F'){
+                Utils::parseInstruemnt(instrument, underly, optionType, strikePrice);
+                if (underly[0] == 'I' && underly[1] == 'F') {
                     underly[1] = 'O';
-                }else  if(underly[0] == 'I' && underly[1] == 'H'){
+                } else if (underly[0] == 'I' && underly[1] == 'H') {
                     underly[0] = 'H';
                     underly[1] = 'O';
-                }else  if(underly[0] == 'I' && underly[1] == 'M'){
+                } else if (underly[0] == 'I' && underly[1] == 'M') {
                     underly[0] = 'M';
                     underly[1] = 'O';
                 }
-                sprintf(read_path, "%s/%d_%s/instruments/%s-%c-%d.txt", m_rawTickPath.c_str(), tradingday, dayOrNight.c_str(),
+                sprintf(read_path, "%s/%d_%s/instruments/%s-%c-%d.txt", m_rawTickPath.c_str(), tradingday,
+                        dayOrNight.c_str(),
                         underly.data(), optionType, int(strikePrice));
             }
             file.open(read_path);
@@ -159,7 +159,6 @@ namespace Cosmos {
                     std::vector<std::string> line_vector;
                     std::string substring = "";
                     do {
-
                         if (index != std::string::npos) {
                             substring = strLine.substr(start, index - start);
 
@@ -171,15 +170,14 @@ namespace Cosmos {
                             if (start == std::string::npos) {
                                 break;
                             }
-
                         }
                     } while (index != std::string::npos);
                     line_vector.emplace_back(strLine.substr(start, index - start));
-                    if (line_vector.size() < 45 ) {
+                    if (line_vector.size() < 45) {
                         continue;
                     }
                     Types::MarketData marketData;
-               //     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
+                    //     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
                     strcpy(marketData.instrumentID.data(), line_vector[1].c_str());
                     Utils::InstrumentToProduct(marketData.instrumentID, marketData.productID);
                     marketData.openPrice = atof(line_vector[8].c_str());
@@ -201,18 +199,18 @@ namespace Cosmos {
 
                     std::copy(line_vector[20].begin(), line_vector[20].end(), marketData.updateTime.begin());
                     marketData.milliSeconds = atof(line_vector[21].c_str());
-      //             fprintf(stderr, "updateTime=%s\n", marketData.updateTime.data());
+                    //             fprintf(stderr, "updateTime=%s\n", marketData.updateTime.data());
 
                     marketData.psSecond = Utils::ToPsSeconds(marketData.updateTime);
-                    if (marketData.bidVolume[0]>0 && marketData.askVolume[0]) {
-                         marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
-                    }else {
-                        marketData.midPrice = marketData.lastPrice ;
+                    if (marketData.bidVolume[0] > 0 && marketData.askVolume[0]) {
+                        marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
+                    } else {
+                        marketData.midPrice = marketData.lastPrice;
                     }
 
-//                    if((marketData.settlementPrice > 0  &&    marketData.settlementPrice< 9999) ||   (marketData.psSecond > 54000 && marketData.psSecond < 58000 ) ){
-//                        int a =1;
-//                    }
+                    //                    if((marketData.settlementPrice > 0  &&    marketData.settlementPrice< 9999) ||   (marketData.psSecond > 54000 && marketData.psSecond < 58000 ) ){
+                    //                        int a =1;
+                    //                    }
                     if (marketData.openPrice > 999999999.9) {
                         marketData.openPrice = marketData.lastPrice;
                         marketData.highestPrice = marketData.lastPrice;
@@ -234,6 +232,286 @@ namespace Cosmos {
             return 0;
         }
 
+        int MockMarket::read_ETFOptionTick(Types::Instrument_t const &instrument, int tradingday, std::string &dayOrNight,
+                                     std::vector<Types::MarketData> &allSymbolMarket) {
+            std::ifstream file;
+            std::string strLine;
+
+            char read_path[256]{""};
+            sprintf(read_path, "%s/%s/%d/%s", m_rawTickPath.c_str(),  m_productId.data(), tradingday,
+                    instrument.data());
+         //   fprintf(stderr, "%s\n", read_path);
+            file.open(read_path);
+            std::string separator = ",";
+            int i = 0;
+            while (getline(file, strLine)) {
+                if (strLine.empty()) {
+                    continue;
+                }
+                if (i >= 1) {
+                    unsigned int start = 0;
+                    auto index = strLine.find_first_of(separator, start);
+                    std::vector<std::string> line_vector;
+                    std::string substring = "";
+                    do {
+                        if (index != std::string::npos) {
+                            substring = strLine.substr(start, index - start);
+                            line_vector.emplace_back(substring);
+                            start = index + separator.size();
+                            index = strLine.find(separator, start);
+                            if (start == std::string::npos) {
+                                break;
+                            }
+                        }
+                    } while (index != std::string::npos);
+                    line_vector.emplace_back(strLine.substr(start, index - start));
+                    if (line_vector.size() < 33) {
+                        continue;
+                    }
+                    Types::MarketData marketData;
+                    //     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
+                    strcpy(marketData.instrumentID.data(), line_vector[0].c_str());
+                    strcpy(marketData.productID.data(), m_productId.data());
+                    std::copy(line_vector[3].begin(), line_vector[3].begin() + 8, marketData.updateTime.begin());
+                    marketData.milliSeconds = atof(line_vector[3].substr(9,3).c_str());
+
+                    marketData.lastPrice = atof(line_vector[4].c_str());
+                    marketData.openPrice = atof(line_vector[5].c_str());
+                    marketData.highestPrice = atof(line_vector[6].c_str());
+                    marketData.lowestPrice = atof(line_vector[7].c_str());
+                    marketData.upperLimitPrice = atof(line_vector[8].c_str());
+                    marketData.lowerLimitPrice = atof(line_vector[9].c_str());
+                    marketData.oi = atof(line_vector[10].c_str());
+                    marketData.volume = std::stoll(line_vector[11]);
+                    marketData.amount = atof(line_vector[12].c_str());
+                    marketData.settlementPrice = atof(line_vector[13].c_str());
+                    marketData.askPrice[0] = atof(line_vector[24].c_str());
+                    marketData.bidPrice[0] = atof(line_vector[14].c_str());
+                    marketData.askVolume[0] = atof(line_vector[29].c_str());
+                    marketData.bidVolume[0] = atof(line_vector[19].c_str());
+
+                    marketData.psSecond = Utils::ToPsSeconds(marketData.updateTime);
+                    if (marketData.bidVolume[0] > 0 && marketData.askVolume[0]) {
+                        marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
+                    } else {
+                        marketData.midPrice = marketData.lastPrice;
+                    }
+
+                    if (marketData.openPrice > 999999999.9 || marketData.openPrice < Types::g_epsilon) {
+                        marketData.openPrice = marketData.lastPrice;
+                        marketData.highestPrice = marketData.lastPrice;
+                        marketData.lowestPrice = marketData.lastPrice;
+                    }
+                    marketData.epoch_time = parse_time_str_with_us(line_vector[34]);
+                    allSymbolMarket.emplace_back(marketData);
+                }
+                i++;
+            }
+            return 0;
+        }
+
+        int MockMarket::read_ETFTick(Types::Instrument_t const &instrument, int tradingday, std::string &dayOrNight,
+                             std::vector<Types::MarketData> &allSymbolMarket) {
+                std::ifstream file;
+                std::string strLine;
+
+                char read_path[256]{""};
+                sprintf(read_path, "/home/research/data/FutureLevel2/%s/%d/%s",  m_productId.data(), tradingday,
+                        instrument.data());
+             //   fprintf(stderr, "%s\n", read_path);
+                file.open(read_path);
+                std::string separator = ",";
+                int i = 0;
+                while (getline(file, strLine)) {
+                    if (strLine.empty()) {
+                        continue;
+                    }
+                    if (i >= 1) {
+                        unsigned int start = 0;
+                        auto index = strLine.find_first_of(separator, start);
+                        std::vector<std::string> line_vector;
+                        std::string substring = "";
+                        do {
+                            if (index != std::string::npos) {
+                                substring = strLine.substr(start, index - start);
+                                line_vector.emplace_back(substring);
+                                start = index + separator.size();
+                                index = strLine.find(separator, start);
+                                if (start == std::string::npos) {
+                                    break;
+                                }
+                            }
+                        } while (index != std::string::npos);
+                        line_vector.emplace_back(strLine.substr(start, index - start));
+                        if (line_vector.size() < 33) {
+                            continue;
+                        }
+                        Types::MarketData marketData;
+                        //     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
+                        strcpy(marketData.instrumentID.data(), line_vector[0].c_str());
+                        strcpy(marketData.productID.data(), m_productId.data());
+                        std::copy(line_vector[1].begin() +11, line_vector[1].end(), marketData.updateTime.begin());
+                        marketData.milliSeconds = 0;
+
+
+                        marketData.lastPrice = atof(line_vector[2].c_str());
+                        marketData.openPrice = atof(line_vector[3].c_str());
+                        marketData.highestPrice = atof(line_vector[4].c_str());
+                        marketData.lowestPrice = atof(line_vector[5].c_str());
+                        marketData.upperLimitPrice = atof(line_vector[8].c_str());
+                        marketData.lowerLimitPrice = atof(line_vector[9].c_str());
+                        marketData.oi = 0.0;
+                        marketData.volume = std::stoll(line_vector[11].c_str());
+                        marketData.amount = atof(line_vector[12].c_str());
+                        marketData.settlementPrice = atof(line_vector[13].c_str());
+                        marketData.askPrice[0] = atof(line_vector[24].c_str());
+                        marketData.bidPrice[0] = atof(line_vector[14].c_str());
+
+                        auto askVolume = std::stoll(line_vector[29].c_str());
+                        auto bidVolume = std::stoll(line_vector[19].c_str());
+                        marketData.askVolume[0]  = askVolume < std::numeric_limits<int32_t>::max() ? static_cast<int>(askVolume) : std::numeric_limits<int32_t>::max() ;
+                        marketData.bidVolume[0] = bidVolume < std::numeric_limits<int32_t>::max() ? static_cast<int>(bidVolume) : std::numeric_limits<int32_t>::max() ;
+
+                        marketData.psSecond = Utils::ToPsSeconds(marketData.updateTime);
+                        if (marketData.bidVolume[0] > 0 && marketData.askVolume[0]) {
+                            marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
+                        } else {
+                            marketData.midPrice = marketData.lastPrice;
+                        }
+
+                        if (marketData.openPrice > 999999999.9 || marketData.openPrice < Types::g_epsilon) {
+                            marketData.openPrice = marketData.lastPrice;
+                            marketData.highestPrice = marketData.lastPrice;
+                            marketData.lowestPrice = marketData.lastPrice;
+                        }
+                        marketData.epoch_time = parse_time_str_with_us(line_vector[34]);
+                     //   fprintf(stderr, "updateTime=%s, volume=%ld\n", marketData.updateTime.data(), marketData.volume);
+                        allSymbolMarket.emplace_back(marketData);
+                    }
+                    i++;
+                }
+                return 0;
+                }
+
+
+        int MockMarket::read_IndexTick(Types::Instrument_t const &instrument, int tradingday, std::string &dayOrNight,
+                     std::vector<Types::MarketData> &allSymbolMarket) {
+        std::ifstream file;
+        std::string strLine;
+
+        char read_path[256]{""};
+        sprintf(read_path, "/home/research/data/FutureLevel2/%s/%d/%s",  m_productId.data(), tradingday,
+                instrument.data());
+     //   fprintf(stderr, "%s\n", read_path);
+        file.open(read_path);
+        std::string separator = ",";
+        int i = 0;
+        while (getline(file, strLine)) {
+            if (strLine.empty()) {
+                continue;
+            }
+            if (i >= 1) {
+                unsigned int start = 0;
+                auto index = strLine.find_first_of(separator, start);
+                std::vector<std::string> line_vector;
+                std::string substring = "";
+                do {
+                    if (index != std::string::npos) {
+                        substring = strLine.substr(start, index - start);
+                        line_vector.emplace_back(substring);
+                        start = index + separator.size();
+                        index = strLine.find(separator, start);
+                        if (start == std::string::npos) {
+                            break;
+                        }
+                    }
+                } while (index != std::string::npos);
+                line_vector.emplace_back(strLine.substr(start, index - start));
+                if (line_vector.size() < 14) {
+                    continue;
+                }
+                Types::MarketData marketData;
+                //     line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'), line_vector[1].end());
+                strcpy(marketData.instrumentID.data(), line_vector[0].c_str());
+                strcpy(marketData.productID.data(), m_productId.data());
+                std::copy(line_vector[1].begin() +11, line_vector[1].end(), marketData.updateTime.begin());
+                marketData.milliSeconds = 0;
+
+
+                marketData.lastPrice = atof(line_vector[2].c_str());
+                marketData.openPrice = atof(line_vector[3].c_str());
+                marketData.highestPrice = atof(line_vector[4].c_str());
+                marketData.lowestPrice = atof(line_vector[5].c_str());
+             //   marketData.upperLimitPrice = atof(line_vector[8].c_str());
+             //   marketData.lowerLimitPrice = atof(line_vector[9].c_str());
+             //   marketData.oi = 0.0;
+                marketData.volume = std::stoll(line_vector[11].c_str());
+                marketData.amount = atof(line_vector[12].c_str());
+                // marketData.settlementPrice = atof(line_vector[13].c_str());
+                marketData.askPrice[0] = marketData.lastPrice + 0.01;
+                marketData.bidPrice[0] = marketData.lastPrice - 0.01;
+
+                marketData.askVolume[0] = 1;
+                marketData.bidVolume[0] = 1;
+
+                // auto askVolume = std::stoll(line_vector[29].c_str());
+                // auto bidVolume = std::stoll(line_vector[19].c_str());
+                // marketData.askVolume[0]  = askVolume < std::numeric_limits<int32_t>::max() ? static_cast<int>(askVolume) : std::numeric_limits<int32_t>::max() ;
+                // marketData.bidVolume[0] = bidVolume < std::numeric_limits<int32_t>::max() ? static_cast<int>(bidVolume) : std::numeric_limits<int32_t>::max() ;
+                //
+                // marketData.psSecond = Utils::ToPsSeconds(marketData.updateTime);
+                // if (marketData.bidVolume[0] > 0 && marketData.askVolume[0]) {
+                //     marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
+                // } else {
+                //     marketData.midPrice = marketData.lastPrice;
+                // }
+                marketData.psSecond = Utils::ToPsSeconds(marketData.updateTime);
+                if (marketData.openPrice > 999999999.9 || marketData.openPrice < Types::g_epsilon) {
+                    marketData.openPrice = marketData.lastPrice;
+                    marketData.highestPrice = marketData.lastPrice;
+                    marketData.lowestPrice = marketData.lastPrice;
+                }
+                marketData.epoch_time = parse_time_str_with_us(line_vector[13]);
+             //   fprintf(stderr, "updateTime=%s, volume=%ld\n", marketData.updateTime.data(), marketData.volume);
+                allSymbolMarket.emplace_back(marketData);
+            }
+            i++;
+        }
+        return 0;
+        }
+
+
+        // 返回微秒级时间戳 (Unix timestamp in microseconds)
+        int64_t MockMarket::parse_time_str_with_us(const std::string& time_str) {
+            // 1. 解析前面的 "YYYY-MM-DD HH:MM:SS" (前19字节)
+            struct tm tm_time;
+            std::memset(&tm_time, 0, sizeof(tm_time));
+
+            if (strptime(time_str.c_str(), "%Y-%m-%d %H:%M:%S", &tm_time) == nullptr) {
+                return -1; // 解析失败
+            }
+
+            // 获取秒级时间戳（按当前系统本地时区转换）
+            time_t sec = mktime(&tm_time);
+            if (sec == -1) return -1;
+
+            // 2. 解析小数点后的微秒部分
+            int64_t us = 0;
+            auto dot_pos = time_str.find('.');
+            if (dot_pos != std::string::npos) {
+                // 截取点后面的微秒字符串（最多6位）
+                std::string us_str = time_str.substr(dot_pos + 1, 6);
+
+                // 如果不足6位则向右补0（例如 .123 表示 123000 微秒）
+                while (us_str.size() < 6) {
+                    us_str.push_back('0');
+                }
+                us = std::stoll(us_str);
+            }
+
+            // 3. 组合为微秒时间戳 (秒 * 1,000,000 + 微秒)
+            return static_cast<int64_t>(sec) * 1000000LL + us;
+        }
     }
 }
 

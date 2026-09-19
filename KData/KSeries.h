@@ -7,7 +7,7 @@
 
 #include <iostream>
 #include "KSeriesTime.h"
-#include "../OptionModel/BSModelQuantLib.h"
+//#include "../OptionModel/BSModelQuantLib.h"
 #include "../OptionModel/LetsBeRationalModel.h"
 #include "KData.h"
 //#include "CallPutSeries.h"
@@ -34,7 +34,7 @@ namespace Cosmos {
 
          //   OptionModel::BSModelQuantLib *m_BSModelQuantLib{nullptr};
             OptionModel::LetsBeRationalModel *m_BSModelQuantLib{nullptr};
-            OptionModel::SARBModelQuantLib * m_sabrModelQuantLib{nullptr};
+        //    OptionModel::SARBModelQuantLib * m_sabrModelQuantLib{nullptr};
 
             KSeries( Types::InstrumentInfo const &insInfo,
                     int tradingday, double r,
@@ -212,6 +212,9 @@ namespace Cosmos {
                         }
                     }
                     if (m_Period ==  Types::KPeriod::D1) {
+                        if (pMD->volume > 4294967295) {
+                            int a  =1;
+                        }
                         m_KDataVecs[m_seriesIndex]->updateDayKBar(pMD->lastPrice, pMD->highestPrice, pMD->lowestPrice,
                                                                        pMD->openPrice, pMD->volume,
                                                                        pMD->amount, pMD->oi, pMD->settlementPrice);

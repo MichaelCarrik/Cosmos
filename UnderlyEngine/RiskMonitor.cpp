@@ -27,10 +27,10 @@ namespace Cosmos {
             bool RiskMonitor::isRiskForNoTrade(const Types::Symbol * underlySymbol, bool isOption) {
                 if (underlySymbol->lastMD == nullptr or underlySymbol->lastMD->bidVolume[0] ==0 or underlySymbol->lastMD->askVolume[0] ==0 ) {
                     if (underlySymbol->lastMD != nullptr ) {
-                           spdlog::error("[{}_{}], RiskMonitor::isRiskForNoTrade instrumentID={}, bidVolume[0]={}, askVolume[0]={}",
-                               m_engineName, underlySymbol->lastMD->updateTime.data(),
-                             underlySymbol->instrumentInfo.instrumentID.data(),
-                            underlySymbol->lastMD->bidVolume[0], underlySymbol->lastMD->askVolume[0]);
+                           // spdlog::error("[{}_{}], RiskMonitor::isRiskForNoTrade instrumentID={}, bidVolume[0]={}, askVolume[0]={}",
+                           //     m_engineName, underlySymbol->lastMD->updateTime.data(),
+                           //   underlySymbol->instrumentInfo.instrumentID.data(),
+                           //  underlySymbol->lastMD->bidVolume[0], underlySymbol->lastMD->askVolume[0]);
                     }
 
                     return true;
@@ -97,14 +97,14 @@ namespace Cosmos {
                         return true;
                     }
 
-                    if (underlySymbol->lastMD->psSecond - symbol->riskIndicator.lastSendOrderTime < 5  ) {
+                    if (underlySymbol->lastMD->psSecond - symbol->riskIndicator.lastSendOrderTime < 2  ) {
                         spdlog::info("[{}_{}], RiskMonitor::isRiskForOrder symbolLastSendTooClose , instrumentID={}",
                         m_engineName, underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data());
                         return true;
                     }
                     if (isOption == false && orderField->pet == Types::PositionEffectType::open && orderField->orderVolume < m_engineParam.futureMinOV ) {
-                        spdlog::error("[{}_{}], RiskMonitor::isRiskForOrder open minVolume lessThan futureMinOV, instrumentID={}",
-                                             m_engineName, underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data());
+                        // spdlog::error("[{}_{}], RiskMonitor::isRiskForOrder open minVolume lessThan futureMinOV, instrumentID={}",
+                        //                      m_engineName, underlySymbol->lastMD->updateTime.data(), symbol->instrumentInfo.instrumentID.data());
                         return true;
                     }
                 }

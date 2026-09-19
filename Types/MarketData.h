@@ -31,7 +31,7 @@ namespace Cosmos{
             std::array<int,5> bidVolume;
             double amount;
             double oi;
-            int volume;
+            int64_t volume;
             Instrument_t instrumentID{""};
             Product_t productID{""};
             UpdateTime_t  updateTime;
