@@ -83,7 +83,7 @@ void getInstruments(int tradingday, std::string &futureProductId, std::string &r
                     futureSymbols.emplace_back(instrumentInfo);
                 }
             } else if (line_vector.size() < 45 && (
-                           atoi(line_vector[6].c_str()) == 2 || atoi(line_vector[6].c_str()) == 6)) {
+                           atoi(line_vector[6].c_str()) == 2 || atoi(line_vector[6].c_str()) == 6) ) {
                 Cosmos::Types::InstrumentInfo instrumentInfo;
                 strcpy(instrumentInfo.instrumentID.data(), line_vector[1].c_str());
                 //    fprintf(stderr, "%s\n", line_vector[1].c_str());
@@ -145,6 +145,7 @@ int main(int argc, char *argv[]) {
 
     std::string savePath = pt.get_child("Cosmos").get_child("params").get_child("savePath").get<std::string>(
         "<xmlattr>.value");
+
 
     std::string engineName{"KBarReadEngine"};
 

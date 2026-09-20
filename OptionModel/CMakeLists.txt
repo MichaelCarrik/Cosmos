@@ -1,4 +1,4 @@
 aux_source_directory(. DIR_OptionModel_SRCS)
-add_library(OptionModel #${DIR_OptionModel_SRCS}
-        LetsBeRationalModel.h LetsBeRationalModel.cpp
+add_library(OptionModel ${DIR_OptionModel_SRCS}
+       # LetsBeRationalModel.h LetsBeRationalModel.cpp
 )

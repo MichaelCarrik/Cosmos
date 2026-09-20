@@ -11,7 +11,7 @@
 #include "../OptionModel/LetsBeRationalModel.h"
 #include "KData.h"
 //#include "CallPutSeries.h"
-//#include "../OptionModel/SARBModelQuantLib.h"
+#include "../OptionModel/SARBModelQuantLib.h"
 #include "Common.h"
 
 namespace Cosmos {
@@ -34,7 +34,7 @@ namespace Cosmos {
 
          //   OptionModel::BSModelQuantLib *m_BSModelQuantLib{nullptr};
             OptionModel::LetsBeRationalModel *m_BSModelQuantLib{nullptr};
-        //    OptionModel::SARBModelQuantLib * m_sabrModelQuantLib{nullptr};
+            OptionModel::SARBModelQuantLib * m_sabrModelQuantLib{nullptr};
 
             KSeries( Types::InstrumentInfo const &insInfo,
                     int tradingday, double r,
@@ -49,8 +49,8 @@ namespace Cosmos {
                                                            m_insInfo.expireDate, r);
 
                 }else if (m_insInfo.productIDClass == Types::ProductClass::future) {
-                    //  m_sabrModelQuantLib = new OptionModel::SARBModelQuantLib( tradingday,
-                     //                                    m_insInfo.expireDate);
+                      m_sabrModelQuantLib = new OptionModel::SARBModelQuantLib( tradingday,
+                                                         m_insInfo.expireDate);
                 }
 				
 				int secondsBias{0};

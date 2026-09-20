@@ -11,8 +11,8 @@
 
 namespace Cosmos {
     namespace Market {
-        MockMarket::MockMarket(decltype(m_driver) driver, std::string &rawTickPath, std::string & productId, bool isFuture) : m_driver(driver),
-            m_rawTickPath(rawTickPath), m_isFuture(isFuture) {
+        MockMarket::MockMarket(decltype(m_driver) driver, std::string &rawTickPath, std::string & productId,   bool isFuture) : m_driver(driver),
+            m_rawTickPath(rawTickPath),  m_isFuture(isFuture) {
             strcpy(m_productId.data(), productId.c_str());
             //    m_kDataManager.m_mysql = mySql;
         }
@@ -81,7 +81,7 @@ namespace Cosmos {
                 }
             } else {
                 for (auto &itr: m_subScribeInstruments) {
-                    if (strcmp(itr.first.data(), m_productId.data()) != 0) {
+                    if (strcmp(itr.first.data(), m_productId.data()) != 0 ) {
                         read_ETFOptionTick(itr.first, tradingday, dayOrNigh, allSymbolMarket);
                     }else if (strcmp(m_productId.data(), "000016") != 0 && strcmp(m_productId.data(), "000300") != 0 &&
                               strcmp(m_productId.data(), "000905") != 0 &&   strcmp(m_productId.data(), "000852") != 0) {
@@ -89,7 +89,6 @@ namespace Cosmos {
                     }else {
                         read_IndexTick(itr.first, tradingday, dayOrNigh, allSymbolMarket);
                     }
-
                 }
             }
 
