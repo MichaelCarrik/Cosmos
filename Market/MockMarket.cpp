@@ -103,8 +103,8 @@ namespace Cosmos {
             // auto log_epoch_time = std::chrono::duration_cast<std::chrono::seconds>(
             //       std::chrono::system_clock::now().time_since_epoch()).count();
             for (auto &marketData: allSymbolMarket) {
-                //                fprintf(stderr, "mockMarket sendMarket : %s %s %d\n", marketData.instrumentID.data(),
-                //                        marketData.updateTime.data(), marketData.milliSeconds);
+                // fprintf(stderr, "mockMarket sendMarket : %s %s %d\n", marketData.instrumentID.data(),
+                //         marketData.updateTime.data(), marketData.milliSeconds);
                 this->onRtnQuote(&marketData);
             }
             //    fprintf(stderr, "consume TIME = %d\n", std::chrono::duration_cast<std::chrono::seconds>(

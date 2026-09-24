@@ -13,11 +13,11 @@ namespace Cosmos {
             if (inputOrder->policyID != m_policyID) {
                 assert(false && "RiskMonitor::onOrderField policyID not match");
             }
-            fprintf(stderr, "RiskMonitor::onEventData instrument=%s, updateTime=%s, %03d, pOrderID=%d, requestID=%d, orderRef=%s, orderSide=%s, "
-                                  "orderPrice=%.3f, orderVolume=%d, orderStatus=%s\n",
-                          inputOrder->instrumentID.data(), symbol->lastMD->updateTime.data(), symbol->lastMD->milliSeconds, inputOrder->pOrderID, inputOrder->tOrderID,
-                          inputOrder->orderRef.data(), Types::orderSideMap[inputOrder->orderSide].data(),  inputOrder->orderPrice, inputOrder->orderVolume,
-                          Types::orderStatusMap[inputOrder->orderStatus].data());
+            // fprintf(stderr, "RiskMonitor::onEventData instrument=%s, updateTime=%s, %03d, pOrderID=%d, requestID=%d, orderRef=%s, orderSide=%s, "
+            //                       "orderPrice=%.3f, orderVolume=%d, orderStatus=%s\n",
+            //               inputOrder->instrumentID.data(), symbol->lastMD->updateTime.data(), symbol->lastMD->milliSeconds, inputOrder->pOrderID, inputOrder->tOrderID,
+            //               inputOrder->orderRef.data(), Types::orderSideMap[inputOrder->orderSide].data(),  inputOrder->orderPrice, inputOrder->orderVolume,
+            //               Types::orderStatusMap[inputOrder->orderStatus].data());
 
             symbol->underlySymbol->riskIndicator.updateRiskIndicator(inputOrder, symbol->instrumentInfo.productIDClass == Types::ProductClass::option,
                 symbol->underlySymbol->lastMD, symbol->riskIndicator.lastSendOrderTime);

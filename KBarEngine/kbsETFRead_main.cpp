@@ -57,7 +57,9 @@ void getInstruments(int tradingDay, std::string &etfProductId, std::string &rawP
                 }
             } while (index != std::string::npos);
             line_vector.emplace_back(strLine.substr(start, index - start));
-            if (line_vector.size() == 6 && atoi(line_vector[2].c_str()) <= tradingDay && tradingDay <= atoi(line_vector[3].c_str())) {
+            if (line_vector.size() == 8 && atoi(line_vector[2].c_str()) <= tradingDay &&
+                tradingDay <= atoi(line_vector[3].c_str()) &&
+                strcmp(line_vector[6].c_str(), etfProductId.c_str()) == 0 ) {
                 Cosmos::Types::InstrumentInfo instrumentInfo;
                 strcpy(instrumentInfo.instrumentID.data(), line_vector[0].substr(0,8).c_str());
                 instrumentInfo.productIDClass = Cosmos::Types::ProductClass::option; // atoi(line_vector[6].c_str());

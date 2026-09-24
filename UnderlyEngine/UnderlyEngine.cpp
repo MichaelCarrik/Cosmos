@@ -14,6 +14,7 @@
 //#include "../Policy/OptionPolicy/TestTrendOption.h"
 // #include "../Policy/Calendar.h"
 #include "../Policy/OptionPolicy/SellStrangleV2.h"
+#include "../Policy/OptionPolicy/VannaSABR.h"
 //#include "../Policy/FuturePolicy/TestTrend.h"
 #include "../Policy/FuturePolicy/VultureTrend.h"
 #include "../Policy/FuturePolicy/VultureFast.h"
@@ -50,8 +51,6 @@ namespace Cosmos {
                     }else {
                         fprintf(stderr, "createFuturePolicy %s return nullptr\n", policyName.c_str());
                     }
-
-
                 }
                 if (strcmp(policyType.c_str(), "option") ==0 ) {
                     auto policy= this->createOptionPolicy(policyName, subPolicyParams);
@@ -60,7 +59,6 @@ namespace Cosmos {
                     }else {
                         fprintf(stderr, "createOptionPolicy %s return nullptr\n", policyName.c_str());
                     }
-
                 }
             }
 
@@ -403,7 +401,31 @@ namespace Cosmos {
                                                              [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
                               return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
-             }else if (policyName.compare("OptionGod") == 0) {
+             } else if (policyName.compare("VannaSABR") == 0) {
+
+                 Types::Instrument_t underlyInstrument{""};
+                 strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+                 auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                 Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                 this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
+
+                 double MV = std::stof(Utils::getParamMapValue(paramMap, "MV").c_str());
+                 double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "openAtDelta").c_str());
+                 int rhoLength = std::stoi(Utils::getParamMapValue(paramMap, "rhoLength").c_str());
+
+                 Types::InstrumentInfo * optionInsInfo{nullptr};
+                 getOptionInfoByUnderly(underlyInstrument, optionInsInfo);
+                 if (optionInsInfo == nullptr) {
+                     return nullptr;
+                 }
+
+                 return new  Policy::VannaSABR(policyName, m_engineName, underlyInstrument, kPeriod,  MV,   optionInsInfo->multi,  m_tradingDay, optionInsInfo->expireDate,
+                                                             m_engineParam.riskOptionMaxPosition,  openAtDelta, rhoLength,
+                                                             [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
+                              return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
+                           });
+             }
+            else if (policyName.compare("OptionGod") == 0) {
 
 
                  Types::Instrument_t underlyInstrument{""};
@@ -606,8 +628,8 @@ namespace Cosmos {
             if (eventData.eventType == Types::EventType::marketEvent) {
                 auto pMD = (const Types::MarketData *) eventData.point;
                 // if (pMD->isInit ==true ) {
-                //     fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
-                //         pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit, pMD->epoch_time);
+                // fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                //     pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit, pMD->epoch_time);
                 // }
 
                 m_kDataManager->KMAddTick(pMD);

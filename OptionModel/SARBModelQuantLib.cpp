@@ -15,8 +15,9 @@ namespace Cosmos {
 
             int idx = 0;
             for (auto itr = callPutSeriesMap->rbegin(); itr != callPutSeriesMap->rend(); ++itr) {
-                if (itr->first <= forwardPrice) {
-                    strikes.push_back(itr->first);
+                auto strikePrice = itr->first / 1000.0;
+                if (strikePrice <= forwardPrice) {
+                    strikes.push_back(strikePrice);
                     auto putSeries = itr->second->putSeries;
                     volatilities.push_back(putSeries->m_KDataVecs[optionSeriesIndex]->m_greeks.IV);
                     idx++;
@@ -31,8 +32,9 @@ namespace Cosmos {
             idx = 0;
 
             for (auto itr = callPutSeriesMap->begin(); itr != callPutSeriesMap->end(); ++itr) {
-                if (itr->first > forwardPrice) {
-                    strikes.push_back(itr->first);
+                auto strikePrice = itr->first / 1000.0;
+                if (strikePrice > forwardPrice) {
+                    strikes.push_back(strikePrice);
                     auto callSeries = itr->second->callSeries;
                     volatilities.push_back(callSeries->m_KDataVecs[optionSeriesIndex]->m_greeks.IV);
                     idx++;
@@ -118,7 +120,7 @@ namespace Cosmos {
 
                  //   m_isInitialized = false;
                 }catch (std::exception &e) {
-               //    fprintf(stderr, " m_sabrInterp->update(); Error: %s\n", e.what());
+                  //  fprintf(stderr, " m_sabrInterp->update(); Error: %s\n", e.what());
                 }
             }
         };

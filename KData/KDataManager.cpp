@@ -13,8 +13,6 @@ namespace Cosmos {
             //     fprintf(stderr, "onEventData %s\n", pMD->instrumentID.data());
             //     assert(false);
             // }
-
-
             auto series = this->getSeries(pMD->instrumentID, period);
             int lastSeriesIndex = series->m_seriesIndex;
 
@@ -36,7 +34,6 @@ namespace Cosmos {
                     return series;
                 }
             }
-
             return nullptr;
         }
 
@@ -251,11 +248,11 @@ namespace Cosmos {
         }
 
         void KDataManager::_initUnderlyToOptionSeriesMap(KSeries *optionKSeries, Types::KPeriod const &kperiod) {
-            if (optionKSeries->m_underlySeries->m_callPutSeriesMap == nullptr) {
-                optionKSeries->m_underlySeries->m_callPutSeriesMap = new std::map<int, CallPutSeries *>();
+            if (optionKSeries->m_underlySeries->m_calPutSeriesMap == nullptr) {
+                optionKSeries->m_underlySeries->m_calPutSeriesMap = new std::map<int, CallPutSeries *>();
             }
-            auto callPutSeriesMap = optionKSeries->m_underlySeries->m_callPutSeriesMap;
-            int strikePriceKey = static_cast<int>(optionKSeries->m_insInfo.strikePrice);
+            auto callPutSeriesMap = optionKSeries->m_underlySeries->m_calPutSeriesMap;
+            int strikePriceKey = static_cast<int>(optionKSeries->m_insInfo.strikePrice * 1000.0);
             auto strikePriceMapItr = callPutSeriesMap->find(strikePriceKey);
             if (strikePriceMapItr == callPutSeriesMap->end()) {
                 auto temp = new CallPutSeries();
@@ -270,7 +267,7 @@ namespace Cosmos {
         }
 
         double KDataManager::_calForwardPrice(const KSeries *underlySeries) {
-            auto calPutMap = underlySeries->m_callPutSeriesMap;
+            auto calPutMap = underlySeries->m_calPutSeriesMap;
             if (m_isUseUnderlyPrice == true && underlySeries->m_lastPMD->bidVolume[0] > 0 && underlySeries->m_lastPMD->
                 askVolume[0] > 0) {
                 return underlySeries->m_lastPMD->midPrice;
@@ -292,7 +289,7 @@ namespace Cosmos {
                     if (spread < minSpread) {
                         minSpread = spread;
                         forwardPrice = callSeries->m_lastPMD->midPrice - putSeries->m_lastPMD->midPrice +
-                                       optionSeriesItr.first;
+                                       optionSeriesItr.first/ 1000.0;
                     }
                 }
 
@@ -306,7 +303,7 @@ namespace Cosmos {
         };
 
         void KDataManager::checkSeriesRecord(KSeries *series, int lastSeriesIndex) {
-            if (series->m_insInfo.productIDClass == Types::ProductClass::future && series->m_callPutSeriesMap !=
+            if (series->m_insInfo.productIDClass == Types::ProductClass::future && series->m_calPutSeriesMap !=
                 nullptr) {
                 auto underlySeries = series;
                 while (lastSeriesIndex < underlySeries->m_seriesIndex) {

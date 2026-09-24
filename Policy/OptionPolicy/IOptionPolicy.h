@@ -50,7 +50,6 @@ namespace Cosmos {
             }
 
 
-
             void _initOptionPolicySymbolVecs(std::unordered_map< Types::Instrument_t,  Types::Symbol *,  Types::InstrumentHash> &inputSymbolMap,
                                        Types::Instrument_t const& underlyInstrument, PolicySymbolStruct & policySymbols,
                                        std::vector<FileRead>const& fileReadVecs, char optionType ){

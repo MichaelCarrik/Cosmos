@@ -143,6 +143,7 @@ void Session(Cosmos::Driver::TestDriver * driver ,boost::asio::ip::tcp::socket s
 int main(int argc, char *argv[]) {
     int tradingdayBegin = atoi(argv[1]);
     int tradingdayEnd = atoi(argv[2]);
+    std::string productid = argv[3];
 
     std::string config_path = "CosmosTrading_test.xml";
     spdlog::init_thread_pool(1024 * 64, 1);
@@ -175,7 +176,7 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "tradingDay=%d, isDay=%d\n", tradingDay, isDay == true ? 1 : 0);
             Cosmos::Driver::TestDriver driver;
          //   std::vector<Cosmos::Types::InstrumentInfo> queryInstruments;
-            Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath);
+            Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath, productid);
             Cosmos::Trader::Trader<Cosmos::Trader::MockTrader, decltype(driver)> trader(
                 &driver, rawTickPath, tradingDay, isDay);
             trader.start(tradingDay);

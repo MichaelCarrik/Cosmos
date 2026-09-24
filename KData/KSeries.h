@@ -30,7 +30,7 @@ namespace Cosmos {
             double m_lastDelta{0.0};
             int m_biasSeconds{0};
             KSeries *m_underlySeries{nullptr};
-            std::map<int, CallPutSeries *> * m_callPutSeriesMap{nullptr};
+            std::map<int, CallPutSeries *> * m_calPutSeriesMap{nullptr};
 
          //   OptionModel::BSModelQuantLib *m_BSModelQuantLib{nullptr};
             OptionModel::LetsBeRationalModel *m_BSModelQuantLib{nullptr};
@@ -73,8 +73,6 @@ namespace Cosmos {
                 m_underlySeries = inputSeries;
             }
 
-
-
             void calGreeks(int optionUpdateIndex, double optionFairPrice, double forwardPrice, double bidPrioPrice, double askPrioPrice) {
 
                  auto optionKData = m_KDataVecs[optionUpdateIndex];
@@ -86,7 +84,7 @@ namespace Cosmos {
                 //
 
                 try {
-                    this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
+                    this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV = m_BSModelQuantLib->calImpliedVol(optionKData->m_forwardPrice,
                                                                                           optionFairPrice);
 
                     if (this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV > 99999) {
@@ -104,9 +102,10 @@ namespace Cosmos {
                     m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta;
                 } catch (std::exception &e) {
                 //   if ( strcmp(this->m_insInfo.productID.data() , "si")==0 ) {
-                        // fprintf(stderr,"%s-%d-%s, %s\n", this->m_KDataVecs[optionUpdateIndex]->m_instrument.data(),Types::KPeroidToIntervalMap[this->m_Period],
-                        //      this->m_KDataVecs[optionUpdateIndex]->m_updateTimeBegin.data() ,e.what());
-                      //  std::cerr << e.what() << std::endl;
+                       //  fprintf(stderr,"%s-%d-%s, %s\n", this->m_KDataVecs[optionUpdateIndex]->m_instrument.data(),
+                       //      static_cast<int>(this->m_Period), this->m_KDataVecs[optionUpdateIndex]->m_updateTimeBegin.data(),
+                       //      e.what());
+                       // std::cerr << e.what() << std::endl;
                         // fprintf(stderr, "calGreeks exception underly=%s %s (%.3f) , optionKD=%s %s (%.3f)\n",
                         //         underlyKData->m_instrument.data(),
                         //         underlyKData->m_updateTimeBegin.data(),

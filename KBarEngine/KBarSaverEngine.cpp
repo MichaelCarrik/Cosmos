@@ -231,8 +231,8 @@ namespace Cosmos {
                     if (updateSeries != nullptr) {
                         if (updateSeries->m_insInfo.productIDClass == Types::ProductClass::future) {
                                saveKline(updateSeries, period);
-                            if (updateSeries->m_callPutSeriesMap != nullptr) {
-                                for (auto &optionSeriesItr: *updateSeries->m_callPutSeriesMap) {
+                            if (updateSeries->m_calPutSeriesMap != nullptr) {
+                                for (auto &optionSeriesItr: *updateSeries->m_calPutSeriesMap) {
                                     saveKline(optionSeriesItr.second->callSeries, period);
                                     saveKline(optionSeriesItr.second->putSeries, period);
                                 }

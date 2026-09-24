@@ -37,7 +37,7 @@ namespace Cosmos{
 
         public:
 
-            MockMarket( Driver::TestDriver* driver,  std::string&, std::string & product,   bool isFuture=true);
+            MockMarket( Driver::TestDriver* driver,  std::string&, std::string & product,   bool isFuture);
             std::unordered_map<  Types::Instrument_t ,  Types::PushMarket*,  Types::InstrumentHash> m_subScribeInstruments;
 
             void SubScribeQuote( Types::SubScribeQuote const & subscribQuote);

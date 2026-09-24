@@ -76,7 +76,7 @@ namespace Cosmos {
 
             int updateOptionIndex = lastSeriesIndex - underlyTodayBeginIndex;
 
-            for (auto &calPutItr: * (underlySeries->m_callPutSeriesMap)) {
+            for (auto &calPutItr: * (underlySeries->m_calPutSeriesMap)) {
                 if (strcmp(calPutItr.second->putSeries->m_insInfo.instrumentID.data(), "sc2505P550") == 0 &&
                     strcmp(underlySeries->m_lastPMD->updateTime.data(), "14:30:50") > 0) {
                     int a = 1;
@@ -122,14 +122,16 @@ namespace Cosmos {
                     //    }
                 }
 
+                double strikePrice = calPutItr.first / 1000.0;
 
-                if (calPutItr.first > forwardPrice) {
-                    auto putTheoryBidPrice = callOptionKData->m_bidPrice - underlyKData->m_askPrice + calPutItr.first;
-                    auto putTheoryAskPrice = callOptionKData->m_askPrice - underlyKData->m_bidPrice + calPutItr.first;
+
+                if (strikePrice > forwardPrice) {
+                    auto putTheoryBidPrice = callOptionKData->m_bidPrice - underlyKData->m_askPrice + strikePrice;
+                    auto putTheoryAskPrice = callOptionKData->m_askPrice - underlyKData->m_bidPrice + strikePrice;
                     // put otm
                     if (underlyKData->m_bidVolume == 0 || underlyKData->m_askVolume == 0) {
-                        putTheoryBidPrice = callOptionKData->m_bidPrice - forwardPrice + calPutItr.first;
-                        putTheoryAskPrice = callOptionKData->m_askPrice - forwardPrice + calPutItr.first; // put otm
+                        putTheoryBidPrice = callOptionKData->m_bidPrice - forwardPrice + strikePrice;
+                        putTheoryAskPrice = callOptionKData->m_askPrice - forwardPrice + strikePrice; // put otm
                     }
 
                     if ((putTheoryAskPrice - putTheoryBidPrice < putOptionKData->m_askPrice - putOptionKData->m_bidPrice
@@ -144,11 +146,11 @@ namespace Cosmos {
                                           ? putTheoryAskPrice
                                           : std::min(putAskPrioPrice, putTheoryAskPrice);
                 } else {
-                    auto callTheoryBidPrice = underlyKData->m_bidPrice + putOptionKData->m_bidPrice - calPutItr.first;
-                    auto callTheoryAskPrice = underlyKData->m_askPrice + putOptionKData->m_askPrice - calPutItr.first;
+                    auto callTheoryBidPrice = underlyKData->m_bidPrice + putOptionKData->m_bidPrice - strikePrice;
+                    auto callTheoryAskPrice = underlyKData->m_askPrice + putOptionKData->m_askPrice - strikePrice;
                     if (underlyKData->m_bidVolume == 0 || underlyKData->m_askVolume == 0) {
-                        callTheoryBidPrice = underlyKData->m_bidPrice + forwardPrice - calPutItr.first;
-                        callTheoryAskPrice = underlyKData->m_askPrice + forwardPrice - calPutItr.first;
+                        callTheoryBidPrice = underlyKData->m_bidPrice + forwardPrice - strikePrice;
+                        callTheoryAskPrice = underlyKData->m_askPrice + forwardPrice - strikePrice;
                     }
 
                     if ((callTheoryAskPrice - callTheoryBidPrice < callOptionKData->m_askPrice - callOptionKData->
@@ -187,7 +189,7 @@ namespace Cosmos {
             int readOptionIndex = lastSeriesIndex - underlyTodayBeginIndex;
             // auto log_epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
             //      std::chrono::system_clock::now().time_since_epoch()).count();
-            underlySeries->m_sabrModelQuantLib->sarbFit( forwardPrice, underlySeries->m_callPutSeriesMap , readOptionIndex);
+            underlySeries->m_sabrModelQuantLib->sarbFit( forwardPrice, underlySeries->m_calPutSeriesMap , readOptionIndex);
             underlySeries->m_sabrModelQuantLib->getParameters(underlySeries->m_KDataVecs[lastSeriesIndex]->m_sabrPRMT);
             // fprintf(stderr, "period=%d, consume TIME = %d\n", static_cast<int>(underlySeries->m_Period),
             //     std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()- log_epoch_time );

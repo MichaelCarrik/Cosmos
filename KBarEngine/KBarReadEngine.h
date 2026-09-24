@@ -51,7 +51,7 @@ namespace Cosmos {
             int m_policyID{-1};
             int m_tradingDay{0};
             int m_isDay;
-            bool m_isUseUnderlyPrice{true};
+            bool m_isUseUnderlyPrice{false};
 
             KBarReadEngine(decltype(m_driver) driver, std::string &_policyName,
                            std::vector< Types::InstrumentInfo> &optionInstruments,

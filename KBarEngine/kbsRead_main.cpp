@@ -167,7 +167,7 @@ int main(int argc, char *argv[]) {
         std::vector<Cosmos::Types::InstrumentInfo> queryFutureInstruments;
         // std::set< Types::Instrument_t> queryInstruments{ Types::Instrument_t {"au2108"}} ;
         getInstruments(tradingDay, productid, rawTickPath, queryOptionInstruments, queryFutureInstruments, isDay);
-        Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath, productid);
+        Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath, productid, true);
 
         Cosmos::KBarSaverEngine::KBarReadEngine saveEngine(&driver, engineName, queryOptionInstruments,
                                                            queryFutureInstruments, tradingDay, isDay, savePath);
