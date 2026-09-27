@@ -99,18 +99,12 @@ namespace Cosmos {
 
         static void parseInstruemnt(Types::Instrument_t const &instrument, Types::Instrument_t &underly,
                                     char &optionType, double &strickPrice) {
-            if (instrument[5] == 'C' or instrument[5] == 'P') {
-                std::copy(std::begin(instrument), std::begin(instrument) + 5, std::begin(underly));
-                optionType = instrument[5];
-                Types::Instrument_t strickStr{""};
-                std::copy(std::begin(instrument) + 6, std::end(instrument), std::begin(strickStr));
-                strickPrice = atof(strickStr.data());
-            }
-            else {
+
+            if (instrument[6] == '-') {
                 std::copy(std::begin(instrument), std::begin(instrument) + 6, std::begin(underly));
-                optionType = instrument[6];
+                optionType = instrument[7];
                 Types::Instrument_t strickStr{""};
-                std::copy(std::begin(instrument) + 7, std::end(instrument), std::begin(strickStr));
+                std::copy(std::begin(instrument) + 9, std::end(instrument), std::begin(strickStr));
                 strickPrice = atof(strickStr.data());
                 // Types::Product_t productId{""};
                 // InstrumentToProduct(instrument, productId);
@@ -125,6 +119,36 @@ namespace Cosmos {
                     underly[1] = 'M';
                 }
             }
+            else {
+                if (instrument[5] == 'C' or instrument[5] == 'P') {
+                    std::copy(std::begin(instrument), std::begin(instrument) + 5, std::begin(underly));
+                    optionType = instrument[5];
+                    Types::Instrument_t strickStr{""};
+                    std::copy(std::begin(instrument) + 6, std::end(instrument), std::begin(strickStr));
+                    strickPrice = atof(strickStr.data());
+                }
+                else {
+                    std::copy(std::begin(instrument), std::begin(instrument) + 6, std::begin(underly));
+                    optionType = instrument[6];
+                    Types::Instrument_t strickStr{""};
+                    std::copy(std::begin(instrument) + 7, std::end(instrument), std::begin(strickStr));
+                    strickPrice = atof(strickStr.data());
+                    // Types::Product_t productId{""};
+                    // InstrumentToProduct(instrument, productId);
+                    if (instrument[0] == 'I' && instrument[1] == 'O') {
+                        underly[0] = 'I';
+                        underly[1] = 'F';
+                    } else if (instrument[0] == 'H' && instrument[1] == 'O') {
+                        underly[0] = 'I';
+                        underly[1] = 'H';
+                    } else if (instrument[0] == 'M' && instrument[1] == 'O') {
+                        underly[0] = 'I';
+                        underly[1] = 'M';
+                    }
+                }
+            }
+
+
         }
 
         static bool checkTerminal(Types::OrderField *orderField) {
@@ -272,8 +296,8 @@ namespace Cosmos {
                     }
                     Types::InstrumentInfo *instrumentInfo = new Types::InstrumentInfo();
                     //   fprintf(stderr, "%s\n", line_vector[1].c_str());
-                    line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'),
-                                         line_vector[1].end());
+                    // line_vector[1].erase(std::remove(line_vector[1].begin(), line_vector[1].end(), '-'),
+                    //                      line_vector[1].end());
                     strcpy(instrumentInfo->instrumentID.data(), line_vector[1].c_str());
                     // if (strcmp(instrumentInfo.instrumentID.data(), "i2405") ==0) {
                     //     fprintf(stderr,"instrument=%s\n",instrumentInfo.instrumentID.data());

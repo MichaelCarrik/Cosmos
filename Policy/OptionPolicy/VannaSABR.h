@@ -342,12 +342,13 @@ namespace Cosmos {
 
             void _writePolicyLog(const KData::KData *lastUnderlyKB, const Types::MarketData * pMD) {
 
-                m_configLog->info("configIndex={}, instr={}, {}, {}, {}, {:03d}, close={:.3f}, skewDirct={}, skewPos={}, sgnPrice={:.3f}, "
-                                  "callStkPrice={:.3f}, putStkPrice={:.3f}, rho={:.3f}, rhoUp={:.3f}, rhoDown={:.3f}, seriesIndex={}",
+                m_configLog->info("configIndex={}, instr={}, {}, {}, {}, {:03d}, close={:.3f}, rho={:.5f}, rhoUp={:.5f}, rhoDown={:.5f}, "
+                                  "skewDirct={}, skewPos={}, sgnPrice={:.3f}, "
+                                  "callStkPrice={:.3f}, putStkPrice={:.3f}, seriesIndex={}",
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                                   lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds, lastUnderlyKB->m_close,
-                                  m_skewDirection, m_skewPosition, m_signalPrice, m_callOptionStrike, m_putOptionStrike,
-                                  lastUnderlyKB->m_sabrPRMT.rho, m_rhoUp, m_rhoDown, m_lastUnderlyBarIndex);
+                                  lastUnderlyKB->m_sabrPRMT.rho, m_rhoUp, m_rhoDown, m_skewDirection, m_skewPosition,
+                                  m_signalPrice, m_callOptionStrike, m_putOptionStrike, m_lastUnderlyBarIndex);
                 _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
                 _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
             }

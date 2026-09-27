@@ -223,8 +223,8 @@ namespace Cosmos {
             if (symbol->m_kSeriesMap.begin() != symbol->m_kSeriesMap.end()) {
                 auto kseries = symbol->m_kSeriesMap.begin()->second;
                 int strikPrice = static_cast<int>(symbol->instrumentInfo.strikePrice);
-                auto itrCallPut = kseries->m_underlySeries->m_callPutSeriesMap->find(strikPrice);
-                if (itrCallPut != kseries->m_underlySeries->m_callPutSeriesMap->end()) {
+                auto itrCallPut = kseries->m_underlySeries->m_calPutSeriesMap->find(strikPrice);
+                if (itrCallPut != kseries->m_underlySeries->m_calPutSeriesMap->end()) {
                     auto callMD = itrCallPut->second->callSeries->m_lastPMD;
                     auto putMD = itrCallPut->second->putSeries->m_lastPMD;
                     auto underlyMD = kseries->m_underlySeries->m_lastPMD;

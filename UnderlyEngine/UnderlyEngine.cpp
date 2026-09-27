@@ -627,10 +627,13 @@ namespace Cosmos {
         void UnderlyEngine::onEventData(Types::EventData const &eventData) {
             if (eventData.eventType == Types::EventType::marketEvent) {
                 auto pMD = (const Types::MarketData *) eventData.point;
-                // if (pMD->isInit ==true ) {
-                // fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
-                //     pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit, pMD->epoch_time);
+                // if (pMD->updateTime[0]=='0') {
+                //     return;
                 // }
+                 if (strcmp(pMD->instrumentID.data(), "IM2610") ==0 ) {
+                    fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                       pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit, pMD->epoch_time);
+                 }
 
                 m_kDataManager->KMAddTick(pMD);
                 auto symbolItr = m_symbolMap.find(pMD->instrumentID);

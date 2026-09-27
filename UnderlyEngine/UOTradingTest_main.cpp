@@ -73,7 +73,6 @@ void parseStringBySeparator(std::string const& originString, std::string&& separ
     }
 }
 
-
 void parseNetParams(std::string &lingStr, Cosmos::Types::NetModifyParam *netModifyParam) {
     std::vector<std::string> paramVec;
     parseStringBySeparator(lingStr, ",", paramVec);
@@ -176,9 +175,8 @@ int main(int argc, char *argv[]) {
             fprintf(stderr, "tradingDay=%d, isDay=%d\n", tradingDay, isDay == true ? 1 : 0);
             Cosmos::Driver::TestDriver driver;
          //   std::vector<Cosmos::Types::InstrumentInfo> queryInstruments;
-            Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath, productid);
-            Cosmos::Trader::Trader<Cosmos::Trader::MockTrader, decltype(driver)> trader(
-                &driver, rawTickPath, tradingDay, isDay);
+            Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath, productid, true);
+            Cosmos::Trader::Trader<Cosmos::Trader::MockTrader, decltype(driver)> trader(&driver, rawTickPath, tradingDay, isDay);
             trader.start(tradingDay);
             spdlog::info("initial policies");
             int policyID = 0;

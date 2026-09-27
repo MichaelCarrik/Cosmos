@@ -12,6 +12,7 @@
 #include "KData.h"
 //#include "CallPutSeries.h"
 #include "../OptionModel/SARBModelQuantLib.h"
+#include "../OptionModel/SARBModelFast.h"
 #include "Common.h"
 
 namespace Cosmos {
@@ -35,6 +36,7 @@ namespace Cosmos {
          //   OptionModel::BSModelQuantLib *m_BSModelQuantLib{nullptr};
             OptionModel::LetsBeRationalModel *m_BSModelQuantLib{nullptr};
             OptionModel::SARBModelQuantLib * m_sabrModelQuantLib{nullptr};
+        //    OptionModel::SABRModelFast * m_sabrModelQuantLib{nullptr};
 
             KSeries( Types::InstrumentInfo const &insInfo,
                     int tradingday, double r,
