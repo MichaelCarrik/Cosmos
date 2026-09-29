@@ -7,8 +7,7 @@
 namespace Cosmos {
     namespace KData {
         void UpdateOptionModelPamt::init(KSeries *series, Types::KPeriod const &period, int tradingDay, bool m_isDay) {
-            std::tuple<Types::Instrument_t, Types::KPeriod> key = std::make_tuple(
-                series->m_insInfo.instrumentID, period);
+
             if (series->m_insInfo.productIDClass == Types::ProductClass::option) {
                 auto optionSeries = series;
                 auto keyUnderly = std::make_pair(optionSeries->m_insInfo.underly, period);
@@ -191,6 +190,7 @@ namespace Cosmos {
             //      std::chrono::system_clock::now().time_since_epoch()).count();
             underlySeries->m_sabrModelQuantLib->sarbFit( forwardPrice, underlySeries->m_calPutSeriesMap , readOptionIndex);
             underlySeries->m_sabrModelQuantLib->getParameters(underlySeries->m_KDataVecs[lastSeriesIndex]->m_sabrPRMT);
+
             // fprintf(stderr, "period=%d, consume TIME = %d\n", static_cast<int>(underlySeries->m_Period),
             //     std::chrono::duration_cast<std::chrono::microseconds>(std::chrono::system_clock::now().time_since_epoch()).count()- log_epoch_time );
         };

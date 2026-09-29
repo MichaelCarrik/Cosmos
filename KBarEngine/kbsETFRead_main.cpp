@@ -63,6 +63,7 @@ void getInstruments(int tradingDay, std::string &etfProductId, std::string &rawP
                 Cosmos::Types::InstrumentInfo instrumentInfo;
                 strcpy(instrumentInfo.instrumentID.data(), line_vector[0].substr(0,8).c_str());
                 instrumentInfo.productIDClass = Cosmos::Types::ProductClass::option; // atoi(line_vector[6].c_str());
+                instrumentInfo.exchanges = Cosmos::Types::ExchangeType::SHSZ;
                 strcpy(instrumentInfo.productID.data(), etfProductId.c_str());
                 instrumentInfo.optionType = line_vector[1][0];
                 instrumentInfo.strikePrice = atof(line_vector[4].c_str());
@@ -112,6 +113,8 @@ int main(int argc, char *argv[]) {
 
     std::string savePath = pt.get_child("Cosmos").get_child("params").get_child("savePath").get<std::string>(
         "<xmlattr>.value");
+    std::string isUseUnderlyPrice = pt.get_child("Cosmos").get_child("params").get_child("isUseUnderlyPrice").get<std::string>(
+    "<xmlattr>.value");
 
     std::string engineName{"KBarReadEngine"};
 
@@ -142,6 +145,7 @@ int main(int argc, char *argv[]) {
     Cosmos::Types::InstrumentInfo futureInInfo;
     strcpy(futureInInfo.instrumentID.data(), productid.c_str());
     futureInInfo.productIDClass = Cosmos::Types::ProductClass::future; // atoi(line_vector[6].c_str());
+    futureInInfo.exchanges = Cosmos::Types::ExchangeType::SHSZ;
     strcpy(futureInInfo.productID.data(), productid.c_str());
     strcpy(futureInInfo.underly.data(), productid.c_str());
     futureInInfo.multi = 100;
@@ -152,7 +156,7 @@ int main(int argc, char *argv[]) {
     Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath, productid, false);
 
     Cosmos::KBarSaverEngine::KBarReadEngine saveEngine(&driver, engineName, queryOptionInstruments,
-                                                       queryFutureInstruments, tradingDay, true, savePath);
+                                                       queryFutureInstruments, tradingDay, true, savePath, atoi(isUseUnderlyPrice.c_str()));
     driver.setPolicySize(2);
     saveEngine.m_policyID = 0;
     saveEngine.onStart();

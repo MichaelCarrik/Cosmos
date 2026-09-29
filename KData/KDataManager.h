@@ -52,7 +52,9 @@ namespace Cosmos {
                              int tradingday, bool isReal, bool isDay);
             void initKSeries(Types::InstrumentInfo const &insInfo, Types::KPeriod period,
                              int tradingday, double riskFreeR, std::vector<KData *> &historyKline, bool isDay);
-            void _initUnderlyToOptionSeriesMap(KSeries *optionKSeries, Types::KPeriod const &kperiod);
+            void _initUnderlyToOptionSeriesMap(KSeries *optionKSeries, KSeries *underlyKSeries, Types::KPeriod const &kperiod);
+
+            void setSHSZForwadSeries(KSeries *optionKSeries, Types::KPeriod const &kperiod, double,  bool);
 
             double _calForwardPrice(const KSeries *underlySeries);
 

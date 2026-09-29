@@ -146,6 +146,8 @@ int main(int argc, char *argv[]) {
     std::string savePath = pt.get_child("Cosmos").get_child("params").get_child("savePath").get<std::string>(
         "<xmlattr>.value");
 
+    std::string isUseUnderlyPrice = pt.get_child("Cosmos").get_child("params").get_child("isUseUnderlyPrice").get<std::string>("<xmlattr>.value");
+
 
     std::string engineName{"KBarReadEngine"};
 
@@ -170,7 +172,8 @@ int main(int argc, char *argv[]) {
         Cosmos::Market::Market<Cosmos::Market::MockMarket, decltype(driver)> market(&driver, rawTickPath, productid, true);
 
         Cosmos::KBarSaverEngine::KBarReadEngine saveEngine(&driver, engineName, queryOptionInstruments,
-                                                           queryFutureInstruments, tradingDay, isDay, savePath);
+                                                           queryFutureInstruments, tradingDay, isDay, savePath,
+                                                           atoi(isUseUnderlyPrice.c_str()));
         driver.setPolicySize(2);
         saveEngine.m_policyID = 0;
         saveEngine.onStart();

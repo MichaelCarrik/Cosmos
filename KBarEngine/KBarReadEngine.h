@@ -56,9 +56,9 @@ namespace Cosmos {
             KBarReadEngine(decltype(m_driver) driver, std::string &_policyName,
                            std::vector< Types::InstrumentInfo> &optionInstruments,
                            std::vector< Types::InstrumentInfo> &futureInstruments,
-                           int tradingday, int isDay, std::string &savePath) : m_engineName(_policyName),
-                                                                               m_tradingDay(tradingday), m_isDay(isDay),
-                                                                               m_savePath(savePath) {
+                           int tradingday, int isDay, std::string &savePath,
+                           int isUseUnderlyPrice) : m_engineName(_policyName),
+            m_tradingDay(tradingday), m_isDay(isDay), m_savePath(savePath), m_isUseUnderlyPrice(isUseUnderlyPrice) {
 
                 m_optionInstruments = &optionInstruments;
                 m_futureInstruments = &futureInstruments;

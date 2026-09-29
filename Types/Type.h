@@ -51,7 +51,7 @@ namespace Cosmos{
 
         enum class OrderIntension{OIPut, OIHit, OIMid, OFIHit, OINoT};
 
-        enum class ExchangeType{CFFEX, SHFE, ZCE, DCE, INE, GFE};
+        enum class ExchangeType{CFFEX, SHFE, ZCE, DCE, INE, GFE, SHSZ};
 
         enum class ProductClass{future, option};
 
@@ -121,7 +121,17 @@ namespace Cosmos{
         //                 {"EIMid", ExecuteIntension::EIMid}
         // };
 
-
+        static std::map<Types::Product_t, Types::Product_t>  etfToForwardProdcuctMap{
+                                    {Types::Product_t{"510050"},  Types::Product_t{"ZA"}},
+                                    {Types::Product_t{"510300"},  Types::Product_t{"ZB"}},
+                                    {Types::Product_t{"510500"},  Types::Product_t{"ZD"}},
+                                    {Types::Product_t{"588000"},  Types::Product_t{"ZE"}},
+                                    {Types::Product_t{"588080"},  Types::Product_t{"ZF"}},
+                                    {Types::Product_t{"159901"},  Types::Product_t{"ZZ"}},
+                                    {Types::Product_t{"159915"},  Types::Product_t{"ZY"}},
+                                    {Types::Product_t{"159919"},  Types::Product_t{"ZW"}},
+                                    {Types::Product_t{"159922"},  Types::Product_t{"ZV"}},
+                            };
 
 
 

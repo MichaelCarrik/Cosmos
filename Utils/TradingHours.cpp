@@ -262,6 +262,7 @@ namespace Cosmos {
         TradingSession *TradingHours::getTradingSession(Types::Product_t const &product) {
             auto itr = TradingHours::m_productTradingSession.find(product);
             if (itr == TradingHours::m_productTradingSession.end()) {
+                fprintf(stderr, "TradingHours::getTradingSession : product=%s\n", product.data());
                 assert(false && "cannot find in m_instrumentTradingSession");
             }
             return &itr->second;

@@ -31,6 +31,8 @@ namespace Cosmos {
             double m_lastDelta{0.0};
             int m_biasSeconds{0};
             KSeries *m_underlySeries{nullptr};
+        //    KSeries *m_fowardSeries{nullptr};
+            std::vector<KSeries *> m_fowardSeriesVec;
             std::map<int, CallPutSeries *> * m_calPutSeriesMap{nullptr};
 
          //   OptionModel::BSModelQuantLib *m_BSModelQuantLib{nullptr};
@@ -73,6 +75,10 @@ namespace Cosmos {
 
             void setUnderlySeries(KSeries *inputSeries) {
                 m_underlySeries = inputSeries;
+            }
+
+            void setForwadSeries(KSeries *inputSeries) {
+                m_fowardSeriesVec.emplace_back(inputSeries);
             }
 
             void calGreeks(int optionUpdateIndex, double optionFairPrice, double forwardPrice, double bidPrioPrice, double askPrioPrice) {

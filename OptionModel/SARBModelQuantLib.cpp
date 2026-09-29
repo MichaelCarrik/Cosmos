@@ -22,8 +22,17 @@ namespace Cosmos {
                 if (strikePrice <= forwardPrice) {
                     strikes.push_back(strikePrice);
                     auto putSeries = itr->second->putSeries;
-                    volatilities.push_back(putSeries->m_KDataVecs[optionSeriesIndex]->m_greeks.IV);
-                    vegas.push_back(putSeries->m_KDataVecs[optionSeriesIndex]->m_greeks.vega);
+                    auto kData = putSeries->m_KDataVecs[optionSeriesIndex];
+                    volatilities.push_back(kData->m_greeks.IV);
+                    vegas.push_back(kData->m_greeks.vega);
+                    if (strcmp(putSeries->m_insInfo.productID.data(), "lc") == 0 || strcmp(
+                            putSeries->m_insInfo.productID.data(), "ps") == 0) {
+                        fprintf(stderr, "updateTimeBegin=%s, updateTimeEnd=%s, instrument=%s, iv=%.5f, vega=%.5f\n",
+                                kData->m_updateTimeBegin.data(), kData->m_updateTimeEnd.data(),
+                                kData->m_instrument.data(),
+                                kData->m_greeks.IV, kData->m_greeks.vega);
+                    }
+
                     idx++;
                 }
                 if (idx >= m_useOptionNumb) {
@@ -40,8 +49,16 @@ namespace Cosmos {
                 if (strikePrice > forwardPrice) {
                     strikes.push_back(strikePrice);
                     auto callSeries = itr->second->callSeries;
-                    volatilities.push_back(callSeries->m_KDataVecs[optionSeriesIndex]->m_greeks.IV);
-                    vegas.push_back(callSeries->m_KDataVecs[optionSeriesIndex]->m_greeks.vega);
+                    auto kData = callSeries->m_KDataVecs[optionSeriesIndex];
+                    volatilities.push_back(kData->m_greeks.IV);
+                    vegas.push_back(kData->m_greeks.vega);
+                    if (strcmp(callSeries->m_insInfo.productID.data(), "lc") == 0 || strcmp(
+                            callSeries->m_insInfo.productID.data(), "ps") == 0) {
+                        fprintf(stderr, "updateTimeBegin=%s, updateTimeEnd=%s, instrument=%s, iv=%.5f, vega=%.5f\n",
+                                kData->m_updateTimeBegin.data(), kData->m_updateTimeEnd.data(),
+                                kData->m_instrument.data(),
+                                kData->m_greeks.IV, kData->m_greeks.vega);
+                    }
                     idx++;
                 }
 
