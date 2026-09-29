@@ -21,7 +21,7 @@ namespace Cosmos {
             UpdateOptionModelPamt() {
 
             }
-            void  init(KSeries *series, Types::KPeriod const& period,int tradingDay, bool m_isDay) ;
+            void  init(KSeries *series, Types::Instrument_t const&, Types::KPeriod const& period,int tradingDay, bool m_isDay) ;
 
             void fillOptionSeries(KSeries * optionSeries, int updateUnderlyIndex, int updateOptionIndex) ;
 

@@ -245,12 +245,12 @@ namespace Cosmos {
 
                     //set forwardSeries
                     if (insInfo.exchanges == Types::ExchangeType::SHSZ) {
-                        setSHSZForwadSeries(kSeries, period, riskFreeR,  isDay);
+                        auto forwardSeries =  setSHSZForwadSeries(kSeries, period, riskFreeR,  isDay);
                         _initUnderlyToOptionSeriesMap(kSeries, kSeries->m_fowardSeriesVec[0], period);
-                        m_updateOptionModelPamt->init(kSeries, period, m_tradingDay, m_isDay);
+                        m_updateOptionModelPamt->init(kSeries, kSeries->m_fowardSeriesVec[0]->m_insInfo.instrumentID, period, m_tradingDay, m_isDay);
                     } else {
                         _initUnderlyToOptionSeriesMap(kSeries, kSeries->m_underlySeries, period);
-                        m_updateOptionModelPamt->init(kSeries, period, m_tradingDay, m_isDay);
+                        m_updateOptionModelPamt->init(kSeries, kSeries->m_underlySeries->m_insInfo.instrumentID, period, m_tradingDay, m_isDay);
                     }
                 }
             }
@@ -276,30 +276,35 @@ namespace Cosmos {
             }
         }
 
-        void KDataManager::setSHSZForwadSeries(KSeries *optionKSeries, Types::KPeriod const &kperiod, double riskFreeR,  bool isDay) {
+        KSeries * KDataManager::setSHSZForwadSeries(KSeries *optionKSeries, Types::KPeriod const &kperiod, double riskFreeR,  bool isDay) {
             Types::InstrumentInfo instrInfo;
             memcpy(&instrInfo, &(optionKSeries->m_underlySeries->m_insInfo), sizeof(Types::InstrumentInfo));
             sprintf(instrInfo.instrumentID.data(), "%s%d",
                     Types::etfToForwardProdcuctMap[optionKSeries->m_insInfo.productID].data(),
                     (optionKSeries->m_insInfo.expireDate / 100) % 10000);
-            auto itrForwaardSeriesMap = m_allKLineSeries.find(instrInfo.instrumentID);
-            if (itrForwaardSeriesMap == m_allKLineSeries.end()) {
+            auto itrForwardSeriesMap = m_allKLineSeries.find(instrInfo.instrumentID);
+            if (itrForwardSeriesMap == m_allKLineSeries.end()) {
                 std::unordered_map<Types::KPeriod, KSeries *> *temp = new std::unordered_map<Types::KPeriod, KSeries
                     *>();
                 m_allKLineSeries[instrInfo.instrumentID] = temp;
-                itrForwaardSeriesMap = m_allKLineSeries.find(instrInfo.instrumentID);
+                itrForwardSeriesMap = m_allKLineSeries.find(instrInfo.instrumentID);
             }
-            auto itrForwardSeries = itrForwaardSeriesMap->second->find(kperiod);
-            if (itrForwardSeries == itrForwaardSeriesMap->second->end()) {
+            auto itrForwardSeries = itrForwardSeriesMap->second->find(kperiod);
+            if (itrForwardSeries == itrForwardSeriesMap->second->end()) {
                 auto tradingSession = Utils::TradingHours::getTradingSession(instrInfo.productID);
-                (*itrForwaardSeriesMap->second)[kperiod] = new KSeries(instrInfo, optionKSeries->m_tradingday, riskFreeR,
+                auto forwardKSeries =  new KSeries(instrInfo, optionKSeries->m_tradingday, riskFreeR,
                                                                        kperiod, *tradingSession, isDay,
                                                                        optionKSeries->m_biasSeconds);
-                itrForwardSeries = itrForwaardSeriesMap->second->find(kperiod);
+                std::vector<KData *> temp;
+
+                forwardKSeries->setHistoryKLine(temp);
+                itrForwardSeriesMap->second->insert({kperiod, forwardKSeries});
+                itrForwardSeries = itrForwardSeriesMap->second->find(kperiod);
                 optionKSeries->m_underlySeries->setForwadSeries(itrForwardSeries->second);
             }
 
             optionKSeries->setForwadSeries(itrForwardSeries->second);
+            return itrForwardSeries->second;
         }
 
         double KDataManager::_calForwardPrice(const KSeries *underlySeries) {
@@ -329,7 +334,8 @@ namespace Cosmos {
                     }
                 }
 
-                if (minSpread > underlySeries->m_insInfo.tickSize * 5 && underlySeries->m_lastPMD->bidVolume[0] > 0 &&
+                if (underlySeries->m_insInfo.exchanges != Types::ExchangeType::SHSZ &&
+                    minSpread > underlySeries->m_insInfo.tickSize * 5 && underlySeries->m_lastPMD->bidVolume[0] > 0 &&
                     underlySeries->m_lastPMD->askVolume[0] > 0) {
                     forwardPrice = underlySeries->m_lastPMD->lastPrice;
                 }
@@ -345,8 +351,14 @@ namespace Cosmos {
                     while (lastSeriesIndex < underlySeries->m_seriesIndex) {
                         for (auto & forwardSeries : underlySeries->m_fowardSeriesVec) {
                             double forwardPrice = _calForwardPrice(forwardSeries);
-                            auto thisUnderlyKData =  forwardSeries->m_KDataVecs[lastSeriesIndex];
-                            auto thisForwardKData =  forwardSeries->m_KDataVecs[lastSeriesIndex];
+                            auto thisUnderlyKData =  underlySeries->m_KDataVecs[lastSeriesIndex];
+
+                            int forwardTodayBeginIndex = m_updateOptionModelPamt->getUnderlyTodayBeginIndex(forwardSeries->m_insInfo.instrumentID,
+                                                       underlySeries->m_Period);
+
+                            int lastForwardIndex = lastSeriesIndex - forwardTodayBeginIndex;
+
+                            auto thisForwardKData =  forwardSeries->m_KDataVecs[lastForwardIndex];
                             strcpy(thisForwardKData->m_instrument.data(), thisUnderlyKData->m_instrument.data());
                             strcpy(thisForwardKData->m_productID.data(), thisUnderlyKData->m_productID.data());
                             strcpy(thisForwardKData->m_updateTimeBegin.data(), thisUnderlyKData->m_updateTimeBegin.data());
@@ -356,11 +368,10 @@ namespace Cosmos {
                             thisForwardKData->m_high = forwardPrice;
                             thisForwardKData->m_low = forwardPrice;
                             thisForwardKData->m_close = forwardPrice;
-
                             m_updateOptionModelPamt->updateGreeks(forwardSeries, forwardPrice, lastSeriesIndex);
                             m_updateOptionModelPamt->updateSabr(forwardSeries, forwardPrice, lastSeriesIndex);
-                            lastSeriesIndex++;
                         }
+                        lastSeriesIndex++;
                     }
                 }
             } else {

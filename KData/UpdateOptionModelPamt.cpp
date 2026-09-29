@@ -6,11 +6,11 @@
 
 namespace Cosmos {
     namespace KData {
-        void UpdateOptionModelPamt::init(KSeries *series, Types::KPeriod const &period, int tradingDay, bool m_isDay) {
+        void UpdateOptionModelPamt::init(KSeries *series, Types::Instrument_t const& underlyInstrument , Types::KPeriod const &period, int tradingDay, bool m_isDay) {
 
             if (series->m_insInfo.productIDClass == Types::ProductClass::option) {
                 auto optionSeries = series;
-                auto keyUnderly = std::make_pair(optionSeries->m_insInfo.underly, period);
+                auto keyUnderly = std::make_pair(underlyInstrument, period);
 
                 auto underlyTodayBeginIndexItr = m_underlyTodayBeginIndexMap.find(keyUnderly);
                 if (underlyTodayBeginIndexItr == m_underlyTodayBeginIndexMap.end()) {
