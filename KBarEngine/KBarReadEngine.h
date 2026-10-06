@@ -31,9 +31,7 @@ namespace Cosmos {
             std::vector< Types::InstrumentInfo> *m_optionInstruments;
             std::vector< Types::InstrumentInfo> *m_futureInstruments;
             KData::KDataManager * m_kDataManager{nullptr};
-
             std::map< Types::Instrument_t, Types::InstrumentInfo> m_instrumentInfoMap;
-
             std::string m_savePath{""};
 
         public:

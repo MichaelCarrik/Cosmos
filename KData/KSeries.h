@@ -160,7 +160,7 @@ namespace Cosmos {
                     if (strcmp(m_KDataVecs[m_seriesIndex]->m_instrument.data(), "") == 0) {
                         //                        fprintf(stderr, "init k pmd 1 : instrumentid=%s, updateTime=%s, millisec=%d, volume=%d, m_seriesIndex=%d, m_kseries.size()=%d\n",
                         //                                pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, m_seriesIndex, m_kseries.size());
-                        m_KDataVecs[m_seriesIndex]->initKBar(m_insInfo.instrumentID, std::max(m_kTime->beginPstime, 0),
+                        m_KDataVecs[m_seriesIndex]->initKBar(m_insInfo.instrumentID,  m_insInfo.productID,std::max(m_kTime->beginPstime, 0),
                                                  m_kTime->endPstime, m_tradingday, m_lastPMD);
 
                     }
@@ -171,7 +171,7 @@ namespace Cosmos {
                         //                        fprintf(stderr, "init k pmd 2 : instrumentid=%s, updateTime=%s, millisec=%d, volume=%d, m_seriesIndex=%d, m_kseries.size()=%d\n",
                         //                                pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, m_seriesIndex, m_kseries.size());
 
-                        m_KDataVecs[m_seriesIndex]->initKBar(m_insInfo.instrumentID, std::max(m_kTime->beginPstime, 0), m_kTime->endPstime,
+                        m_KDataVecs[m_seriesIndex]->initKBar(m_insInfo.instrumentID,  m_insInfo.productID, std::max(m_kTime->beginPstime, 0), m_kTime->endPstime,
                                                     m_tradingday,m_lastPMD);
                     }
                 }
@@ -211,10 +211,10 @@ namespace Cosmos {
 //                        fprintf(stderr, "init k pmd 3: instrumentid=%s, updateTime=%s, millisec=%d, volume=%d, m_seriesIndex=%d, m_kseries.size()=%d\n",
 //                                pMD->instrumentID.data(), pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, m_seriesIndex, m_kseries.size());
                         if (m_Period ==  Types::KPeriod::D1) {
-                            m_KDataVecs[m_seriesIndex]->initKDayKBar(m_insInfo.instrumentID, std::max(m_kTime->beginPstime, 0),
+                            m_KDataVecs[m_seriesIndex]->initKDayKBar(m_insInfo.instrumentID, m_insInfo.productID, std::max(m_kTime->beginPstime, 0),
                                 m_kTime->endPstime, m_tradingday, pMD);
                         } else {
-                            m_KDataVecs[m_seriesIndex]->initKBar(m_insInfo.instrumentID, std::max(m_kTime->beginPstime, 0),
+                            m_KDataVecs[m_seriesIndex]->initKBar(m_insInfo.instrumentID,m_insInfo.productID, std::max(m_kTime->beginPstime, 0),
                                 m_kTime->endPstime,m_tradingday, pMD);
                         }
                     }

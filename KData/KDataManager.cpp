@@ -282,6 +282,7 @@ namespace Cosmos {
             sprintf(instrInfo.instrumentID.data(), "%s%d",
                     Types::etfToForwardProdcuctMap[optionKSeries->m_insInfo.productID].data(),
                     (optionKSeries->m_insInfo.expireDate / 100) % 10000);
+            strcpy(optionKSeries->m_insInfo.underly.data(), instrInfo.instrumentID.data());
             auto itrForwardSeriesMap = m_allKLineSeries.find(instrInfo.instrumentID);
             if (itrForwardSeriesMap == m_allKLineSeries.end()) {
                 std::unordered_map<Types::KPeriod, KSeries *> *temp = new std::unordered_map<Types::KPeriod, KSeries
@@ -296,7 +297,6 @@ namespace Cosmos {
                                                                        kperiod, *tradingSession, isDay,
                                                                        optionKSeries->m_biasSeconds);
                 std::vector<KData *> temp;
-
                 forwardKSeries->setHistoryKLine(temp);
                 itrForwardSeriesMap->second->insert({kperiod, forwardKSeries});
                 itrForwardSeries = itrForwardSeriesMap->second->find(kperiod);
@@ -359,7 +359,7 @@ namespace Cosmos {
                             int lastForwardIndex = lastSeriesIndex - forwardTodayBeginIndex;
 
                             auto thisForwardKData =  forwardSeries->m_KDataVecs[lastForwardIndex];
-                            strcpy(thisForwardKData->m_instrument.data(), thisUnderlyKData->m_instrument.data());
+                            strcpy(thisForwardKData->m_instrument.data(), forwardSeries->m_insInfo.instrumentID.data());
                             strcpy(thisForwardKData->m_productID.data(), thisUnderlyKData->m_productID.data());
                             strcpy(thisForwardKData->m_updateTimeBegin.data(), thisUnderlyKData->m_updateTimeBegin.data());
                             strcpy(thisForwardKData->m_updateTimeEnd.data(), thisUnderlyKData->m_updateTimeEnd.data());

@@ -99,28 +99,28 @@ namespace Cosmos {
             }
 
 
-            void initKBar(Types::Instrument_t &instrument, int beginPsTime, int endPsTime, int tradingday,
+            void initKBar(Types::Instrument_t const& instrument, Types::Product_t const & productId, int beginPsTime, int endPsTime, int tradingday,
                           const Types::MarketData *lastPMD) {
                 strcpy(m_instrument.data(), instrument.data());
+                strcpy(m_productID.data(), productId.data());
                 m_beginPsTime = beginPsTime;
                 m_endPsTime = endPsTime;
                 Utils::ToUpdateTime(m_beginPsTime, m_updateTimeBegin);
                 Utils::ToUpdateTime(m_endPsTime, m_updateTimeEnd);
-                Utils::InstrumentToProduct(m_instrument, m_productID);
                 m_tradingDay = tradingday;
                 m_open = lastPMD->lastPrice;
                 update(lastPMD);
             }
 
             // for no night
-            void initKDayKBar(Types::Instrument_t &instrument,  int beginPsTime, int endPsTime,int tradingday,
+            void initKDayKBar(Types::Instrument_t const& instrument, Types::Product_t const & productId, int beginPsTime, int endPsTime,int tradingday,
                               const Types::MarketData *marketData) {
                 strcpy(m_instrument.data(), instrument.data());
+                strcpy(m_productID.data(), productId.data());
                 m_beginPsTime = beginPsTime;
                 m_endPsTime = endPsTime;
                 Utils::ToUpdateTime(m_beginPsTime, m_updateTimeBegin);
                 Utils::ToUpdateTime(m_endPsTime, m_updateTimeEnd);
-                Utils::InstrumentToProduct(m_instrument, m_productID);
                 m_tradingDay = tradingday;
                 m_open = marketData->openPrice;
                 m_high = marketData->highestPrice;
