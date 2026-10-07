@@ -219,9 +219,7 @@ namespace Cosmos {
                         }
                     }
                     if (m_Period ==  Types::KPeriod::D1) {
-                        if (pMD->volume > 4294967295) {
-                            int a  =1;
-                        }
+
                         m_KDataVecs[m_seriesIndex]->updateDayKBar(pMD->lastPrice, pMD->highestPrice, pMD->lowestPrice,
                                                                        pMD->openPrice, pMD->volume,
                                                                        pMD->amount, pMD->oi, pMD->settlementPrice);
