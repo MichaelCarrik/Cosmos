@@ -128,12 +128,12 @@ namespace Cosmos {
                 m_rhoUp = Indicator::Quartile(m_fiveRhoVec, beginI, endI, 0.75);
                 m_rhoDown = Indicator::Quartile(m_fiveRhoVec, beginI, endI, 0.25);
 
-                if (lastUnderlyBar->m_sabrPRMT.rho > m_rhoUp and lastUnderlyBar->m_sabrPRMT.rho >0){
+                if (lastUnderlyBar->m_sabrPRMT.rho > m_rhoUp and lastUnderlyBar->m_sabrPRMT.rho >0.1){
                     m_skewDirection = -1;
-                }else if (lastUnderlyBar->m_sabrPRMT.rho < m_rhoDown and lastUnderlyBar->m_sabrPRMT.rho <0) {
+                }else if (lastUnderlyBar->m_sabrPRMT.rho < m_rhoDown and lastUnderlyBar->m_sabrPRMT.rho < -0.1) {
                     m_skewDirection = 1;
                 }
-                else if ((lastUnderlyBar->m_sabrPRMT.rho >0 && m_skewDirection >0 ) || (lastUnderlyBar->m_sabrPRMT.rho <0 && m_skewDirection < 0)){
+                else if ((lastUnderlyBar->m_sabrPRMT.rho >0.1 && m_skewDirection >0 ) || (lastUnderlyBar->m_sabrPRMT.rho < -0.1 && m_skewDirection < 0)){
                     m_skewDirection = 0;
                 }
             }
@@ -296,9 +296,11 @@ namespace Cosmos {
                     else if (m_lastUnderlyBarIndex < m_underlyKseries->m_seriesIndex) {  //waiting all instrtuments finish KData
                         auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
                         m_lastOptionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
-                        if (strcmp(lastUnderlyBar->m_updateTimeBegin.data(),"04:54:40") ==0 && m_tradingDay == 20260716) {
-                            int a = 1;
+
+                        if (Utils::TradingHours::isNoTradeAfterAuctionEnd( m_underlyKseries->m_insInfo.productID, pMD->psSecond ,240) == true) {
+                            return;
                         }
+
                         _updateVannaSignal(lastUnderlyBar);
                         if(m_tradingDay  != m_expireDay){
                             if (m_skewDirection > 0 &&  m_skewPosition <=0) {

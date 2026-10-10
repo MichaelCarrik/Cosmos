@@ -112,7 +112,7 @@ namespace Cosmos {
                     auto time = std::chrono::duration_cast<std::chrono::seconds>(
                         std::chrono::system_clock::now().time_since_epoch()).count();
                     for (auto& tableInsertBuffer : m_TableInsertBufferVec) {
-                        if ( (tableInsertBuffer.numb >500 ) || (tableInsertBuffer.numb  >0 && time - tableInsertBuffer.lastWriteSeconds >30) ) {
+                        if ( (tableInsertBuffer.numb >200 ) || (tableInsertBuffer.numb  >0 && time - tableInsertBuffer.lastWriteSeconds >30) ) {
                             insertSql(tableInsertBuffer.insertBuffer);
                             initTableInsertBuffer(tableInsertBuffer);
                         }
