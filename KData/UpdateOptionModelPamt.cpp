@@ -76,10 +76,7 @@ namespace Cosmos {
             int updateOptionIndex = lastSeriesIndex - underlyTodayBeginIndex;
 
             for (auto &calPutItr: * (underlySeries->m_calPutSeriesMap)) {
-                if (strcmp(calPutItr.second->putSeries->m_insInfo.instrumentID.data(), "sc2505P550") == 0 &&
-                    strcmp(underlySeries->m_lastPMD->updateTime.data(), "14:30:50") > 0) {
-                    int a = 1;
-                }
+
                 fillOptionSeries(calPutItr.second->callSeries, lastSeriesIndex, updateOptionIndex);
                 fillOptionSeries(calPutItr.second->putSeries, lastSeriesIndex, updateOptionIndex);
 

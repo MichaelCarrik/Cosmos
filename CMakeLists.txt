@@ -57,7 +57,7 @@ add_subdirectory(Utils)
 #target_link_libraries(CosmosKAmountBReader KData  Market Trader KAmountBarEngine  Utils
 #		${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}
 #		${LIB_MYSQL} Threads::Threads stdc++fs)
-
+#
 #add_executable(CosmosKBReader  KBarEngine/kbsRead_main.cpp)
 #target_link_libraries(CosmosKBReader KData Market Trader  Utils  OptionModel
 #	        ${LIB_CTPMD} ${LIB_CTPTRADE} ${LIB_QUANTLIB}  ${LIB_LETSBERATIONAL}

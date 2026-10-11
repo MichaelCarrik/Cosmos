@@ -28,7 +28,7 @@ namespace Cosmos {
             KTime * m_kTime{nullptr};
             Types::KPeriod m_Period;
             Types::MarketData * m_lastPMD{nullptr};
-            double m_lastDelta{0.0};
+            Greeks m_lastKDataGreeks;
             int m_biasSeconds{0};
             KSeries *m_underlySeries{nullptr};
         //    KSeries *m_fowardSeries{nullptr};
@@ -77,7 +77,7 @@ namespace Cosmos {
                 m_underlySeries = inputSeries;
             }
 
-            void setForwadSeries(KSeries *inputSeries) {
+            void setForwardSeries(KSeries *inputSeries) {
                 m_fowardSeriesVec.emplace_back(inputSeries);
             }
 
@@ -85,11 +85,10 @@ namespace Cosmos {
 
                  auto optionKData = m_KDataVecs[optionUpdateIndex];
                 optionKData->m_forwardPrice = forwardPrice;
-                // optionKData->m_forwardPrice = forwardPrice;
-                // auto optionFairPrice = getKFairClose(optionKData);
-                //
-                // auto underlyKData = this->m_underlySeries->m_KDataVecs[updateUnderlyIndex];
-                //
+
+                if (strcmp(this->m_insInfo.instrumentID.data(), "10006222") == 0 &&strcmp(optionKData->m_updateTimeBegin.data(), "09:39:40") == 0) {
+                    int a = 1;
+                }
 
                 try {
                     this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV = m_BSModelQuantLib->calImpliedVol(optionKData->m_forwardPrice,
@@ -104,52 +103,65 @@ namespace Cosmos {
 
                         m_BSModelQuantLib->calGreeks(optionKData->m_forwardPrice, this->m_KDataVecs[optionUpdateIndex]->m_greeks);
                     }
-                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta) < 0.00001) {
-                        this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta = m_lastDelta;
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV) < 0.00001) {
+                        memcpy(&(this->m_KDataVecs[optionUpdateIndex]->m_greeks), &m_lastKDataGreeks,  sizeof(Greeks));
                     }
-                    m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta;
-                } catch (std::exception &e) {
-                //   if ( strcmp(this->m_insInfo.productID.data() , "si")==0 ) {
-                       //  fprintf(stderr,"%s-%d-%s, %s\n", this->m_KDataVecs[optionUpdateIndex]->m_instrument.data(),
-                       //      static_cast<int>(this->m_Period), this->m_KDataVecs[optionUpdateIndex]->m_updateTimeBegin.data(),
-                       //      e.what());
-                       // std::cerr << e.what() << std::endl;
-                        // fprintf(stderr, "calGreeks exception underly=%s %s (%.3f) , optionKD=%s %s (%.3f)\n",
-                        //         underlyKData->m_instrument.data(),
-                        //         underlyKData->m_updateTimeBegin.data(),
-                        //         optionKData->m_forwardPrice,
-                        //         optionKData->m_instrument.data(),
-                        //         optionKData->m_updateTimeBegin.data(),
-                        //         optionFairPrice);
+                    memcpy(&m_lastKDataGreeks, &(this->m_KDataVecs[optionUpdateIndex]->m_greeks), sizeof(Greeks));
+                }catch (const std::runtime_error& e) {
+                    // 1. 精确捕获 calImpliedVol 中抛出的 runtime_error
+                    // e.what() 会包含 "underlyPrice is negetive value " 或 "ImpliedVolatility is nan" 等信息
 
-              //      }
-                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta) < 0.00001) {
-                        this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta = m_lastDelta;
+                    auto optionUpdateTime = this->m_lastPMD != nullptr ? this->m_lastPMD->updateTime.data() : "";
+                    auto optionMilliSeconds = this->m_lastPMD != nullptr ? this->m_lastPMD->milliSeconds : 0;
+                    auto underlyUpdateTime = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->updateTime.data() : "";
+                    auto underlyMilliSeconds = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->milliSeconds : 0;
+
+                    spdlog::error("calGreeks runtime_error : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
+                                  "optionMDTime={},{:03d}, underlyMDTime={}, {:03d},  error={}", this->m_insInfo.instrumentID.data(),  Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)],
+                        optionKData->m_updateTimeBegin.data(), optionKData->m_updateTimeEnd.data(), optionKData->m_forwardPrice,
+                        optionKData->m_close, optionKData->m_volume, optionKData->m_greeks.IV, optionKData->m_greeks.delta, optionUpdateTime,
+                        optionMilliSeconds, underlyUpdateTime, underlyMilliSeconds, e.what());
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV) < 0.00001) {
+                        memcpy(&(this->m_KDataVecs[optionUpdateIndex]->m_greeks), &m_lastKDataGreeks,  sizeof(Greeks));
                     }
-                    m_lastDelta = this->m_KDataVecs[optionUpdateIndex]->m_greeks.delta;
+                    memcpy(&m_lastKDataGreeks, &(this->m_KDataVecs[optionUpdateIndex]->m_greeks), sizeof(Greeks));
+
+                }
+                catch (std::exception &e) {
+                    auto optionUpdateTime = this->m_lastPMD != nullptr ? this->m_lastPMD->updateTime.data() : "";
+                    auto optionMilliSeconds = this->m_lastPMD != nullptr ? this->m_lastPMD->milliSeconds : 0;
+                    auto underlyUpdateTime = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->updateTime.data() : "";
+                    auto underlyMilliSeconds = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->milliSeconds : 0;
+
+                    spdlog::error("calGreeks std::exception : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
+                                  "optionMDTime={},{:03d}, underlyMDTime={}, {:03d},  error={}", this->m_insInfo.instrumentID.data(),  Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)],
+                        optionKData->m_updateTimeBegin.data(), optionKData->m_updateTimeEnd.data(), optionKData->m_forwardPrice,
+                        optionKData->m_close, optionKData->m_volume, optionKData->m_greeks.IV, optionKData->m_greeks.delta, optionUpdateTime,
+                        optionMilliSeconds, underlyUpdateTime, underlyMilliSeconds, e.what());
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV) < 0.00001) {
+                        memcpy(&(this->m_KDataVecs[optionUpdateIndex]->m_greeks), &m_lastKDataGreeks,  sizeof(Greeks));
+                    }
+                    memcpy(&m_lastKDataGreeks, &(this->m_KDataVecs[optionUpdateIndex]->m_greeks), sizeof(Greeks));
                     //  return 1;
                 } catch (...) {
-                    //    std::cerr << "unknown error" << std::endl;
-                    //   return 1;
+                    auto optionUpdateTime = this->m_lastPMD != nullptr ? this->m_lastPMD->updateTime.data() : "";
+                    auto optionMilliSeconds = this->m_lastPMD != nullptr ? this->m_lastPMD->milliSeconds : 0;
+                    auto underlyUpdateTime = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->updateTime.data() : "";
+                    auto underlyMilliSeconds = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->milliSeconds : 0;
+
+                    spdlog::error("calGreeks  : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
+                                  "optionMDTime={},{:03d}, underlyMDTime={}, {:03d}", this->m_insInfo.instrumentID.data(),  Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)],
+                        optionKData->m_updateTimeBegin.data(), optionKData->m_updateTimeEnd.data(), optionKData->m_forwardPrice,
+                        optionKData->m_close, optionKData->m_volume, optionKData->m_greeks.IV, optionKData->m_greeks.delta, optionUpdateTime,
+                        optionMilliSeconds, underlyUpdateTime, underlyMilliSeconds);
+
+                    if (std::abs(this->m_KDataVecs[optionUpdateIndex]->m_greeks.IV) < 0.00001) {
+                        memcpy(&(this->m_KDataVecs[optionUpdateIndex]->m_greeks), &m_lastKDataGreeks,  sizeof(Greeks));
+                    }
+                    memcpy(&m_lastKDataGreeks, &(this->m_KDataVecs[optionUpdateIndex]->m_greeks), sizeof(Greeks));
 
                 }
 
-                // try {
-                //     this->m_KDataVecs[optionUpdateIndex]->bidIV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
-                //                                                         bidPrioPrice);
-                // }catch (...) {
-                //     //    std::cerr << "unknown error" << std::endl;
-                //     //   return 1;
-                //
-                // }
-                // try {
-                //     this->m_KDataVecs[optionUpdateIndex]->askIV = m_BSModelQuantLib->calImpliedVol(    optionKData->m_forwardPrice,
-                //                                                        askPrioPrice);
-                // }catch (...) {
-                //     //    std::cerr << "unknown error" << std::endl;
-                //     //   return 1;
-                //
-                // }
             }
 
             void ffill( int psTime ) {

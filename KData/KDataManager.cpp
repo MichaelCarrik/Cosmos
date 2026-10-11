@@ -300,10 +300,10 @@ namespace Cosmos {
                 forwardKSeries->setHistoryKLine(temp);
                 itrForwardSeriesMap->second->insert({kperiod, forwardKSeries});
                 itrForwardSeries = itrForwardSeriesMap->second->find(kperiod);
-                optionKSeries->m_underlySeries->setForwadSeries(itrForwardSeries->second);
+                optionKSeries->m_underlySeries->setForwardSeries(itrForwardSeries->second);
             }
 
-            optionKSeries->setForwadSeries(itrForwardSeries->second);
+            optionKSeries->setForwardSeries(itrForwardSeries->second);
             return itrForwardSeries->second;
         }
 
