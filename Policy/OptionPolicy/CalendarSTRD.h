@@ -25,6 +25,7 @@ namespace Cosmos {
             double m_slopeSqrtTSTD{0.0};
             double m_nearT{0.0};
             double m_farT{0.0};
+            int m_slopeLength{240};
 
             //    Types::KPeriod m_kperiod;
 
@@ -186,9 +187,45 @@ namespace Cosmos {
             };
 
 
+            double _calATM(KData::KData * kData, double t) {
+                auto oneMinusBeta = 1.0 - kData->m_sabrPRMT.beta;
+                auto fPow = std::pow(kData->m_forwardPrice, oneMinusBeta);
+                auto alphaDivF = kData->m_sabrPRMT.alpha / fPow;
+                auto term1 = (std::pow(oneMinusBeta, 2.0) / 24.0) * std::pow(alphaDivF, 2.0);
+                auto term2 = 0.25 * ( kData->m_sabrPRMT.rho * kData->m_sabrPRMT.beta * kData->m_sabrPRMT.nu * alphaDivF );
+                auto term3 = ((2.0 - 3.0 * std::pow(kData->m_sabrPRMT.rho, 2.0)) / 24.0) * std::pow(kData->m_sabrPRMT.nu, 2.0);
+                auto bracket = 1.0 + (term1 + term2 + term3) * t;
+                auto atmSigma =  alphaDivF * bracket;
+                return atmSigma;
+            }
+
+
 
             void _calSlopeSqrtT(KData::KData * nearKData, KData::KData * farKData)  {
-                
+
+                if ( (nearKData->m_tradingDay != farKData->m_tradingDay) || strcmp(nearKData->m_updateTimeBegin.data(), farKData->m_updateTimeBegin.data()) != 0 ) {
+                    assert(false);
+                }
+
+                auto nearDiff = (Utils::intToSysDays(m_expireDay) - Utils::intToSysDays(nearKData->m_tradingDay)).count();
+                auto nearT = nearDiff / 365.0;
+                auto nearATMIV = _calATM(nearKData, nearT);
+
+                auto farDiff = (Utils::intToSysDays(m_farExpireDay) - Utils::intToSysDays(farKData->m_tradingDay)).count();
+                auto farT = farDiff / 365.0;
+                auto farATMIV = _calATM(farKData, farT);
+
+                auto nearW = std::pow(nearATMIV, 2.0) * nearT;
+                auto farW = std::pow(farATMIV, 2.0) *farT;
+                auto deltaT = farT - nearT;
+                auto fwdW = farW - nearW;
+                if (fwdW > 0.0 && deltaT > 0.02) {
+
+                    auto fwdATMIV = std::pow( fwdW/deltaT, 0.5);
+                    auto slopeSqrtT = fwdATMIV - nearATMIV;
+                    m_fiveSlopeSqrtTVec.emplace_back(slopeSqrtT);
+
+                }
             }
 
 
@@ -199,18 +236,18 @@ namespace Cosmos {
                     assert(false);
                 }
                 for (auto i = 0; i < m_underlyKseries->m_seriesIndex; i++) {
-                    m_fiveRhoVec.emplace_back(m_underlyKseries->m_KDataVecs[i]->m_sabrPRMT.rho);
+                    _calSlopeSqrtT(m_underlyKseries->m_KDataVecs[i], m_underlyFarKseries->m_KDataVecs[i]);
                 }
                 int beginI = 0, endI = 0;
-                if (m_underlyKseries->m_seriesIndex < m_rhoLength) {
+                if (m_underlyKseries->m_seriesIndex < m_slopeLength) {
                     beginI = 0;
                     endI = m_underlyKseries->m_seriesIndex-1;
                 } else {
-                    beginI = m_underlyKseries->m_seriesIndex - m_rhoLength ;
+                    beginI = m_underlyKseries->m_seriesIndex - m_slopeLength ;
                     endI = m_underlyKseries->m_seriesIndex -1;
                 }
-                m_rhoUp = Indicator::Quartile(m_fiveRhoVec, beginI, endI, 0.75);
-                m_rhoDown = Indicator::Quartile(m_fiveRhoVec, beginI, endI, 0.25);
+                m_slopeSqrtTMean = Indicator::MA(m_fiveSlopeSqrtTVec, beginI, endI);
+                m_slopeSqrtTSTD = Indicator::STDEV(m_fiveSlopeSqrtTVec, beginI, endI);
             }
 
 
@@ -233,14 +270,56 @@ namespace Cosmos {
                     return;
                 }
 
+                _calSlopeSqrtT(lastNearUnderlyKB, lastFarUnderlyKB);
+
                 if (m_calendarPos < 1 && m_slopeSqrtT > m_slopeSqrtTMean + 2.2 * m_slopeSqrtTSTD) {
                     // long near short far
+                    _setTargetAllTargetPosZero(m_callNearPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putNearPolicySymbols.targetSignal.targetPosMaps);
+                    double allNearCallDelta = getAllHoldDelta(m_callNearPolicySymbols);
+                    double allNearPutDelta = getAllHoldDelta(m_putNearPolicySymbols);
+                    _rebalanceDelta(m_callNearPolicySymbols, m_putNearPolicySymbols, allNearCallDelta, allNearPutDelta,
+                                      m_MV *10000 / (lastNearUnderlyKB->m_close * m_multi), m_openAtDelta,
+                                      lastNearUnderlyKB->m_close, m_lastNearOptionIndex);
+
+                    _setTargetAllTargetPosZero(m_callFarPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putFarPolicySymbols.targetSignal.targetPosMaps);
+                    double allFarCallDelta = getAllHoldDelta(m_callFarPolicySymbols);
+                    double allFarPutDelta = getAllHoldDelta(m_putFarPolicySymbols);
+                    _rebalanceDelta(m_callFarPolicySymbols, m_putFarPolicySymbols, allFarCallDelta, allFarPutDelta,
+                                      -m_MV *10000 / (lastFarUnderlyKB->m_close * m_multi), m_openAtDelta,
+                                      lastFarUnderlyKB->m_close, m_lastFarOptionIndex);
+                    _rebalanceCalendarVega(lastNearUnderlyKB, lastFarUnderlyKB);
+                    m_calendarPos =1;
+                    m_basePrice =   lastNearUnderlyKB->m_close;
+
                 } else if (m_calendarPos > -1 && m_slopeSqrtT > m_slopeSqrtTMean - 2.2 * m_slopeSqrtTSTD) {
                     // short near long far
+
+                    _setTargetAllTargetPosZero(m_callNearPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putNearPolicySymbols.targetSignal.targetPosMaps);
+                    double allNearCallDelta = getAllHoldDelta(m_callNearPolicySymbols);
+                    double allNearPutDelta = getAllHoldDelta(m_putNearPolicySymbols);
+                    _rebalanceDelta(m_callNearPolicySymbols, m_putNearPolicySymbols, allNearCallDelta, allNearPutDelta,
+                                      -m_MV *10000 / (lastNearUnderlyKB->m_close * m_multi), m_openAtDelta,
+                                      lastNearUnderlyKB->m_close, m_lastNearOptionIndex);
+
+                    _setTargetAllTargetPosZero(m_callFarPolicySymbols.targetSignal.targetPosMaps);
+                    _setTargetAllTargetPosZero(m_putFarPolicySymbols.targetSignal.targetPosMaps);
+                    double allFarCallDelta = getAllHoldDelta(m_callFarPolicySymbols);
+                    double allFarPutDelta = getAllHoldDelta(m_putFarPolicySymbols);
+                    _rebalanceDelta(m_callFarPolicySymbols, m_putFarPolicySymbols, allFarCallDelta, allFarPutDelta,
+                                      m_MV *10000 / (lastFarUnderlyKB->m_close * m_multi), m_openAtDelta,
+                                      lastFarUnderlyKB->m_close, m_lastFarOptionIndex);
+
+                    _rebalanceCalendarVega(lastNearUnderlyKB, lastFarUnderlyKB);
+                    m_calendarPos = -1;
+                    m_basePrice =   lastNearUnderlyKB->m_close;
                 }
 
                 if (abs(lastNearUnderlyKB->m_close - m_basePrice) > m_basePrice * m_biasRation && m_calendarPos != 0) {
                     _rebalanceCalendarDelta(lastNearUnderlyKB, lastFarUnderlyKB);
+                    m_basePrice = lastNearUnderlyKB->m_close;
                 }
 
 
@@ -324,10 +403,17 @@ namespace Cosmos {
                 double farCallVega = getAllHoldVega(m_callFarPolicySymbols);
                 double farPutVega = getAllHoldVega(m_putFarPolicySymbols);
                 auto targetVega = nearCallVega + nearPutVega;
+                targetVega = targetVega * std::pow(m_farT / m_nearT, 0.5);
                 auto holdVega = farCallVega + farPutVega;
 
                 _adjustHoldVega(m_callFarPolicySymbols, m_putFarPolicySymbols,
                            -targetVega, holdVega, m_openAtDelta, farUnderlyKData->m_close, m_lastFarOptionIndex);
+            }
+
+            void _setTargetAllTargetPosZero(decltype(m_callPolicySymbols.targetSignal.targetPosMaps) & optionTargetPosMaps){
+                for (auto itr = optionTargetPosMaps.begin(); itr != optionTargetPosMaps.end(); itr++) {
+                    itr->second = 0;
+                }
             }
 
             int _syncTargetMap(std::map<Types::Instrument_t, int> const &optionTargetPosMaps,
