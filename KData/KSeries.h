@@ -53,6 +53,7 @@ namespace Cosmos {
                                                            m_insInfo.expireDate, r);
 
                 }else if (m_insInfo.productIDClass == Types::ProductClass::future) {
+                   // fprintf(stderr, "SARBModelQuantLib init : instrument=%s\n", this->m_insInfo.instrumentID.data());
                       m_sabrModelQuantLib = new OptionModel::SARBModelQuantLib( tradingday,
                                                          m_insInfo.expireDate);
                 }
@@ -116,7 +117,7 @@ namespace Cosmos {
                     auto underlyUpdateTime = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->updateTime.data() : "";
                     auto underlyMilliSeconds = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->milliSeconds : 0;
 
-                    spdlog::error("calGreeks runtime_error : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
+                    spdlog::info("calGreeks runtime_error : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
                                   "optionMDTime={},{:03d}, underlyMDTime={}, {:03d},  error={}", this->m_insInfo.instrumentID.data(),  Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)],
                         optionKData->m_updateTimeBegin.data(), optionKData->m_updateTimeEnd.data(), optionKData->m_forwardPrice,
                         optionKData->m_close, optionKData->m_volume, optionKData->m_greeks.IV, optionKData->m_greeks.delta, optionUpdateTime,
@@ -133,7 +134,7 @@ namespace Cosmos {
                     auto underlyUpdateTime = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->updateTime.data() : "";
                     auto underlyMilliSeconds = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->milliSeconds : 0;
 
-                    spdlog::error("calGreeks std::exception : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
+                    spdlog::info("calGreeks std::exception : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
                                   "optionMDTime={},{:03d}, underlyMDTime={}, {:03d},  error={}", this->m_insInfo.instrumentID.data(),  Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)],
                         optionKData->m_updateTimeBegin.data(), optionKData->m_updateTimeEnd.data(), optionKData->m_forwardPrice,
                         optionKData->m_close, optionKData->m_volume, optionKData->m_greeks.IV, optionKData->m_greeks.delta, optionUpdateTime,
@@ -149,7 +150,7 @@ namespace Cosmos {
                     auto underlyUpdateTime = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->updateTime.data() : "";
                     auto underlyMilliSeconds = this->m_underlySeries->m_lastPMD != nullptr ? this->m_underlySeries->m_lastPMD->milliSeconds : 0;
 
-                    spdlog::error("calGreeks  : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
+                    spdlog::info("calGreeks  : {} {} : updateTimeBegin={}, updateTimeEnd={}, forwardPrice={:.3f}, close={:.3f}, volume={}, iv={:.5f}, delta={:.5f}, "
                                   "optionMDTime={},{:03d}, underlyMDTime={}, {:03d}", this->m_insInfo.instrumentID.data(),  Types::KPeroidToIntervalVec[static_cast<int>(this->m_Period)],
                         optionKData->m_updateTimeBegin.data(), optionKData->m_updateTimeEnd.data(), optionKData->m_forwardPrice,
                         optionKData->m_close, optionKData->m_volume, optionKData->m_greeks.IV, optionKData->m_greeks.delta, optionUpdateTime,

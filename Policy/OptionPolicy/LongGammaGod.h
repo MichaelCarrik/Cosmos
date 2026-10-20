@@ -27,6 +27,7 @@ namespace Cosmos {
             int m_preMarketPosition{0};
             double m_holdStrikePrice{0.0};
             double m_signalPrice{0.0};
+            int m_lastOptionIndex{0};
 
         public:
             LongGammaGod( Types::KPeriod kperiod,  std::string const& policyName,
@@ -209,8 +210,8 @@ namespace Cosmos {
                                   lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice, m_godDirection,
                                   m_closeExceedThresh);
-                _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
-                _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
+                _writeOptionPolicyLog(m_callPolicySymbols,m_lastOptionIndex, m_configIndex);
+                _writeOptionPolicyLog(m_putPolicySymbols,m_lastOptionIndex, m_configIndex);
             }
 
 
@@ -275,7 +276,7 @@ namespace Cosmos {
 
             void _setOpenPostion(PolicySymbolStruct & policySymbols, double targetDelta, char optionType, double underlyClose) {
 
-                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose);
+                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose, m_lastOptionIndex);
                 if(openAtSymbol != nullptr){
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
                     auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->m_greeks.delta;
@@ -288,7 +289,7 @@ namespace Cosmos {
                     fprintf(stderr,"_setOpenPostion openAtNull %s, symbolLength=%d\n", m_engineName.c_str(), policySymbols.optionSymbolVecs.size());
                          for (auto symbolItr: policySymbols.optionSymbolVecs) {
                                 fprintf(stderr,"symbolItr  instrumentID=%s, m_seriesIndex=%d, delta=%.3f \n", symbolItr->m_kSeriesMap.at(m_kperiod)->m_insInfo.instrumentID.data(), 
-					symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex, symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta);
+					symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex, symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastKDataGreeks.delta);
                          }
                 }
             }

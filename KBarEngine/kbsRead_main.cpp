@@ -151,7 +151,8 @@ int main(int argc, char *argv[]) {
 
     std::string engineName{"KBarReadEngine"};
 
-    std::array<bool, 2> isDayArray{false, true};
+   std::array<bool, 2> isDayArray{false, true};
+ //   std::array<bool, 2> isDayArray{false};
 
     for (auto isDay: isDayArray) {
 

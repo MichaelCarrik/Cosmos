@@ -41,7 +41,7 @@ namespace Cosmos {
             double m_rhoDown;
             int m_skewDirection{0};
             int m_rhoLength{0};
-
+            int m_lastOptionIndex{0};
 
         //    std::function<int(Types::Instrument_t const&, Types::KPeriod)> m_getUnderlyToBeginIndexFunc;
 
@@ -297,7 +297,8 @@ namespace Cosmos {
                         auto lastUnderlyBar = m_underlyKseries->m_KDataVecs[m_underlyKseries->m_seriesIndex-1];
                         m_lastOptionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
 
-                        if (Utils::TradingHours::isNoTradeAfterAuctionEnd( m_underlyKseries->m_insInfo.productID, pMD->psSecond ,240) == true) {
+                        if (Utils::TradingHours::isNoTradeAfterAuctionEnd( m_underlyKseries->m_insInfo.productID, pMD->psSecond ,240) == true ||
+                            Utils::TradingHours::isNoTradeBeforeCritical( m_underlyKseries->m_insInfo.productID, pMD->psSecond ,120) == true) {
                             return;
                         }
 
@@ -351,8 +352,8 @@ namespace Cosmos {
                                   lastUnderlyKB->m_updateTimeBegin.data(), pMD->updateTime.data(), pMD->milliSeconds, lastUnderlyKB->m_close,
                                   lastUnderlyKB->m_sabrPRMT.rho, m_rhoUp, m_rhoDown, m_skewDirection, m_skewPosition,
                                   m_signalPrice, m_callOptionStrike, m_putOptionStrike, m_lastUnderlyBarIndex);
-                _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
-                _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
+                _writeOptionPolicyLog(m_callPolicySymbols, m_lastOptionIndex, m_configIndex);
+                _writeOptionPolicyLog(m_putPolicySymbols, m_lastOptionIndex, m_configIndex);
             }
 
 
@@ -379,7 +380,7 @@ namespace Cosmos {
             void _setOpenPostion(PolicySymbolStruct & policySymbols, double targetDelta, char optionType, double underlyClose) {
             //    auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
 
-                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose);
+                auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType, underlyClose, m_lastOptionIndex);
                 if(openAtSymbol != nullptr){
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
                     auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->m_greeks.delta;
@@ -398,7 +399,7 @@ namespace Cosmos {
                     fprintf(stderr,"_setOpenPostion openAtNull %s, symbolLength=%d\n", m_engineName.c_str(), policySymbols.optionSymbolVecs.size());
                          for (auto symbolItr: policySymbols.optionSymbolVecs) {
                                 fprintf(stderr,"symbolItr  instrumentID=%s, m_seriesIndex=%d, delta=%.3f \n", symbolItr->m_kSeriesMap.at(m_kperiod)->m_insInfo.instrumentID.data(),
-					symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex, symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta);
+					symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex, symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastKDataGreeks.delta);
                          }
                 }
             }

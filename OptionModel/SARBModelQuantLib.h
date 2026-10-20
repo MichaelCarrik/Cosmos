@@ -62,9 +62,11 @@ namespace Cosmos {
                 m_endCriteria = boost::make_shared< QuantLib::EndCriteria>(1000, 200, 1e-8, 1e-8, 1e-8);
                 auto diff = (Utils::intToSysDays(m_expireDay) - Utils::intToSysDays(m_tradingDay)).count();
                 m_T = std::max(diff / 365.0, 1e-5);
+           //     fprintf(stderr, "SARBModelQuantLib init : T=%.3f, alpha=%.3f, beta=%.3f, rho=%.3f, nu=%.3f\n", m_T, m_alpha, m_beta, m_rho, m_nu);
+
             };
 
-            void sarbFit(double forwardPrice,  std::map<int, KData::CallPutSeries *> *  callPutSeriesMap, int optionSeriesIndex);
+            void sarbFit(double forwardPrice,  std::map<int, KData::CallPutSeries *> *  callPutSeriesMap, int optionSeriesIndex, const KData::KSeries * underlyKSeries);
 
             void getParameters(KData::SabrPRMT & sabrPrmt) {
                 sabrPrmt.alpha = m_alpha;

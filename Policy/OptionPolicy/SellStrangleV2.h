@@ -16,6 +16,7 @@ namespace Cosmos {
             double m_openAtDelta{0.25};
             double m_biasRation{0.01};
             double m_basePrice{0.0};
+            int m_lastOptionIndex{0};
 
         public:
             SellStrangleV2(std::string const &policyName, std::string const &engineName,
@@ -122,8 +123,8 @@ namespace Cosmos {
                                     lastUnderlyKB->m_close,
                                     0.0, 0, m_basePrice, m_underlyKseries->m_seriesIndex - 1, allCallDelta,
                                     allPutDelta);
-                        _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
-                        _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
+                        _writeOptionPolicyLog(m_callPolicySymbols, m_lastOptionIndex, m_configIndex);
+                        _writeOptionPolicyLog(m_putPolicySymbols, m_lastOptionIndex, m_configIndex);
 
                         m_configLog->flush();
                         m_configIndex++;
@@ -207,8 +208,8 @@ namespace Cosmos {
                         double allCallDelta = getAllHoldDelta(m_callPolicySymbols);
                         double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
 
-                        bool isZeroCall = isHaveZeroDeltaPos(m_callPolicySymbols);
-                        bool isZeroPut = isHaveZeroDeltaPos(m_putPolicySymbols);
+                        bool isZeroCall = isHaveZeroDeltaPos(m_callPolicySymbols, m_lastOptionIndex);
+                        bool isZeroPut = isHaveZeroDeltaPos(m_putPolicySymbols, m_lastOptionIndex);
 
                         if (isZeroCall == true || isZeroPut == true) {
                             spdlog::info("policyName={}, updateTime={}, isZeroCall={}, isZeroPut={}\n",
@@ -222,7 +223,7 @@ namespace Cosmos {
                             //rebalance;
                             _rebalanceDelta(m_callPolicySymbols, m_putPolicySymbols, allCallDelta, allPutDelta,
                                             -m_MV *10000 / (lastUnderlyKB->m_close * m_multi), m_openAtDelta,
-                                            lastUnderlyKB->m_close);
+                                            lastUnderlyKB->m_close, m_lastOptionIndex);
                             m_isRefreshDelta = 0;
                             m_basePrice = lastUnderlyKB->m_close;
                         }
@@ -242,8 +243,8 @@ namespace Cosmos {
                                           lastUnderlyKB->m_close,
                                           0.0, 0, m_basePrice, m_underlyKseries->m_seriesIndex - 1, allCallDelta,
                                           allPutDelta);
-                        _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
-                        _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
+                        _writeOptionPolicyLog(m_callPolicySymbols, m_lastOptionIndex, m_configIndex);
+                        _writeOptionPolicyLog(m_putPolicySymbols, m_lastOptionIndex, m_configIndex);
 
                         m_configLog->flush();
                         m_configIndex++;

@@ -77,6 +77,13 @@ namespace Cosmos {
 
             for (auto &calPutItr: * (underlySeries->m_calPutSeriesMap)) {
 
+                // if (underlySeries->m_Period == Types::KPeriod::Min1 && (strcmp(underlySeries->m_insInfo.instrumentID.data(), "jm2611")==0 || strcmp(underlySeries->m_insInfo.instrumentID.data(), "IM2610")==0)) {
+                //     auto callUpdateTime =  calPutItr.second->callSeries->m_lastPMD == nullptr ? "" : calPutItr.second->callSeries->m_lastPMD->updateTime.data();
+                //     fprintf(stderr, "updateGreeks first : instrument=%s updateTime=%s\n", calPutItr.second->callSeries->m_insInfo.instrumentID.data(), callUpdateTime);
+                //     auto putUpdateTime =  calPutItr.second->putSeries->m_lastPMD == nullptr ? "" : calPutItr.second->putSeries->m_lastPMD->updateTime.data();
+                //     fprintf(stderr, "updateGreeks first: instrument=%s updateTime=%s\n",  calPutItr.second->putSeries->m_insInfo.instrumentID.data(), putUpdateTime);
+                // }
+
                 fillOptionSeries(calPutItr.second->callSeries, lastSeriesIndex, updateOptionIndex);
                 fillOptionSeries(calPutItr.second->putSeries, lastSeriesIndex, updateOptionIndex);
 
@@ -163,15 +170,31 @@ namespace Cosmos {
                                            : std::min(callAskPrioPrice, callTheoryAskPrice);
                 }
 
-                if (strcmp(calPutItr.second->callSeries->m_insInfo.instrumentID.data(), "ZC602C1050") == 0 &&
-                    strcmp(underlySeries->m_lastPMD->updateTime.data(), "09:00:49") > 0) {
-                    int a = 1;
-                }
+
+                // if (underlySeries->m_Period == Types::KPeriod::Min1 && (strcmp(underlySeries->m_insInfo.instrumentID.data(), "jm2611")==0 || strcmp(underlySeries->m_insInfo.instrumentID.data(), "IM2610")==0)) {
+                //     if (underlySeries->m_Period == Types::KPeriod::Min1 && (strcmp(underlySeries->m_insInfo.instrumentID.data(), "jm2611")==0 || strcmp(underlySeries->m_insInfo.instrumentID.data(), "IM2610")==0)) {
+                //
+                //         fprintf(stderr, "updateGreeks second : instrument=%s updateTime=%s, forwardPrice=%.3f, forwardPrice=%.3f, iv=%.5f, volume=%ld\n", calPutItr.second->callSeries->m_insInfo.instrumentID.data(),
+                //                 callOptionKData->m_updateTimeBegin.data(),  forwardPrice , callOptionKData->m_forwardPrice, callOptionKData->m_greeks.IV, callOptionKData->m_volume);
+                //         fprintf(stderr, "updateGreeks second: instrument=%s updateTime=%s, forwardPrice=%.3f, forwardPrice=%.3f, iv=%.5f, volume=%ld\n",  calPutItr.second->putSeries->m_insInfo.instrumentID.data(),
+                //             putOptionKData->m_updateTimeBegin.data(), forwardPrice,  putOptionKData->m_forwardPrice, putOptionKData->m_greeks.IV, putOptionKData->m_volume );
+                //     }
+                // }
+
 
                 calPutItr.second->callSeries->calGreeks(updateOptionIndex, callTheoryPrice, forwardPrice,
                                                         callBidPrioPrice, callAskPrioPrice);
                 calPutItr.second->putSeries->calGreeks(updateOptionIndex, putTheoryPrice, forwardPrice, putBidPrioPrice,
                                                        putAskPrioPrice);
+                //
+                // if (underlySeries->m_Period == Types::KPeriod::Min1 && (strcmp(underlySeries->m_insInfo.instrumentID.data(), "jm2611")==0 || strcmp(underlySeries->m_insInfo.instrumentID.data(), "IM2610")==0)) {
+                //     if (underlySeries->m_Period == Types::KPeriod::Min1 && (strcmp(underlySeries->m_insInfo.instrumentID.data(), "jm2611")==0 || strcmp(underlySeries->m_insInfo.instrumentID.data(), "IM2610")==0)) {
+                //         fprintf(stderr, "updateGreeks third : instrument=%s updateTime=%s, forwardPrice=%.3f, forwardPrice=%.3f, iv=%.5f, volume=%ld\n", calPutItr.second->callSeries->m_insInfo.instrumentID.data(),
+                //             callOptionKData->m_updateTimeBegin.data(),  forwardPrice , callOptionKData->m_forwardPrice, callOptionKData->m_greeks.IV, callOptionKData->m_volume);
+                //         fprintf(stderr, "updateGreeks third: instrument=%s updateTime=%s, forwardPrice=%.3f, forwardPrice=%.3f, iv=%.5f, volume=%ld\n",  calPutItr.second->putSeries->m_insInfo.instrumentID.data(),
+                //             putOptionKData->m_updateTimeBegin.data(), forwardPrice,  putOptionKData->m_forwardPrice, putOptionKData->m_greeks.IV, putOptionKData->m_volume );
+                //     }
+                // }
 
                 // updateSingleOptionGreeks(calPutItr.second->callSeries, forwardPrice, lastSeriesIndex,  updateOptionIndex);
                 // updateSingleOptionGreeks(calPutItr.second->putSeries, forwardPrice, lastSeriesIndex, updateOptionIndex);
@@ -182,10 +205,13 @@ namespace Cosmos {
             int underlyTodayBeginIndex = getUnderlyTodayBeginIndex(underlySeries->m_insInfo.instrumentID,
                                                         underlySeries->m_Period);
 
+            if (underlySeries->m_Period == Types::KPeriod::Min5 and strcmp(underlySeries->m_insInfo.instrumentID.data(), "IM2610")==0) {
+                int a = 1;
+            }
             int readOptionIndex = lastSeriesIndex - underlyTodayBeginIndex;
             // auto log_epoch_time = std::chrono::duration_cast<std::chrono::microseconds>(
             //      std::chrono::system_clock::now().time_since_epoch()).count();
-            underlySeries->m_sabrModelQuantLib->sarbFit( forwardPrice, underlySeries->m_calPutSeriesMap , readOptionIndex);
+            underlySeries->m_sabrModelQuantLib->sarbFit( forwardPrice, underlySeries->m_calPutSeriesMap , readOptionIndex, underlySeries);
             underlySeries->m_sabrModelQuantLib->getParameters(underlySeries->m_KDataVecs[lastSeriesIndex]->m_sabrPRMT);
 
             // fprintf(stderr, "period=%d, consume TIME = %d\n", static_cast<int>(underlySeries->m_Period),

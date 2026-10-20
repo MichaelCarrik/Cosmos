@@ -39,7 +39,7 @@ namespace Cosmos {
             PolicySymbolStruct m_putPolicySymbols;
             int m_expireDay{0};
             int m_underlyToBeginIndex{0};
-            int m_lastOptionIndex{0};
+        //    int m_lastOptionIndex{0};
             std::function<int(Types::Instrument_t const&, Types::KPeriod)> m_getUnderlyToBeginIndexFunc;
             IOptionPolicy(std::string const &policyName, std::string const &engineName,
                           Types::Instrument_t &instrument, Types::KPeriod kperiod, double mv, double multi,
@@ -85,14 +85,14 @@ namespace Cosmos {
 
 
 
-            bool isHaveZeroDeltaPos(PolicySymbolStruct & policySymbols) {
+            bool isHaveZeroDeltaPos(PolicySymbolStruct & policySymbols, int lastOptionIndex) {
             //    auto optionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 for (auto & optionSymbol: policySymbols.optionSymbolVecs) {
                     int  targetPosition =  getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps);
                     if (targetPosition !=0) {
                         auto series = optionSymbol->m_kSeriesMap.at(m_kperiod);
                     //    auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
-                        auto lastOptionK = series->m_KDataVecs[m_lastOptionIndex];
+                        auto lastOptionK = series->m_KDataVecs[lastOptionIndex];
                         if ( abs(lastOptionK->m_greeks.delta) < 0.00001 && optionSymbol->lastMD->askPrice[0] > 10* optionSymbol->instrumentInfo.tickSize) {
                             fprintf(stderr, "isHaveZeroDeltaPos policyName=%s, instrument=%s, updateTimeBegin=%s, pos=%d,  delta=%.3f\n",
                                 m_policyName.c_str(), optionSymbol->instrumentInfo.instrumentID.data(),
@@ -104,7 +104,7 @@ namespace Cosmos {
                 return false;
             }
 
-            void _writeOptionPolicyLog( PolicySymbolStruct & policySymbols,  int configIndex) {
+            void _writeOptionPolicyLog( PolicySymbolStruct & policySymbols, int lastOptionIndex, int configIndex) {
             //    auto optionIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 for (auto & optionSymbol: policySymbols.optionSymbolVecs) {
                     int  targetPosition =  getTargetPos(optionSymbol->instrumentInfo.instrumentID, policySymbols.targetSignal.targetPosMaps);
@@ -112,7 +112,7 @@ namespace Cosmos {
                     if(targetPosition !=0 || (targetPosition ==0 && lastTargetPosition!=0)) {
                         auto series = optionSymbol->m_kSeriesMap.at(m_kperiod);
                         //       auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
-                        auto lastOptionK = series->m_KDataVecs[m_lastOptionIndex];
+                        auto lastOptionK = series->m_KDataVecs[lastOptionIndex];
 
                         //                        if(lastOptionK->m_tradingday ==0){
                         //                            assert(false);
@@ -126,7 +126,7 @@ namespace Cosmos {
                                 "targetPos={}, seriesIndex={}", configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingDay,
                                 lastOptionK->m_updateTimeBegin.data(), lastOptionK->m_endPsTime, lastOptionK->m_close, lastOptionK->m_bidPrice,
                                 lastOptionK->m_askPrice, midPrice, lastOptionK->m_greeks.delta, targetPosition,
-                                m_lastOptionIndex);
+                                lastOptionIndex);
                     }
                 }
                 policySymbols.targetSignal.lastTargetPosMaps.clear();
@@ -147,15 +147,15 @@ namespace Cosmos {
 
 
             const Types::Symbol* getApproxiDeltaSymbol(decltype(m_callPolicySymbols.optionSymbolVecs) const& symbolCallVecs,
-                                                       double findAtDelta , char optionType, double undelyClose){
+                                                       double findAtDelta , char optionType, double undelyClose, int lastOptionIndex){
                 std::vector<const Types::Symbol *> filterSymbolVecs;
                 int itmIndex =0 ;
                 // for (auto symbolItr: symbolCallVecs) {
                 for (auto itr = symbolCallVecs.rbegin(); itr != symbolCallVecs.rend(); itr++) {
                     auto symbolItr = *itr;
                 //    if (symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex > 0) {
-                        if (std::abs(symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta) < 0.00001 ||
-                            std::abs(symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta) > 0.70) {
+                        if (std::abs(symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastKDataGreeks.delta) < 0.00001 ||
+                            std::abs(symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastKDataGreeks.delta) > 0.70) {
                             continue;
                         }
                         if ((optionType == 'C' && symbolItr->m_kSeriesMap.at(m_kperiod)->m_insInfo.strikePrice < undelyClose) ||
@@ -172,9 +172,9 @@ namespace Cosmos {
                 }
                 if (filterSymbolVecs.size() > 0) {
                     auto specialDeltaItr = std::min_element(filterSymbolVecs.begin(), filterSymbolVecs.end(),
-                                                       [findAtDelta, this](auto &symbol_a, auto &symbol_b) {
-                                                           auto kbar_a = symbol_a->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[this->m_lastOptionIndex];
-                                                           auto kbar_b = symbol_b->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[this->m_lastOptionIndex];
+                                                       [findAtDelta, lastOptionIndex, this](auto &symbol_a, auto &symbol_b) {
+                                                           auto kbar_a = symbol_a->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[lastOptionIndex];
+                                                           auto kbar_b = symbol_b->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[lastOptionIndex];
                                                            return std::abs(
                                                                    std::abs(kbar_a->m_greeks.delta) - std::abs(findAtDelta)) <
                                                                   std::abs(std::abs(kbar_b->m_greeks.delta) -

@@ -25,13 +25,13 @@ namespace Cosmos {
                     auto kData = putSeries->m_KDataVecs[optionSeriesIndex];
                     volatilities.push_back(kData->m_greeks.IV);
                     vegas.push_back(kData->m_greeks.vega);
-                    if (strcmp(putSeries->m_insInfo.productID.data(), "lc") == 0 || strcmp(
-                            putSeries->m_insInfo.productID.data(), "ps") == 0) {
-                        fprintf(stderr, "updateTimeBegin=%s, updateTimeEnd=%s, instrument=%s, iv=%.5f, vega=%.5f\n",
-                                kData->m_updateTimeBegin.data(), kData->m_updateTimeEnd.data(),
-                                kData->m_instrument.data(),
-                                kData->m_greeks.IV, kData->m_greeks.vega);
-                    }
+                    // if (strcmp(putSeries->m_insInfo.productID.data(), "lc") == 0 || strcmp(
+                    //         putSeries->m_insInfo.productID.data(), "ps") == 0) {
+                    //     fprintf(stderr, "updateTimeBegin=%s, updateTimeEnd=%s, instrument=%s, iv=%.5f, vega=%.5f\n",
+                    //             kData->m_updateTimeBegin.data(), kData->m_updateTimeEnd.data(),
+                    //             kData->m_instrument.data(),
+                    //             kData->m_greeks.IV, kData->m_greeks.vega);
+                    // }
 
                     idx++;
                 }
@@ -42,6 +42,7 @@ namespace Cosmos {
 
             std::reverse(strikes.begin(), strikes.end());
             std::reverse(volatilities.begin(), volatilities.end());
+            std::reverse(vegas.begin(), vegas.end());
             idx = 0;
 
             for (auto itr = callPutSeriesMap->begin(); itr != callPutSeriesMap->end(); ++itr) {
@@ -52,13 +53,13 @@ namespace Cosmos {
                     auto kData = callSeries->m_KDataVecs[optionSeriesIndex];
                     volatilities.push_back(kData->m_greeks.IV);
                     vegas.push_back(kData->m_greeks.vega);
-                    if (strcmp(callSeries->m_insInfo.productID.data(), "lc") == 0 || strcmp(
-                            callSeries->m_insInfo.productID.data(), "ps") == 0) {
-                        fprintf(stderr, "updateTimeBegin=%s, updateTimeEnd=%s, instrument=%s, iv=%.5f, vega=%.5f\n",
-                                kData->m_updateTimeBegin.data(), kData->m_updateTimeEnd.data(),
-                                kData->m_instrument.data(),
-                                kData->m_greeks.IV, kData->m_greeks.vega);
-                    }
+                    // if (strcmp(callSeries->m_insInfo.productID.data(), "lc") == 0 || strcmp(
+                    //         callSeries->m_insInfo.productID.data(), "ps") == 0) {
+                    //     fprintf(stderr, "updateTimeBegin=%s, updateTimeEnd=%s, instrument=%s, iv=%.5f, vega=%.5f\n",
+                    //             kData->m_updateTimeBegin.data(), kData->m_updateTimeEnd.data(),
+                    //             kData->m_instrument.data(),
+                    //             kData->m_greeks.IV, kData->m_greeks.vega);
+                    // }
                     idx++;
                 }
 
@@ -67,88 +68,11 @@ namespace Cosmos {
                 }
             }
         };
-        //
-        // void SARBModelQuantLib::sarbFit(double forwardPrice, std::map<int, KData::CallPutSeries *> *callPutSeriesMap,
-        //                                 int optionSeriesIndex) {
-        //     std::vector<QuantLib::Real> strikesTemp;
-        //     std::vector<QuantLib::Real> volatilitiesTemp;
-        //
-        //     _prepareSliceData(strikesTemp, volatilitiesTemp, forwardPrice,
-        //                            callPutSeriesMap, optionSeriesIndex) ;
-        //
-        //     m_fowardPrice = forwardPrice;
-        //
-        //     // bool isStrikesSame = true;
-        //     // for (int i = 0; i < strikesTemp.size(); i++) {
-        //     //     if (std::abs(m_strikes[i] - strikesTemp[i]) > Types::g_epsilon) {
-        //     //         isStrikesSame = false;
-        //     //     }
-        //     // }
-        //
-        //     if (m_sabrInterp == nullptr || m_strikes.size() != strikesTemp.size() ) {
-        //         if (m_sabrInterp != nullptr) {
-        //             delete m_sabrInterp;
-        //             m_sabrInterp = nullptr;
-        //
-        //         }
-        //         try {
-        //             auto minIV = std::min_element(volatilitiesTemp.begin(), volatilitiesTemp.end());
-        //             m_alpha = std::max(*minIV, 0.15);
-        //
-        //             m_strikes.clear();
-        //             for (int i = 0; i < strikesTemp.size(); i++) {
-        //                 m_strikes.push_back(strikesTemp[i]);
-        //             }
-        //
-        //             m_volatilities.clear();
-        //             for (int i = 0; i < volatilitiesTemp.size(); i++) {
-        //                 m_volatilities.push_back(volatilitiesTemp[i]);
-        //             }
-        //
-        //             m_sabrInterp = new QuantLib::SABRInterpolation(
-        //                m_strikes.begin(), m_strikes.end(),
-        //                m_volatilities.begin(),
-        //                m_T, m_fowardPrice,
-        //                m_alpha, m_beta, m_nu, m_rho,
-        //                false, true,
-        //                false, false, true, m_endCriteria, m_optimizationMethod
-        //                );
-        //         }
-        //             catch (std::exception &e) {
-        //                 m_sabrInterp = nullptr;
-        //              //   fprintf(stderr, " new SABRInterpolation  Error: %s\n", e.what());
-        //             }
-        //     }else {
-        //         for (int i = 0; i < strikesTemp.size(); i++) {
-        //             m_strikes[i] = strikesTemp[i];
-        //         }
-        //         for (int i = 0; i < volatilitiesTemp.size(); i++) {
-        //             m_volatilities[i] = volatilitiesTemp[i];
-        //         }
-        //     }
-        //
-        //     if (m_sabrInterp != nullptr) {
-        //         try {
-        //             m_sabrInterp->update();
-        //             m_alpha = m_sabrInterp->alpha();
-        //             if (std::isnan(m_alpha)) {
-        //                 int a = 1;
-        //             }
-        //             m_beta = m_sabrInterp->beta();
-        //             m_nu = m_sabrInterp->nu();
-        //             m_rho = m_sabrInterp->rho();
-        //             m_rmse= m_sabrInterp->rmsError();
-        //
-        //          //   m_isInitialized = false;
-        //         }catch (std::exception &e) {
-        //           //  fprintf(stderr, " m_sabrInterp->update(); Error: %s\n", e.what());
-        //         }
-        //     }
-        // };
-        //
+
+
         void SARBModelQuantLib::sarbFit(double forwardPrice,
                                         std::map<int, KData::CallPutSeries *> *callPutSeriesMap,
-                                        int optionSeriesIndex) {
+                                        int optionSeriesIndex,  const KData::KSeries * underlyKSeries) {
             std::vector<QuantLib::Real> strikesTemp;
             std::vector<QuantLib::Real> volatilitiesTemp;
             std::vector<QuantLib::Real> vegasTemp;
@@ -159,6 +83,20 @@ namespace Cosmos {
             if (strikesTemp.size() < 3) return;
 
             m_fowardPrice = forwardPrice;
+
+            if (underlyKSeries->m_Period == Types::KPeriod::Min5 &&
+                (strcmp(underlyKSeries->m_insInfo.instrumentID.data(), "ag2611") ==0 ||
+                    strcmp(underlyKSeries->m_insInfo.instrumentID.data(), "jm2611") ==0) ) {
+                fprintf(stderr, "SARBModelQuantLib::sarbFit first : instrument=%s, updateTimeEnd=%s, forwardPrice=%.3f, init_alpha=%.5f, beta=%.5f, rho=%.5f, nu=%.5f, T=%.5f\n",
+                    underlyKSeries->m_insInfo.instrumentID.data(), underlyKSeries->m_lastPMD->updateTime.data(), forwardPrice,  m_alpha, m_beta, m_rho, m_nu, m_T);
+                for (auto i = 0; i <strikesTemp.size(); i++) {
+                    fprintf(stderr, "SARBModelQuantLib::sarbFit : i=%d, strikePrice=%.5f, iv=%.5f, vega=%.5f\n",i, strikesTemp[i], volatilitiesTemp[i], vegasTemp[i]);
+                }
+            }
+
+
+
+
 
             // 1. 归一化 Vega 平方根权重
             std::vector<QuantLib::Real> weights(strikesTemp.size(), 1.0);
@@ -245,6 +183,12 @@ namespace Cosmos {
                 m_nu = std::max(bestSolution[1], 1e-4);
                 m_rho = std::tanh(bestSolution[2]);
                 m_rmse = std::sqrt(bestChiSq / strikesTemp.size());
+            }
+            if (underlyKSeries->m_Period == Types::KPeriod::Min5 &&
+                         (strcmp(underlyKSeries->m_insInfo.instrumentID.data(), "ag2611") ==0 ||
+                             strcmp(underlyKSeries->m_insInfo.instrumentID.data(), "jm2611") ==0) ) {
+                fprintf(stderr, "SARBModelQuantLib::sarbFit second : instrument=%s, updateTimeEnd=%s, forwardPrice=%.3f, init_alpha=%.5f, beta=%.5f, rho=%.5f, nu=%.5f, T=%.5f\n",
+                    underlyKSeries->m_insInfo.instrumentID.data(), underlyKSeries->m_lastPMD->updateTime.data(), forwardPrice,  m_alpha, m_beta, m_rho, m_nu, m_T);
             }
         }
     }

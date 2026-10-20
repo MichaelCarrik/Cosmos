@@ -13,7 +13,7 @@ namespace Cosmos {
 
         class Strangle : public IOptionPolicy {
         private:
-
+            int m_lastOptionIndex{0};
 
         public:
             Strangle(std::string const &policyName, std::string const &engineName, Types::Instrument_t &instrument,
@@ -93,14 +93,14 @@ namespace Cosmos {
             }
 
             void _adjustHoldDelta(PolicySymbolStruct & policySymbolStruct,
-                                  double targetDelta, double holdDelta, double openAtDelta, char optionType, double underlyClose){
+                                  double targetDelta, double holdDelta, double openAtDelta, char optionType, double underlyClose, int lastOptionIndex){
                 double diffDelta = targetDelta - holdDelta;
             //    auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 if(diffDelta * holdDelta >=0){  //same direction add
-                    auto openAtmItr = getApproxiDeltaSymbol(policySymbolStruct.optionSymbolVecs , openAtDelta, optionType,  underlyClose);
+                    auto openAtmItr = getApproxiDeltaSymbol(policySymbolStruct.optionSymbolVecs , openAtDelta, optionType,  underlyClose, lastOptionIndex);
                     if(openAtmItr != nullptr ){
                         auto openAtmKSeries = openAtmItr->m_kSeriesMap.at(m_kperiod);
-                        auto openAtDelta =   openAtmKSeries->m_KDataVecs[m_lastOptionIndex]->m_greeks.delta;
+                        auto openAtDelta =   openAtmKSeries->m_KDataVecs[lastOptionIndex]->m_greeks.delta;
 
                         addPositionByGreeks(openAtmItr->instrumentInfo.instrumentID, policySymbolStruct.targetSignal.targetPosMaps,
                                             openAtDelta, diffDelta);
@@ -117,7 +117,7 @@ namespace Cosmos {
                             targetPosition = itrTGPos->second;
                         }
 
-                        auto lastOptionK = symbolItr->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[m_lastOptionIndex];
+                        auto lastOptionK = symbolItr->m_kSeriesMap.at(m_kperiod)->m_KDataVecs[lastOptionIndex];
                         double instrumentDeltaCash =  targetPosition * lastOptionK->m_greeks.delta;
 
                         if(targetPosition ==0 || diffDelta * instrumentDeltaCash >0){
@@ -136,29 +136,29 @@ namespace Cosmos {
             }
 
             void _adjustHoldVega(PolicySymbolStruct & callPolicySymbols, PolicySymbolStruct & putPolicySymbols,
-                                 double targetVega, double holdVega, double openAtDelta,  double underlyClose) {
+                                 double targetVega, double holdVega, double openAtDelta,  double underlyClose, int lastOptionIndex) {
                 double diffVega = targetVega - holdVega;
             //    auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
                 if (diffVega * targetVega >= 0) {  //same direction add
-                    auto callAtmItr = getApproxiDeltaSymbol(callPolicySymbols.optionSymbolVecs , openAtDelta, 'C',  underlyClose);
-                    auto putAtmItr = getApproxiDeltaSymbol(putPolicySymbols.optionSymbolVecs , openAtDelta, 'P',  underlyClose);
+                    auto callAtmItr = getApproxiDeltaSymbol(callPolicySymbols.optionSymbolVecs , openAtDelta, 'C',  underlyClose, lastOptionIndex);
+                    auto putAtmItr = getApproxiDeltaSymbol(putPolicySymbols.optionSymbolVecs , openAtDelta, 'P',  underlyClose, lastOptionIndex);
 
                     if(callAtmItr != nullptr && putAtmItr != nullptr){
 
                         auto callAtmKSeries = callAtmItr->m_kSeriesMap.at(m_kperiod);
                         auto putAtmKSeries = putAtmItr->m_kSeriesMap.at(m_kperiod);
-                        auto callDelta =   callAtmKSeries->m_KDataVecs[m_lastOptionIndex]->m_greeks.delta;
-                        auto putDelta =   putAtmKSeries->m_KDataVecs[m_lastOptionIndex]->m_greeks.delta;
+                        auto callDelta =   callAtmKSeries->m_KDataVecs[lastOptionIndex]->m_greeks.delta;
+                        auto putDelta =   putAtmKSeries->m_KDataVecs[lastOptionIndex]->m_greeks.delta;
                         auto callDiffVega = diffVega * std::abs(callDelta)/ (std::abs(callDelta) + std::abs(putDelta));
                         auto putDiffVega = diffVega * std::abs(putDelta)/ (std::abs(callDelta) + std::abs(putDelta));
 
                         auto ckSeries = callAtmItr->m_kSeriesMap.at(m_kperiod);
                         addPositionByGreeks(callAtmItr->instrumentInfo.instrumentID, callPolicySymbols.targetSignal.targetPosMaps,
-                                            ckSeries->m_KDataVecs[m_lastOptionIndex]->m_greeks.vega, callDiffVega);
+                                            ckSeries->m_KDataVecs[lastOptionIndex]->m_greeks.vega, callDiffVega);
 
                         auto pkSeries = putAtmItr->m_kSeriesMap.at(m_kperiod);
                         addPositionByGreeks(putAtmItr->instrumentInfo.instrumentID, putPolicySymbols.targetSignal.targetPosMaps,
-                                            pkSeries->m_KDataVecs[m_lastOptionIndex]->m_greeks.vega, putDiffVega);
+                                            pkSeries->m_KDataVecs[lastOptionIndex]->m_greeks.vega, putDiffVega);
                     }
                 } else if (diffVega * targetVega < 0) {
 
@@ -167,8 +167,8 @@ namespace Cosmos {
                     double stepMinusDelta = callHoldDelta *0.05;
 
                     for(int i=0; i<20; i++){
-                        _adjustHoldDelta(callPolicySymbols, callHoldDelta - stepMinusDelta, callHoldDelta, openAtDelta,'C', underlyClose);
-                        _adjustHoldDelta(putPolicySymbols, putHoldDelta + stepMinusDelta, putHoldDelta, openAtDelta,'P', underlyClose);
+                        _adjustHoldDelta(callPolicySymbols, callHoldDelta - stepMinusDelta, callHoldDelta, openAtDelta,'C', underlyClose, lastOptionIndex);
+                        _adjustHoldDelta(putPolicySymbols, putHoldDelta + stepMinusDelta, putHoldDelta, openAtDelta,'P', underlyClose, lastOptionIndex);
 
                         double callHoldVega = getAllHoldVega(callPolicySymbols);
                         double putHoldVega = getAllHoldVega(putPolicySymbols);
@@ -181,10 +181,10 @@ namespace Cosmos {
             }
 
             void _rebalanceDelta(PolicySymbolStruct & callPolicySymbols,   PolicySymbolStruct & putPolicySymbols,
-                                    double allCallDelta, double allPutDelta, double posDelta, double openAtDelta, double underlyClose) {
+                                    double allCallDelta, double allPutDelta, double posDelta, double openAtDelta, double underlyClose, int lastOptionIndex) {
 
-                _adjustHoldDelta(callPolicySymbols, posDelta, allCallDelta, openAtDelta, 'C', underlyClose);
-                _adjustHoldDelta(putPolicySymbols, -posDelta, allPutDelta, openAtDelta, 'P', underlyClose);
+                _adjustHoldDelta(callPolicySymbols, posDelta, allCallDelta, openAtDelta, 'C', underlyClose, lastOptionIndex);
+                _adjustHoldDelta(putPolicySymbols, -posDelta, allPutDelta, openAtDelta, 'P', underlyClose, lastOptionIndex);
 
             };
 

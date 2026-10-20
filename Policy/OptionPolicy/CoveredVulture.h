@@ -26,6 +26,7 @@ namespace Cosmos {
             int m_preMarketPosition{0};
             double m_closeAtDelta{0.0};
             double m_signalPrice{0.0};
+            int m_lastOptionIndex{0};
 
             const KData::KSeries *m_dayKSeries{nullptr};
 
@@ -337,8 +338,8 @@ namespace Cosmos {
                     lastUnderlyKB->m_close,
                     m_marketPosition, m_preMarketPosition, m_signalPrice,
                     m_minsMA, m_upBand, m_downBand);
-                _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
-                _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
+                _writeOptionPolicyLog(m_callPolicySymbols, m_lastOptionIndex, m_configIndex);
+                _writeOptionPolicyLog(m_putPolicySymbols,m_lastOptionIndex, m_configIndex);
             }
 
 
@@ -425,7 +426,7 @@ namespace Cosmos {
                 //    auto optionKBarIndex = m_underlyKseries->m_seriesIndex - 1 - m_underlyToBeginIndex;
 
                 auto openAtSymbol = getApproxiDeltaSymbol(policySymbols.optionSymbolVecs, m_openAtDelta, optionType,
-                                                          underlyClose);
+                                                          underlyClose, m_lastOptionIndex);
                 if (openAtSymbol != nullptr) {
                     auto openAtSeries = openAtSymbol->m_kSeriesMap.at(m_kperiod);
                     auto symbolDelta = (openAtSeries->m_KDataVecs[m_lastOptionIndex])->m_greeks.delta;
@@ -433,13 +434,13 @@ namespace Cosmos {
                                         policySymbols.targetSignal.targetPosMaps,
                                         symbolDelta, targetDelta);
                 } else {
-                    fprintf(stderr, "_setOpenPostion openAtNull %s, symbolLength=%d\n", m_engineName.c_str(),
+                    fprintf(stderr, "_setOpenPosition openAtNull %s, symbolLength=%d\n", m_engineName.c_str(),
                             policySymbols.optionSymbolVecs.size());
                     for (auto symbolItr: policySymbols.optionSymbolVecs) {
                         fprintf(stderr, "symbolItr  instrumentID=%s, m_seriesIndex=%d, delta=%.3f \n",
                                 symbolItr->m_kSeriesMap.at(m_kperiod)->m_insInfo.instrumentID.data(),
                                 symbolItr->m_kSeriesMap.at(m_kperiod)->m_seriesIndex,
-                                symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastDelta);
+                                symbolItr->m_kSeriesMap.at(m_kperiod)->m_lastKDataGreeks.delta);
                     }
                 }
             }

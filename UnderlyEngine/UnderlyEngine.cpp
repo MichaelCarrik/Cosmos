@@ -19,6 +19,7 @@
 #include "../Policy/FuturePolicy/VultureTrend.h"
 #include "../Policy/FuturePolicy/VultureFast.h"
 #include "../Policy/FuturePolicy/FutureGodPolicy.h"
+#include "../Policy/OptionPolicy/CalendarSTRD.h"
 
 namespace Cosmos {
     namespace Engine {
@@ -402,7 +403,6 @@ namespace Cosmos {
                               return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
              } else if (policyName.compare("VannaSABR") == 0) {
-
                  Types::Instrument_t underlyInstrument{""};
                  strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
                  auto kpstr = Utils::getParamMapValue(paramMap, "period");
@@ -461,6 +461,40 @@ namespace Cosmos {
                               return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
              }
+            else if (policyName.compare("Calendar") == 0) {
+                Types::Instrument_t underlyInstrument{""};
+                strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
+
+                Types::Instrument_t underlyFarInstrument{""};
+                strcpy(underlyFarInstrument.data(), Utils::getParamMapValue(paramMap, "underlyB").c_str());
+
+                auto kpstr = Utils::getParamMapValue(paramMap, "period");
+                Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
+                this->setKPtoHisSeriesMap(underlyInstrument, kPeriod, true);
+                this->setKPtoHisSeriesMap(underlyFarInstrument, kPeriod, true);
+
+                int isRefreshDelta = std::stoi(Utils::getParamMapValue(paramMap, "isRefreshDelta"));
+                double MV = std::stof(Utils::getParamMapValue(paramMap,"MV"));
+                double openAtDelta = std::stof(Utils::getParamMapValue(paramMap, "openAtDelta"));
+                double baseRation = std::stof(Utils::getParamMapValue(paramMap, "biasRation"));
+
+                Types::InstrumentInfo * optionNearInsInfo{nullptr};
+                getOptionInfoByUnderly(underlyInstrument, optionNearInsInfo);
+
+                Types::InstrumentInfo * optionFarInsInfo{nullptr};
+                getOptionInfoByUnderly(underlyFarInstrument, optionFarInsInfo);
+
+                if (optionNearInsInfo == nullptr || optionFarInsInfo == nullptr) {
+                    return nullptr;
+                }
+                return new  Policy::CalendarSTRD( policyName, m_engineName,
+                          underlyInstrument, underlyFarInstrument, kPeriod, MV,  optionNearInsInfo->multi,
+                           m_tradingDay, optionNearInsInfo->expireDate, optionFarInsInfo->expireDate,
+                          m_engineParam.riskOptionMaxPosition,
+                          isRefreshDelta, openAtDelta,baseRation, [this](Types::Instrument_t const& instrument, Types::KPeriod period)->int {
+                             return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
+                          });
+                }
 
             //else if (policyName.compare("TestTrendOption") == 0){
              //
@@ -498,25 +532,6 @@ namespace Cosmos {
             //     return new  Policy::BuyStrangle(kPeriod, MV * 10000, policyName,
             //                                                  m_engineName, m_underlyInsMap.nearInstrument, tradeTime, m_multi,
             //                                                  m_tradingDay, m_maxPosition, isRefreshDelta, openAtDelta,adjCoef);
-            // }else if (policyName.compare("Calendar") == 0) {
-            //     auto kpstr = Types::Param::getValue(paramMap, "period");
-            //     Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);
-            //     std::string tt_str = Types::Param::getValue(paramMap, "tradeTime");
-            //     int tradeTime = Utils::ToPsSeconds(tt_str);
-            //     int isRefreshDelta = std::stoi(Types::Param::getValue(paramMap, "isRefreshDelta"));
-            //     double MV = std::stof(Types::Param::getValue(paramMap, "MV").c_str());
-            //     double openAtDelta = std::stof(Types::Param::getValue(paramMap, "openAtDelta").c_str());
-            //     double adjCoef = std::stof(Types::Param::getValue(paramMap, "adjCoef").c_str());
-            //     std::string farUnderlyStr = Types::Param::getValue(paramMap, "farUnderly");
-            //     _initUnderly(farUnderlyStr);
-            //     strcpy(m_underlyInsMap.farInstrument.data(), farUnderlyStr.c_str());
-            //     if(m_policyKPMap.find(kPeriod) == m_policyKPMap.end()){
-            //         m_policyKPMap[kPeriod] = false;
-            //     }
-            //     return new  Policy::Calendar(kPeriod, MV * 10000, policyName,
-            //                                                 m_engineName, m_underlyInsMap.nearInstrument, m_underlyInsMap.farInstrument,
-            //                                                 tradeTime, m_multi, m_tradingDay, m_maxPosition, isRefreshDelta, openAtDelta,
-            //                                                 adjCoef);
             // }else if (policyName.compare("LongGammaSAR") == 0) {
             //     auto kpstr = Types::Param::getValue(paramMap, "period");
             //     Types::KPeriod kPeriod = Types::configParamToKPeriodMap.at(kpstr);

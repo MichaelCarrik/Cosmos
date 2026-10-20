@@ -85,14 +85,14 @@ namespace Cosmos {
 
 
             sprintf(m_TableInsertBufferVec[4].insertHead.data(), "%s",
-              "INSERT INTO optionMinutes_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
+              "REPLACE INTO optionMinutes_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
               "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta,vanna,volga) "
                       "VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[4]);
 
 
             sprintf(m_TableInsertBufferVec[5].insertHead.data(), "%s",
-              "INSERT INTO optionOneMinute_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
+              "REPLACE INTO optionOneMinute_bars (instrument,underly,optionType,strikePrice,tradingDay,expireDate,period,updateTimeBegin,updateTimeEnd,productId,"
               "open,high,low,close,forwardPrice,volume,amount,position,bidPrice,askPrice,bidVolume,askVolume,IV,delta,gamma,vega,theta,vanna,volga) "
                       "VALUES");
             initTableInsertBuffer(m_TableInsertBufferVec[5]);
@@ -112,7 +112,7 @@ namespace Cosmos {
                     auto time = std::chrono::duration_cast<std::chrono::seconds>(
                         std::chrono::system_clock::now().time_since_epoch()).count();
                     for (auto& tableInsertBuffer : m_TableInsertBufferVec) {
-                        if ( (tableInsertBuffer.numb >200 ) || (tableInsertBuffer.numb  >0 && time - tableInsertBuffer.lastWriteSeconds >30) ) {
+                        if ( (tableInsertBuffer.numb > 200 ) || (tableInsertBuffer.numb  >0 && time - tableInsertBuffer.lastWriteSeconds >30) ) {
                             insertSql(tableInsertBuffer.insertBuffer);
                             initTableInsertBuffer(tableInsertBuffer);
                         }
@@ -237,7 +237,7 @@ namespace Cosmos {
                                 }
                             }
                         } else if (updateSeries->m_insInfo.productIDClass == Types::ProductClass::option) {
-                            saveKline(updateSeries, period);
+                           // saveKline(updateSeries, period);
                         }
                     }
                 }

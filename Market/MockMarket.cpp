@@ -290,10 +290,23 @@ namespace Cosmos {
                     marketData.bidVolume[0] = atof(line_vector[19].c_str());
 
                     marketData.psSecond = Utils::ToPsSeconds(marketData.updateTime);
+
+                    if ( (line_vector[34] == "T" || line_vector[34] == "E") == false) {
+                        continue;
+                    }
+
                     if (marketData.bidVolume[0] > 0 && marketData.askVolume[0]) {
                         marketData.midPrice = (marketData.bidPrice[0] + marketData.askPrice[0]) * 0.5;
-                    } else {
-                        marketData.midPrice = marketData.lastPrice;
+                    }else if (marketData.bidVolume[0] > 0) {
+                        marketData.midPrice = marketData.bidPrice[0];
+                    }else if (marketData.askVolume[0] > 0) {
+                        marketData.midPrice = marketData.askPrice[0];
+                    }else {
+                        continue;
+                    }
+
+                    if (marketData.lastPrice < Types::g_epsilon) {
+                        marketData.lastPrice = marketData.midPrice;
                     }
 
                     if (marketData.openPrice > 999999999.9 || marketData.openPrice < Types::g_epsilon) {
@@ -377,6 +390,9 @@ namespace Cosmos {
                         } else {
                             marketData.midPrice = marketData.lastPrice;
                         }
+                       // else {
+                        //     marketData.midPrice = marketData.lastPrice;
+                        // }
 
                         if (marketData.openPrice > 999999999.9 || marketData.openPrice < Types::g_epsilon) {
                             marketData.openPrice = marketData.lastPrice;

@@ -30,7 +30,7 @@ namespace Cosmos {
             int m_preMarketPosition{0};
             double m_holdStrikePrice{0.0};
             double m_signalPrice{0.0};
-
+            int m_lastOptionIndex{0};
             char optionTypeA{'N'};
             char optionTypeB{'N'};
 
@@ -177,8 +177,8 @@ namespace Cosmos {
                                   m_configIndex, lastUnderlyKB->m_instrument.data(), lastUnderlyKB->m_tradingDay,
                                   lastUnderlyKB->m_updateTimeBegin.data(), lastUnderlyKB->m_endPsTime, lastUnderlyKB->m_close,
                                   m_marketPosition, m_preMarketPosition, m_signalPrice, m_holdStrikePrice);
-                _writeOptionPolicyLog(m_callPolicySymbols, m_configIndex);
-                _writeOptionPolicyLog(m_putPolicySymbols, m_configIndex);
+                _writeOptionPolicyLog(m_callPolicySymbols, m_lastOptionIndex, m_configIndex);
+                _writeOptionPolicyLog(m_putPolicySymbols, m_lastOptionIndex, m_configIndex);
             }
 
 
