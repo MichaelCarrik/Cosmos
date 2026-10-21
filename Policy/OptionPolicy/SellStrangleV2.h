@@ -112,8 +112,8 @@ namespace Cosmos {
                     if (isFind==true) {
                         auto lastUnderlyKB = m_underlyKseries->m_KDataVecs[m_lastUnderlyBarIndex];
 
-                        double allCallDelta = getAllHoldDelta(m_callPolicySymbols);
-                        double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
+                        double allCallDelta = getAllHoldDelta(m_callPolicySymbols, m_lastOptionIndex);
+                        double allPutDelta = getAllHoldDelta(m_putPolicySymbols, m_lastOptionIndex);
                         m_configLog->info("configIndex={}, instrument={}, {}, {}, {}, close={:.3f}, delta={:.3f}, "
                                     "targetPosition={}, basePrice={:.3f}, seriesIndex={}, "
                                     "allCallDelta={:.3f}, allPutDelta={:.3f}",
@@ -205,8 +205,8 @@ namespace Cosmos {
                         }
 
 
-                        double allCallDelta = getAllHoldDelta(m_callPolicySymbols);
-                        double allPutDelta = getAllHoldDelta(m_putPolicySymbols);
+                        double allCallDelta = getAllHoldDelta(m_callPolicySymbols, m_lastOptionIndex);
+                        double allPutDelta = getAllHoldDelta(m_putPolicySymbols, m_lastOptionIndex);
 
                         bool isZeroCall = isHaveZeroDeltaPos(m_callPolicySymbols, m_lastOptionIndex);
                         bool isZeroPut = isHaveZeroDeltaPos(m_putPolicySymbols, m_lastOptionIndex);
@@ -228,8 +228,8 @@ namespace Cosmos {
                             m_basePrice = lastUnderlyKB->m_close;
                         }
 
-                        allCallDelta = getAllHoldDelta(m_callPolicySymbols);
-                        allPutDelta = getAllHoldDelta(m_putPolicySymbols);
+                        allCallDelta = getAllHoldDelta(m_callPolicySymbols, m_lastOptionIndex);
+                        allPutDelta = getAllHoldDelta(m_putPolicySymbols, m_lastOptionIndex);
 
                         _checkMaxPositionRisk(m_callPolicySymbols.targetSignal.targetPosMaps, -1, m_maxOptionPos);
                         _checkMaxPositionRisk(m_putPolicySymbols.targetSignal.targetPosMaps, -1, m_maxOptionPos);

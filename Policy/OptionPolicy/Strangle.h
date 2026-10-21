@@ -13,7 +13,7 @@ namespace Cosmos {
 
         class Strangle : public IOptionPolicy {
         private:
-            int m_lastOptionIndex{0};
+
 
         public:
             Strangle(std::string const &policyName, std::string const &engineName, Types::Instrument_t &instrument,
@@ -31,7 +31,7 @@ namespace Cosmos {
 
             virtual void runTick(const  Types::MarketData *pMD) =0;
 
-            double getAllHoldDelta(PolicySymbolStruct const& policySymbolStruct){
+            double getAllHoldDelta(PolicySymbolStruct const& policySymbolStruct, int lastOptionIndex) {
                 double allHoldDelta = 0.0;
                 for(auto  symbolItr : policySymbolStruct.optionSymbolVecs){
                     auto targetPosition = getTargetPos(symbolItr->instrumentInfo.instrumentID,  policySymbolStruct.targetSignal.targetPosMaps);
@@ -42,7 +42,7 @@ namespace Cosmos {
                     }
                     auto series = itr->second;
                   //  auto lastIndex = series->m_seriesIndex > 0 ?  series->m_seriesIndex-1 : 0;
-                    auto lastOptionK = series->m_KDataVecs[m_lastOptionIndex];
+                    auto lastOptionK = series->m_KDataVecs[lastOptionIndex];
                     if(targetPosition !=0 && lastOptionK != nullptr ){
                         allHoldDelta += targetPosition * lastOptionK->m_greeks.delta;
                     }
@@ -50,13 +50,13 @@ namespace Cosmos {
                 return allHoldDelta;
             }
 
-            double getAllHoldVega(PolicySymbolStruct const& policySymbolStruct) {
+            double getAllHoldVega(PolicySymbolStruct const& policySymbolStruct, int lastOptionIndex) {
                 double allHoldVega = 0.0;
                 for (auto symbolItr: policySymbolStruct.optionSymbolVecs) {
                     auto targetPosition = getTargetPos(symbolItr->instrumentInfo.instrumentID, policySymbolStruct.targetSignal.targetPosMaps);
                     auto series = symbolItr->m_kSeriesMap.at(m_kperiod);
              //       auto lastIndex = series->m_seriesIndex > 0 ? series->m_seriesIndex - 1 : 0;
-                    auto lastOptionK = series->m_KDataVecs[m_lastOptionIndex];
+                    auto lastOptionK = series->m_KDataVecs[lastOptionIndex];
                     if (targetPosition != 0 && lastOptionK != nullptr) {
                         allHoldVega += targetPosition * lastOptionK->m_greeks.vega;
                     }
@@ -160,22 +160,27 @@ namespace Cosmos {
                         addPositionByGreeks(putAtmItr->instrumentInfo.instrumentID, putPolicySymbols.targetSignal.targetPosMaps,
                                             pkSeries->m_KDataVecs[lastOptionIndex]->m_greeks.vega, putDiffVega);
                     }
-                } else if (diffVega * targetVega < 0) {
+                } else if (diffVega * targetVega < 0 && std::abs(diffVega) > std::abs(targetVega) * 0.05 ) {
 
-                    double callHoldDelta = getAllHoldDelta(callPolicySymbols);
-                    double putHoldDelta = getAllHoldDelta(putPolicySymbols);
+                    double callHoldDelta = getAllHoldDelta(callPolicySymbols, lastOptionIndex);
+                    double putHoldDelta = getAllHoldDelta(putPolicySymbols, lastOptionIndex);
                     double stepMinusDelta = callHoldDelta *0.05;
 
-                    for(int i=0; i<20; i++){
-                        _adjustHoldDelta(callPolicySymbols, callHoldDelta - stepMinusDelta, callHoldDelta, openAtDelta,'C', underlyClose, lastOptionIndex);
-                        _adjustHoldDelta(putPolicySymbols, putHoldDelta + stepMinusDelta, putHoldDelta, openAtDelta,'P', underlyClose, lastOptionIndex);
+                    auto lastDiffRealVegaABS = 99999999;
 
-                        double callHoldVega = getAllHoldVega(callPolicySymbols);
-                        double putHoldVega = getAllHoldVega(putPolicySymbols);
+                    for(int i=0; i<20; i++){
+                        callHoldDelta = getAllHoldDelta(callPolicySymbols, lastOptionIndex);
+                        putHoldDelta = getAllHoldDelta(putPolicySymbols, lastOptionIndex);
+                        _adjustHoldDelta(callPolicySymbols, callHoldDelta - stepMinusDelta, callHoldDelta, openAtDelta,'C', underlyClose, lastOptionIndex);
+                        _adjustHoldDelta(putPolicySymbols, -callHoldDelta + stepMinusDelta, putHoldDelta, openAtDelta,'P', underlyClose, lastOptionIndex);
+
+                        double callHoldVega = getAllHoldVega(callPolicySymbols, lastOptionIndex);
+                        double putHoldVega = getAllHoldVega(putPolicySymbols, lastOptionIndex);
                         double diffRealVega = targetVega - callHoldVega -putHoldVega;
-                        if (diffVega * diffRealVega <0 && std::abs(diffRealVega) < std::abs(diffVega) * 0.1 ){
+                        if (diffVega * diffRealVega <0 && std::abs(diffRealVega) < std::abs(diffVega) * 0.1 || std::abs(diffRealVega)> lastDiffRealVegaABS ){
                             break;
                         }
+                        lastDiffRealVegaABS = std::abs(diffRealVega);
                     }
                 }
             }

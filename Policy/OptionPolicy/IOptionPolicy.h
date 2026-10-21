@@ -125,7 +125,7 @@ namespace Cosmos {
                                 "configIndex={}, instr={}, {}, {}, {}, close={:.3f}({:.3f}, {:.3f}), sgnPrice={:.3f}, delta={:.3f}, "
                                 "targetPos={}, seriesIndex={}", configIndex, optionSymbol->instrumentInfo.instrumentID.data(), lastOptionK->m_tradingDay,
                                 lastOptionK->m_updateTimeBegin.data(), lastOptionK->m_endPsTime, lastOptionK->m_close, lastOptionK->m_bidPrice,
-                                lastOptionK->m_askPrice, midPrice, lastOptionK->m_greeks.delta, targetPosition,
+                                lastOptionK->m_askPrice, midPrice, lastOptionK->m_greeks.delta,  targetPosition,
                                 lastOptionIndex);
                     }
                 }

@@ -461,7 +461,7 @@ namespace Cosmos {
                               return  this->m_kDataManager->m_updateOptionModelPamt->getUnderlyTodayBeginIndex(instrument, period);
                            });
              }
-            else if (policyName.compare("Calendar") == 0) {
+            else if (policyName.compare("CalendarSTRD") == 0) {
                 Types::Instrument_t underlyInstrument{""};
                 strcpy(underlyInstrument.data(), Utils::getParamMapValue(paramMap, "underlyA").c_str());
 
@@ -645,10 +645,10 @@ namespace Cosmos {
                 // if (pMD->updateTime[0]=='0') {
                 //     return;
                 // }
-                 if (strcmp(pMD->instrumentID.data(), "IM2610") ==0 ) {
-                    fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
-                       pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit, pMD->epoch_time);
-                 }
+                 // if (strcmp(pMD->instrumentID.data(), "IM2610") ==0 ) {
+                 //    fprintf(stderr, "onEventData instrumentid=%s, tradingDay=%d, updateTime=%s.%d, volume=%d, isInit=%d, epoch_time=%ld\n",
+                 //       pMD->instrumentID.data(), m_tradingDay,  pMD->updateTime.data(), pMD->milliSeconds, pMD->volume, pMD->isInit, pMD->epoch_time);
+                 // }
 
                 m_kDataManager->KMAddTick(pMD);
                 auto symbolItr = m_symbolMap.find(pMD->instrumentID);
@@ -756,7 +756,7 @@ namespace Cosmos {
                if (Utils::TradingHours::getProductTrait(symbolItr.second->instrumentInfo.productID, pMD->psSecond, m_isDay) == Utils::FTTrait::FT_TRADING)
                {
                  //  if (symbolItr.second->underlySymbol->lastMD->isInit == true || strcmp(pMD->instrumentID.data(), symbolItr.first.data()) !=0 )
-                   if (symbolItr.second->underlySymbol->lastMD->isInit == true )
+                   if (symbolItr.second->underlySymbol->lastMD == nullptr || symbolItr.second->underlySymbol->lastMD->isInit == true   )
                        {
                        continue;
                    }
